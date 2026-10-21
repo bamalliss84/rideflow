@@ -161,6 +161,8 @@ const en = {
     signedOut: "You have been signed out.",
     secureNote: "Sessions use secure cookies. Never share codes with anyone.",
     expiresIn: "This step expires in 5 minutes.",
+    lostAuthenticator:
+      "This account already has an authenticator. Use the same app you set up before. Lost it? Ask an owner of your operator (or RideFlow support) to reset it; you will then set up a new one at sign-in.",
   },
   nav: {
     overview: "Overview",

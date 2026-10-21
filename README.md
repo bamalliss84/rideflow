@@ -87,6 +87,11 @@ docker compose down                                                  # stop (kee
 
   Finance (`+967700000002`) and reviewer (`+967700000003`) see role-restricted menus.
 - **Platform portal:** open http://localhost:3000/platform/login and sign in with `DEMO_PLATFORM_ADMIN_PHONE` and `DEMO_PLATFORM_ADMIN_PASSWORD`, followed by the same authenticator steps.
+- **Development only — demo authenticator lost or enrolled by someone else.** Run the reset below. It refuses unless `DJANGO_DEBUG=1`, writes an audit event, and never reveals a secret. The next sign-in shows the setup QR code again.
+
+  ```bash
+  docker compose exec api python manage.py dev_reset_mfa +967700000001 --i-understand
+  ```
 - **Lost authenticator:**
   - an operator owner or admin can reset a staff member's authenticator under **Members**;
   - RideFlow staff can reset an operator owner's or admin's authenticator from the operator page.

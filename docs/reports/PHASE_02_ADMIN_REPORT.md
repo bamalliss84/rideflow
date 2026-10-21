@@ -173,3 +173,53 @@ Every operator and platform admin endpoint in the contract is used by a screen. 
   4. Get owner design acceptance.
   5. Choose a map provider.
   6. Start Flutter rider and driver apps on the same contract.
+
+## 9. Fix 2026-10-22: operator MFA onboarding showed the 6-digit challenge without any QR code
+
+**Symptom.** After the development OTP sign-in, `+967700000001` went straight to the 6-digit TOTP screen, although the owner had never scanned a QR code.
+
+**Investigation.** Evidence came from `MFADevice` rows and the `auth.*` audit events.
+
+- The backend returns `mfa_enrolled = true` only when a **confirmed** `MFADevice` exists.
+- The UI (`MfaStep`) chooses between the setup screen and the challenge solely from that flag.
+- Both the Demo Owner (`+967700000001`) and the Platform Admin (`+967700000000`) had confirmed devices:
+  - confirmed at 2026-10-21T21:09:51Z and 22:52:27Z;
+  - audit data `mfa_enrolled_now: true`.
+- Those were created by Claude's automated Phase 2 browser walkthrough (§5), using throwaway secrets that were never handed over.
+
+**Root cause.** The seeded demo accounts were left **already enrolled** by the verification walkthrough. It was **not** a frontend routing bug, and it was **not** in seed data: `seed_demo` creates no MFA devices. The application correctly showed the normal challenge for an enrolled account. Contributing gaps:
+
+- no documented development reset procedure;
+- the challenge screen gave no guidance for a lost authenticator;
+- §5 did not warn that the demo accounts were left enrolled.
+
+**Fix (minimal; no MFA bypass, no change to production behaviour).**
+
+1. `python manage.py dev_reset_mfa <phone> --i-understand`:
+   - deletes the user's authenticator only;
+   - refuses unless `DJANGO_DEBUG=1`;
+   - requires the explicit flag;
+   - never shows or regenerates a secret;
+   - writes the audit event `dev.mfa_reset`.
+
+   The next sign-in still requires the first factor, and then forces a fresh enrolment that a valid TOTP must confirm.
+2. The challenge screen (enrolled accounts only) now explains that an authenticator already exists and how to get a reset (owner, admin or RideFlow support). In Arabic and English.
+3. Production resets are unchanged: Members → Reset authenticator, Platform → operator administrators → Reset authenticator.
+
+**Verification (actually run).**
+
+- **Backend tests:** new tests check that an unconfirmed device still requires enrolment, and that the reset command refuses without DEBUG, refuses without the flag, deletes and audits, after which the next first factor reports `mfa_enrolled = false`.
+  - Focused: `test_mfa_and_portal_api.py` and `test_auth.py`, 25 passed.
+  - Full suite: **115 passed**. ruff clean.
+- **Frontend:** `tsc` 0 errors; `eslint` 0 findings; admin image rebuilt.
+- **Browser, operator `+967700000001`:**
+  1. Ran the dev reset.
+  2. OTP led to the setup screen: QR plus manual key, no 6-digit field before setup.
+  3. A wrong TOTP was rejected and the user stayed on `/login`; nothing was activated.
+  4. A correct TOTP led to `/operator`.
+  5. After sign-out and sign-in again, OTP led to the 6-digit challenge only (no QR, no key, guidance shown).
+  6. The next TOTP led to `/operator`.
+- **Browser, platform `+967700000000`:** the same sequence (password, setup with QR, TOTP, `/platform`; then sign-out, challenge only, TOTP, `/platform`).
+- **Final state:** both demo authenticators were reset again so the owner can enrol their own device; `MFADevice` count is 0.
+
+**Fix commit:** `<MFA_FIX_SHA>`

@@ -125,6 +125,7 @@ export function MfaStep({ challenge, onDone, onRestart }: { challenge: Challenge
       ) : (
         <InlineError error={error} />
       )}
+      {!needsEnrolment ? <p className="rounded-md bg-surface px-3 py-2 text-xs leading-relaxed text-muted">{t.auth.lostAuthenticator}</p> : null}
       <p className="text-center text-xs text-muted">
         {t.auth.expiresIn}{" "}
         <button type="button" onClick={onRestart} className="font-medium text-teal-700 hover:underline">

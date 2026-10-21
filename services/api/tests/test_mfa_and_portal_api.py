@@ -168,3 +168,35 @@ def test_new_tenant_has_no_cross_tenant_riders(ta, tb):
     make_member(ta, "rider")
     assert api_for(tb, make_member(tb, "owner")).get("/api/v1/admin/riders").data["count"] == 0
     assert make_tenant  # factories import used
+
+
+# ---- MFA onboarding state and development-only reset (fix 2026-10-22)
+
+
+def test_unconfirmed_device_still_requires_enrolment(ta):
+    owner = make_member(ta, "owner")
+    client, challenge = _first_factor(ta, owner)
+    client.post("/api/v1/auth/mfa/setup", {"mfa_token": challenge["mfa_token"]}, format="json")  # QR shown, never confirmed
+    _client, again = _first_factor(ta, owner)
+    assert again["mfa_enrolled"] is False  # setup screen again, not the 6-digit challenge
+
+
+def test_dev_reset_mfa_is_development_only_and_audited(ta, settings):
+    from django.core.management import CommandError, call_command
+
+    from apps.core.models import AuditEvent
+
+    owner = make_member(ta, "owner")
+    MFADevice.objects.create(user=owner, secret_encrypted=mfa.encrypt_secret(mfa.new_secret()), confirmed_at="2026-10-21T00:00:00Z")
+    settings.DEBUG = False
+    with pytest.raises(CommandError, match="DJANGO_DEBUG"):
+        call_command("dev_reset_mfa", owner.phone, "--i-understand")
+    settings.DEBUG = True
+    with pytest.raises(CommandError, match="--i-understand"):
+        call_command("dev_reset_mfa", owner.phone)
+    assert MFADevice.objects.filter(user=owner).exists()
+    call_command("dev_reset_mfa", owner.phone, "--i-understand")
+    assert not MFADevice.objects.filter(user=owner).exists()
+    assert AuditEvent.objects.filter(action="dev.mfa_reset", target_id=str(owner.pk)).exists()
+    _client, challenge = _first_factor(ta, owner)
+    assert challenge["mfa_enrolled"] is False  # first factor still required; enrolment forced again
