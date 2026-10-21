@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks (full history)
+        run: docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.18.4 detect --source /repo --no-banner --redact
+
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare environment
+        run: cp .env.example .env
+      - name: Build API image
+        run: docker compose build api
+      - name: Start PostGIS and Redis
+        run: docker compose up -d --wait db redis
+      - name: Lint and format
+        run: docker compose run --rm --no-deps api sh -c "ruff check --no-cache . && ruff format --check --no-cache ."
+      - name: Migration consistency
+        run: docker compose run --rm --no-deps api python manage.py makemigrations --check --dry-run
+      - name: Tests (unit, integration, isolation, concurrency, realtime)
+        run: docker compose run --rm --no-deps api pytest --create-db -p no:logging
+      - name: OpenAPI contract is valid and up to date
+        run: |
+          docker compose run --rm --no-deps -T api python manage.py spectacular --validate --fail-on-warn > /tmp/openapi.yaml
+          diff -u packages/contracts/openapi.yaml /tmp/openapi.yaml
+      - name: Docker smoke (migrate, serve, readiness)
+        run: |
+          docker compose up -d api
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8010/health/ready; then exit 0; fi
+            sleep 2
+          done
+          docker compose logs api
+          exit 1
+      - name: Tear down
+        if: always()
+        run: docker compose down -v

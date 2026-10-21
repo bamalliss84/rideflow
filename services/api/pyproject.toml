@@ -1,0 +1,16 @@
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "rideflow.settings_test"
+python_files = ["test_*.py"]
+testpaths = ["tests"]
+addopts = "-q --ds=rideflow.settings_test --reuse-db -p no:cacheprovider"
+asyncio_mode = "auto"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 135
+target-version = "py312"
+extend-exclude = ["*/migrations/*"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "DJ"]
+ignore = ["DJ001", "B904", "DJ012"]
