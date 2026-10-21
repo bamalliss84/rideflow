@@ -11,7 +11,7 @@
 | Last accepted task | T00-B (documentation baseline). Phase 1 is awaiting owner review |
 | Current task | Phase 2 admin portal: delivered, pending owner design and reviewer acceptance |
 | Phase 1 implementation commit | `0da382308386677be1ddc490314cbd18b5a06656` |
-| Phase 2 implementation commit | `<PHASE2_COMMIT_SHA>` |
+| Phase 2 implementation commit | `daefc54c93fb7eb915dd752bb1f130351a4371bb` |
 | Admin portal (local) | http://localhost:3000 |
 | Last passing CI run | NONE observed yet. The workflow is committed and its identical steps pass locally |
 | Staging URL | NONE |
@@ -95,6 +95,6 @@ Do not change approved policy. Owner approval of the PROPOSED/PROVISIONAL policy
 | 2026-10-21 | T00-A | none | none (inspection only) | git status: no commits, docs/ untracked | n/a | - | - | T00-B |
 | 2026-10-21 | T00-B | main / no commit | 9 pack files edited + 11 new docs | doc checks only | pending | - | D017–D019 | T00-C |
 | 2026-10-21 | Phase 1 backend | main / `0da382308386677be1ddc490314cbd18b5a06656` | repo foundation + services/api + tests + docs | 103 passed; lint/format/migrations/OpenAPI ok; live smoke ok | pending | fixed during session: FOR UPDATE on outer join, django-filter class-level queryset vs fail-closed manager, OTP per-IP limit too strict | D020–D028 | Phase 2 (MFA, CI green, Next.js scaffold) |
-| 2026-10-22 | Phase 2 admin portal | main / `<PHASE2_COMMIT_SHA>` | apps/admin (new), backend MFA + portal endpoints, compose/CI/docs | 113 backend passed; tsc/eslint/build ok; browser walkthrough ok | pending | fixed: refresh-token rotation race (single-flight refresh), django-filter + fail-closed manager, React hook state anti-patterns | D029–D032 | Phase 3 |
+| 2026-10-22 | Phase 2 admin portal | main / `daefc54c93fb7eb915dd752bb1f130351a4371bb` | apps/admin (new), backend MFA + portal endpoints, compose/CI/docs | 113 backend passed; tsc/eslint/build ok; browser walkthrough ok | pending | fixed: refresh-token rotation race (single-flight refresh), django-filter + fail-closed manager, React hook state anti-patterns | D029–D032 | Phase 3 |
 
 Template: Date/time | Task ID | Branch/commit | Files changed | Tests and outputs | Accepted? | Bugs | Decisions | Next task.

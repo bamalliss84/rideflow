@@ -4,7 +4,7 @@
 |---|---|
 | Date | 2026-10-22 |
 | Branch | `main` |
-| Implementation commit | `<PHASE2_COMMIT_SHA>` |
+| Implementation commit | `daefc54c93fb7eb915dd752bb1f130351a4371bb` |
 | Local URL | **http://localhost:3000** (operator sign-in at `/login`, RideFlow staff at `/platform/login`) |
 | Start | `powershell -ExecutionPolicy Bypass -File scripts\dev-up.ps1 -Build -Seed`, or `docker compose up -d --build` |
 | Status | **The portal is implemented, integrated with the real API and verified locally. Phase 2 is not declared complete** until the items in §7 are reviewed (CI first run on GitHub, MFA recovery codes, a real map/SMS provider, owner design acceptance). |
