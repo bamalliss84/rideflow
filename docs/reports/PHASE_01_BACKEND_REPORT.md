@@ -4,7 +4,7 @@
 |---|---|
 | Date | 2026-10-21 |
 | Branch | `main` |
-| Implementation commit | `<PHASE1_COMMIT_SHA>` |
+| Implementation commit | `0da382308386677be1ddc490314cbd18b5a06656` |
 | Environment | Native Windows 11 host; Docker Desktop 4.96.1 (Engine 29.9.2, Compose v5.6.0); containers python:3.12-slim, postgis/postgis:16-3.4, redis:7.4-alpine |
 | Status | **Backend implemented and validated locally. Phase 1 is NOT declared complete** because of the open items in §3 (admin MFA, production adapters, and CI not yet observed green on GitHub at the time of writing). |
 

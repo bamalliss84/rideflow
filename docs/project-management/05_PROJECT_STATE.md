@@ -10,7 +10,7 @@
 | Default branch | main |
 | Last accepted task | T00-B (documentation baseline). Phase 1 is awaiting owner review |
 | Current task | Phase 1 backend: delivered, pending owner and reviewer acceptance |
-| Phase 1 implementation commit | `<PHASE1_COMMIT_SHA>` (see `git log`) |
+| Phase 1 implementation commit | `0da382308386677be1ddc490314cbd18b5a06656` (see `git log`) |
 | Last passing CI run | NONE observed yet. The workflow is committed and its identical steps pass locally |
 | Staging URL | NONE |
 | Production URL | NONE |
@@ -66,6 +66,6 @@ Do not change approved policy. Owner approval of the PROPOSED/PROVISIONAL policy
 |---|---|---|---|---|---|---|---|---|
 | 2026-10-21 | T00-A | none | none (inspection only) | git status: no commits, docs/ untracked | n/a | - | - | T00-B |
 | 2026-10-21 | T00-B | main / no commit | 9 pack files edited + 11 new docs | doc checks only | pending | - | D017–D019 | T00-C |
-| 2026-10-21 | Phase 1 backend | main / `<PHASE1_COMMIT_SHA>` | repo foundation + services/api + tests + docs | 103 passed; lint/format/migrations/OpenAPI ok; live smoke ok | pending | fixed during session: FOR UPDATE on outer join, django-filter class-level queryset vs fail-closed manager, OTP per-IP limit too strict | D020–D028 | Phase 2 (MFA, CI green, Next.js scaffold) |
+| 2026-10-21 | Phase 1 backend | main / `0da382308386677be1ddc490314cbd18b5a06656` | repo foundation + services/api + tests + docs | 103 passed; lint/format/migrations/OpenAPI ok; live smoke ok | pending | fixed during session: FOR UPDATE on outer join, django-filter class-level queryset vs fail-closed manager, OTP per-IP limit too strict | D020–D028 | Phase 2 (MFA, CI green, Next.js scaffold) |
 
 Template: Date/time | Task ID | Branch/commit | Files changed | Tests and outputs | Accepted? | Bugs | Decisions | Next task.
