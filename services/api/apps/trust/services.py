@@ -11,7 +11,7 @@ from django.utils import timezone
 
 from apps.core import audit
 from apps.core.exceptions import BusinessRuleViolation, Conflict
-from apps.notifications.services import notify
+from apps.notifications.services import notify, notify_staff
 from apps.tenancy.policy import current_policy
 
 from .models import (
@@ -196,6 +196,7 @@ def record_incident(subject, role, kind, *, ride=None, evidence=None, reported_b
         subject=subject, subject_role=role, kind=kind, ride=ride, dispute=dispute, evidence=evidence or {}, reported_by=reported_by
     )
     notify(subject, "trust.incident_recorded", {"violation_id": str(violation.pk), "kind": kind, "status": violation.status})
+    notify_staff("violations.review", "staff.incident_recorded", {"violation_id": str(violation.pk), "kind": kind})
     return violation
 
 
@@ -352,6 +353,7 @@ def file_appeal(violation, user, reason):
             appeal = Appeal.objects.create(violation=violation, appellant=user, reason=reason)
     except IntegrityError:
         raise Conflict("An appeal is already pending.", code="appeal_pending")
+    notify_staff("violations.review", "staff.appeal_filed", {"appeal_id": str(appeal.pk), "violation_id": str(violation.pk)})
     return appeal
 
 
@@ -421,6 +423,11 @@ def open_dispute(ride_id, user, *, category, description):
             mark_disputed(ride, user, role)
         if against is not None:
             notify(against, "trust.dispute_opened", {"dispute_id": str(dispute.pk), "ride_id": str(ride.pk)})
+        notify_staff(
+            "disputes.review",
+            "staff.dispute_opened",
+            {"dispute_id": str(dispute.pk), "ride_id": str(ride.pk), "is_safety": dispute.is_safety},
+        )
     return dispute
 
 

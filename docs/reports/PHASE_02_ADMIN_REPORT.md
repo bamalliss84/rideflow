@@ -1,0 +1,175 @@
+# Phase 2 — Administration Portal Report
+
+| | |
+|---|---|
+| Date | 2026-10-22 |
+| Branch | `main` |
+| Implementation commit | `<PHASE2_COMMIT_SHA>` |
+| Local URL | **http://localhost:3000** (operator sign-in at `/login`, RideFlow staff at `/platform/login`) |
+| Start | `powershell -ExecutionPolicy Bypass -File scripts\dev-up.ps1 -Build -Seed`, or `docker compose up -d --build` |
+| Status | **The portal is implemented, integrated with the real API and verified locally. Phase 2 is not declared complete** until the items in §7 are reviewed (CI first run on GitHub, MFA recovery codes, a real map/SMS provider, owner design acceptance). |
+
+## 1. Summary
+
+`apps/admin` is a Next.js 16 App Router application (TypeScript strict, Tailwind CSS 4) with 41 routes:
+
+- a **platform super-admin portal**;
+- a **transport operator portal**, Arabic-first (RTL) with English (LTR).
+
+How it is built:
+
+- **Real data only.** Every screen reads and writes the real Django `/api/v1` through a same-origin BFF. There is no mock data and no hard-coded operational figure.
+- **Phase 1 MFA gap closed.** Administrator MFA (TOTP) is now mandatory on the backend, and staff privileges require an MFA-verified session.
+
+## 2. Screens and workflows
+
+### Platform portal (`/platform`)
+
+- **Overview:** operator counts by status, registered apps, platform admins, operators created per month (chart), and a per-operator aggregate table. It shows counts only, never operator records.
+- **Operators:**
+  - list with a status filter;
+  - create/provision: name, slug, ISO currency, minor units, time zone, language; the three white-label app ids are created automatically;
+  - operator detail: edit profile (currency is locked), suspend/reactivate (with confirmation), applications (list and register, copyable client id), operator administrators (list with MFA state, add owner/admin, reset authenticator).
+- **Platform audit:** platform actions and staff sign-ins.
+- **My account:** display name, MFA state, sign-out.
+
+### Operator portal (`/operator`)
+
+Menus follow the role (owner, admin, reviewer, finance, support).
+
+- **Dashboard:**
+  - live counters: open requests, awaiting driver, on trip, open bids;
+  - period KPIs for today, 7, 30 or 90 days: requests, matched, completed, cancelled, no-shows, agreed cash fares (labelled as declarations, not revenue);
+  - daily chart, performance rates and median timings;
+  - driver supply;
+  - work queues with deep links.
+- **Drivers:**
+  - list with status tabs, search, online filter and pagination;
+  - driver detail: profile, documents with secure preview, expiry highlighting and approve/reject, vehicles with approve/reject, approve/reject/suspend/reinstate (reason required where the API requires it), recent rides, subscriptions, trust profile;
+  - **verification queue**: applications, pending documents and pending vehicles on one page.
+- **Riders:** searchable list with ride counters, plus detail with trust profile, pending incidents and recent rides.
+- **Rides:**
+  - explorer filtered by status group, city, rider phone and driver/rider deep links;
+  - ride detail: parties, fare (agreed or estimate), timeline of every event, bids, location evidence, schematic route preview, cancellation and no-show evidence, cash confirmations.
+  - Admins cannot change ride state (backend contract, stated in the UI).
+- **Live drivers:** online drivers with a fresh location around a city centre, shown on a schematic preview and in a table, refreshed every 20 seconds.
+- **Cities & zones:** create and edit cities; create and edit coverage zones from GeoJSON or a rectangle helper, with a live preview.
+- **Subscriptions:**
+  - deposit-receipt queue and review: receipt preview, approve/reject;
+  - maker-checker aware: the first or final approval is shown, and the same approver is blocked;
+  - plans (create/edit, price typed in major units and stored exactly in minor units);
+  - deposit accounts;
+  - driver subscriptions (current, upcoming or ended);
+  - ledger with CSV export.
+- **Trust & safety:**
+  - disputes (status tabs, safety flag, detail with case notes and uphold/reject with optional violation);
+  - violations (verify/dismiss with a required reason, readable evidence);
+  - penalties (activate restrictions, revoke);
+  - appeals (uphold/reject, different-reviewer rule enforced by the API);
+  - trust scores;
+  - ratings with localized tags.
+- **Reports:** rides by day (chart, table, CSV) and subscription deposits by status and plan.
+- **Notifications:** staff work notifications with deep links, and mark-all-read.
+- **Activity log:** the immutable audit trail, filtered by action prefix.
+- **Members & roles:** staff, driver and rider tabs; add member (owner role only for owners); suspend/reactivate; reset authenticator.
+- **Policy settings:** grouped policy parameters with APPROVED/PROPOSED/PROVISIONAL badges and typed editors. Saving creates a new version after a diff confirmation, and the version history is shown. The page is read-only for roles without `config.manage`.
+- **Organization** (read-only) and **My account**.
+
+## 3. Design system
+
+- **Identity:**
+  - an original RideFlow mark (route between pickup and drop-off) and wordmark, drawn in SVG code;
+  - tokens defined in `src/app/globals.css`: navy `#10243A`, teal `#0D9488`/`#0F766E`, surface `#F5F7FA`, amber `#E9A23B`, coral `#E45858`, each with contrast-checked text pairings.
+- **Typography:** IBM Plex Sans Arabic for both Arabic and Latin, self-hosted by `next/font`, with system fallbacks. Tabular numbers are used.
+- **Components:**
+  - buttons, badges, cards, key/values, stat cards, form fields with inline errors, switch;
+  - native `<dialog>` modals and confirmation dialogs (the confirm button is disabled while busy, the reason is validated);
+  - data table (skeleton, empty and error states, responsive column hiding), pagination, tabs, search with debounce, filter selects, range picker;
+  - toasts, CSS bar chart, rate bars, SVG geo preview.
+  - Icons are lucide only.
+- **RTL/LTR:** logical properties throughout, and direction-aware chevrons and arrows. Language switches via a cookie and `<html lang dir>`. Arabic UI uses Latin digits for phones, amounts and IDs (D032).
+- **Responsive:** sidebar on desktop, drawer below `lg`. At a 375 px phone width no element overflows the viewport (checked).
+- **Formatting:** dates in the operator time zone; currency from integer minor units with the operator currency; relative times and units localized with `Intl`.
+
+## 4. Backend changes in this phase (minimal; D030, D031)
+
+| Change | Why |
+|---|---|
+| `MFADevice` model and migration; `/auth/mfa/setup` and `/auth/mfa/verify`; the first factor for admin app and platform returns a challenge; token claim `mfa`; staff roles dropped without it; platform scope refused without it | Close the Phase 1 MFA gap (R01-04, T13) |
+| Dev OTP adapter refuses to start unless `DJANGO_DEBUG=1` | Never expose dev OTPs in production |
+| `/auth/app-context` (public: operator name, app type, locale, status) | Login screen shows which operator you sign in to |
+| `/admin/riders` (list/detail), `/admin/ratings` | Riders and ratings screens |
+| `/platform/overview` (aggregates only), `/platform/audit-events`, `GET /platform/tenants/{id}/admins`, platform and member MFA reset | Platform portal and lost-device recovery |
+| Read-only `*_name` fields on admin serializers; `live` block on dashboard metrics | Human-readable labels instead of raw IDs; live operations |
+| Staff notifications for submitted drivers, deposits, disputes, appeals and incidents | Notifications page lists real work items |
+| Member `role` filter accepts multiple values; driver `q` search | Correct pagination for the staff tab; search |
+
+RLS, tenant resolution, the state machine and business policies are unchanged. The isolation route test was extended to the new routes.
+
+## 5. Checks actually run (2026-10-22, local Windows + Docker)
+
+| Check | Result |
+|---|---|
+| Backend `ruff check`, `ruff format --check` | passed (120 files) |
+| `makemigrations --check` | no changes |
+| Backend `pytest --create-db` | **113 passed** (103 from Phase 1 + 10 new MFA/portal-API tests) |
+| OpenAPI `spectacular --validate --fail-on-warn` | ok, 135 paths, exported to `packages/contracts/openapi.yaml` |
+| Frontend `tsc --noEmit` (strict) | 0 errors |
+| Frontend `eslint --max-warnings=0` (next core-web-vitals + typescript) | 0 findings |
+| Frontend `next build` | success, 41 routes |
+| `docker compose build admin` and `docker compose up -d`; `scripts\dev-up.ps1` | ok; http://localhost:3000/login returns 200 |
+| HTTP probes | `/` without a session redirects to `/login`; `/operator/*` redirects to `/login?next=…`; proxy without session returns 401; cross-origin POST returns 403 `csrf_failed`; CSP and `X-Frame-Options: DENY` present |
+
+Browser walkthrough in the built-in browser against the running stack, operator portal (Arabic):
+
+- **Sign-in:** workspace resolved to the operator name, OTP, authenticator enrolment (QR and manual key), TOTP verification, then the dashboard with real figures.
+- **Session storage:** script-visible cookies were only `rf_ws` and `rf_csrf`; local and session storage were empty.
+- **Verification queue:** document preview (private blob), document approve dialog, list refresh; three more approvals; the driver approved; suspend without a reason was blocked client-side.
+- **Deposits:** a 5,000 YER receipt reviewed and approved; the subscription and ledger appeared.
+- **Disputes:** a case note was added; the case was resolved as rejected with a reason.
+- **Language:** English/LTR switch worked.
+- **Policy:** the bid validity was changed from 120 to 150, saved as version 2 with a diff confirmation.
+- **Page crawl:** every operator page rendered with data.
+- **Portal separation:** sign-out cleared the session; an operator session opening `/platform/*` was redirected to `/operator`.
+
+Browser walkthrough, platform portal:
+
+- **Sign-in:** password, authenticator enrolment, TOTP, then the overview with aggregates.
+- **Provisioning:** an operator was created through the form; its three apps were auto-registered.
+- **Isolation:** a platform session got 403 on `admin/rides/{id}` and `admin/drivers` through the BFF; the proxy refused `auth/*` with 404.
+- **Session renewal:** after the 15-minute access token expired, the page loaded through the single-flight refresh.
+- **Mobile:** 375 px viewport with no horizontal overflow and the drawer navigation.
+
+Not run in this phase: automated browser E2E tests (Playwright), a screen-reader audit, cross-browser testing, and load testing.
+
+## 6. API coverage
+
+Every operator and platform admin endpoint in the contract is used by a screen. The exceptions, by design, are the rider and driver app endpoints and `admin/config/versions/{id}`.
+
+## 7. Known gaps / remaining items
+
+- **CI:** the new `admin` job and the updated workflow have not yet been observed on GitHub. The same steps pass locally.
+- **MFA:**
+  - no recovery codes, and no WebAuthn;
+  - reset of platform-admin MFA is only possible via Django admin (internal).
+- **Maps:** schematic SVG previews only; no street basemap until a map provider is chosen (privacy and cost decision). Zone drawing is GeoJSON or rectangle, not freehand.
+- **Not available in the backend, so not shown:**
+  - tenant branding (logo and colours);
+  - admin-side ride interventions (by design);
+  - full driver names on bids (bids carry the privacy-preserving first name);
+  - a notification unread badge.
+- **Realtime:** the admin uses polling for the dashboard and live drivers; there is no WebSocket for staff yet.
+- **UI scope:** light theme only.
+- **Test automation:** no automated UI tests yet.
+- **Release blockers carried over from Phase 1:** legal gate G0 (D013), policy values pending owner approval, production adapters (SMS, push, upload scanning).
+
+## 8. Phase 3 readiness
+
+- **Ready:** the API contract and typed client pattern (`npm run gen:api`), the BFF/session model and the design system can be reused for any further web surface.
+- **Recommended next steps:**
+  1. Confirm CI is green.
+  2. Add Playwright E2E for the sign-in, verification, deposit and dispute flows.
+  3. Add MFA recovery codes.
+  4. Get owner design acceptance.
+  5. Choose a map provider.
+  6. Start Flutter rider and driver apps on the same contract.

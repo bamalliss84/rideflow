@@ -54,6 +54,24 @@ class User(AbstractBaseUser, PermissionsMixin):
         return self.phone
 
 
+class MFADevice(models.Model):
+    """TOTP authenticator of a (global) user. The secret is stored encrypted (Fernet)."""
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="mfa_device")
+    secret_encrypted = models.TextField()
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    last_used_step = models.BigIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"MFA {self.user_id} ({'confirmed' if self.confirmed_at else 'pending'})"
+
+    @property
+    def is_confirmed(self):
+        return self.confirmed_at is not None
+
+
 class PhoneOTP(TenantScopedModel):
     """One-time code issued within a tenant's application context. Only an HMAC of the code is stored."""
 

@@ -14,7 +14,7 @@ from .scenario import populate
 
 pytestmark = pytest.mark.django_db
 
-PUBLIC_ROUTES = {"otp-request", "otp-verify", "platform-login", "token-refresh"}
+PUBLIC_ROUTES = {"otp-request", "otp-verify", "platform-login", "token-refresh", "app-context", "mfa-setup", "mfa-verify"}
 
 
 def _walk(patterns, out):
@@ -66,9 +66,12 @@ OBJECT_FOR_PREFIX = [
     ("admin-member", "membership"),
     ("admin-config-version", "config"),
     ("admin-audit", "audit"),
+    ("admin-rider", "rider_membership"),
+    ("admin-rating", "rating"),
+    ("platform-audit", "audit"),
     ("platform-tenant", "tenant"),
 ]
-PARAM_OBJECTS = {"ride_id": "ride", "bid_id": "bid", "amendment_id": "amendment"}
+PARAM_OBJECTS = {"ride_id": "ride", "bid_id": "bid", "amendment_id": "amendment", "membership_id": "membership"}
 
 
 def _object_for(name, param, objects, tenant):

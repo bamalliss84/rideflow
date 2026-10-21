@@ -56,6 +56,11 @@ class GeoJSONField(serializers.Field):
         return json.loads(value.geojson) if value is not None else None
 
 
+def name_field(source):
+    """Read-only human-readable label for a related object (null when the relation is empty)."""
+    return serializers.CharField(source=source, read_only=True, allow_null=True)
+
+
 class MoneySerializer(serializers.Serializer):
     amount_minor = serializers.IntegerField()
     currency = serializers.CharField()

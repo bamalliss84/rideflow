@@ -18,6 +18,8 @@ x-api-env: &api-env
   DEMO_PLATFORM_ADMIN_PHONE: ${DEMO_PLATFORM_ADMIN_PHONE:-+967700000000}
   DEMO_PLATFORM_ADMIN_PASSWORD: ${DEMO_PLATFORM_ADMIN_PASSWORD:-change-me-local-only}
   SEED_DEMO_ON_START: ${SEED_DEMO_ON_START:-0}
+  ADMIN_MFA_REQUIRED: ${ADMIN_MFA_REQUIRED:-1}
+  MFA_ENCRYPTION_KEY: ${MFA_ENCRYPTION_KEY:-}
 
 services:
   db:
@@ -68,6 +70,22 @@ services:
       timeout: 5s
       retries: 12
       start_period: 30s
+
+  admin:
+    build:
+      context: ./apps/admin
+    image: rideflow-admin:dev
+    environment:
+      # Server-side only: the browser talks to this BFF, which calls the API over the compose network.
+      API_INTERNAL_URL: http://api:8000
+      # Local development is plain http on localhost; set to true (default) behind HTTPS.
+      COOKIE_SECURE: ${ADMIN_COOKIE_SECURE:-false}
+      DEFAULT_WORKSPACE: ${ADMIN_DEFAULT_WORKSPACE:-}
+    ports:
+      - "127.0.0.1:${ADMIN_PORT:-3000}:3000"
+    depends_on:
+      api:
+        condition: service_healthy
 
   worker:
     image: rideflow-api:dev

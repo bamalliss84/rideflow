@@ -27,5 +27,22 @@ D025 APPROVED by owner 2026-10-21: The Flutter rider and driver apps will be dev
 D026 APPROVED by owner 2026-10-21: Monetisation model of the pilot operator. Cash fares are paid directly to drivers. The operator earns from driver subscriptions paid by bank deposit, with the receipt approved manually. There is no mandatory trip commission. Reaffirms D002/D003; the platform holds no custody of fares.
 D027 APPROVED by owner 2026-10-21 (Phase 1 mission lists "rider selection, driver confirmation"): The selected driver must confirm before assignment. Resolves D012. The confirmation timeout is a tenant policy (`match.driver_confirm_timeout_seconds`, provisional default 60 s). A decline or timeout returns the request to bidding without penalty.
 D028 ENGINEERING (Claude, 2026-10-21, needs owner review, non-policy): (a) RideRequest, Match and Trip are unified into one `Ride` aggregate with an explicit state machine, so every transition is a single row-locked, version-checked update. (b) All business numbers are tenant policy parameters labelled APPROVED/PROPOSED/PROVISIONAL in `apps/tenancy/policy.py` and exposed via GET /api/v1/admin/config. (c) Several defaults that touch open decisions are off or safe: deposit dual approval off (configurable), no-show compensation disabled (D015 open), renewal discount disabled (D011 proposed). Verified incidents only auto-activate warning or commitment effects; restrictions need a human. (d) Only a development OTP adapter exists (no SMS provider approved). Linked report: docs/reports/PHASE_01_BACKEND_REPORT.md.
+D029 APPROVED by owner 2026-10-22 (Phase 2 mission): Admin portal built with Next.js App Router, TypeScript strict, Tailwind CSS and accessible in-house components. It is packaged as the `admin` Docker service on http://localhost:3000. Sessions use a backend-for-frontend with HttpOnly SameSite=Strict cookies plus CSRF double-submit; no tokens are kept in browser storage. See ADR-0005.
+D030 APPROVED by owner 2026-10-22 (Phase 2 mission "close the Phase 1 administrator MFA gap"): TOTP MFA is mandatory for every staff role and for platform admins (ADR-0005). Staff roles are granted only to sessions carrying `mfa: true`. Secrets are encrypted at rest and replayed codes are rejected. The development OTP adapter now refuses to start unless DJANGO_DEBUG=1.
+D031 ENGINEERING (Claude, 2026-10-22): Minimal backend additions made only because the portal needed them, documented in docs/reports/PHASE_02_ADMIN_REPORT.md §4:
+- MFA endpoints and the app-context endpoint;
+- riders list/detail and ratings list;
+- platform overview (aggregates only), platform audit, tenant-admin list and MFA reset;
+- member MFA reset;
+- human-readable name fields on admin serializers;
+- live operational counters on the dashboard;
+- staff notifications for new work items;
+- a multi-role member filter.
+No change to RLS, tenant resolution, ride state machine or business policies.
+D032 ENGINEERING (Claude, 2026-10-22), UI conventions:
+- Arabic-first (RTL) with English (LTR), switched by a cookie; numbers use Latin digits for operational clarity.
+- Light theme only in Phase 2.
+- Maps are schematic SVG previews (no external tile provider, so no third-party data sharing or keys). A real map provider is a later decision.
+- Exports are client-side CSV of data already returned by the API.
 
 Rule: New decisions get sequential ID, date, approver, rationale, impact and linked task. Never silently reinterpret proposals as approved.

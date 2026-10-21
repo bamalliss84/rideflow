@@ -2,7 +2,11 @@
 
 Multi-tenant ride-hailing SaaS backend. A **tenant** is an independent transportation operator, which may run in several cities. Mukalla, Yemen is the first pilot city; it is demo data, not a platform restriction (D017).
 
-**Phase 1 status:** the backend API is implemented and tested locally. The Next.js admin dashboard and the Flutter rider and driver apps come in later phases. See [docs/reports/PHASE_01_BACKEND_REPORT.md](docs/reports/PHASE_01_BACKEND_REPORT.md) for scope, test evidence and open items.
+**Status:**
+
+- **Phase 1:** backend API ([report](docs/reports/PHASE_01_BACKEND_REPORT.md)).
+- **Phase 2:** administration portal for platform staff and transport operators, Arabic-first ([report](docs/reports/PHASE_02_ADMIN_REPORT.md)).
+- **Later phases:** Flutter rider and driver apps.
 
 ## Stack
 
@@ -11,10 +15,12 @@ Multi-tenant ride-hailing SaaS backend. A **tenant** is an independent transport
 - Redis 7: cache, throttling and the Channels layer.
 - Django Channels and Daphne for WebSocket hints.
 - Docker Compose for local development. The source code stays on the Windows host as a bind mount.
+- Admin portal (`apps/admin`): Next.js 16 App Router, React 19, TypeScript (strict), Tailwind CSS 4, TanStack Query, lucide icons, and IBM Plex Sans Arabic (self-hosted).
 
 ## Repository layout
 
 ```
+apps/admin/              Next.js admin portal (platform + operator), BFF auth, design system
 services/api/            Django project (rideflow/) and modular apps (apps/*)
   apps/core              tenant context, RLS guards, idempotency, audit, health, permissions
   apps/tenancy           tenants, white-label app contexts, memberships, versioned tenant policy
@@ -44,12 +50,13 @@ powershell -ExecutionPolicy Bypass -File scripts\dev-up.ps1 -Build -Seed
 This command:
 
 1. Creates `.env` from `.env.example`. The values are for development only, and `.env` is never committed.
-2. Starts `db`, `redis`, `api` and `worker`.
+2. Starts `db`, `redis`, `api`, `worker` and `admin`.
 3. Applies migrations and waits for `/health/ready`.
 4. Loads the demo data.
 
 | URL | Purpose |
 |---|---|
+| **http://localhost:3000** | **Admin portal: operator sign-in at `/login`, RideFlow staff at `/platform/login`** |
 | http://127.0.0.1:8010/api/v1/ | REST API v1 |
 | http://127.0.0.1:8010/api/docs/ | Swagger UI |
 | http://127.0.0.1:8010/api/redoc/ | ReDoc |
@@ -69,6 +76,20 @@ docker compose down                                                  # stop (kee
 ```
 
 `scripts/dev.sh up|seed|test|openapi|down` does the same from Git Bash, Linux or CI.
+
+## Admin portal sign-in (local demo)
+
+- **Operator portal:** open http://localhost:3000/login and follow these steps:
+  1. Enter workspace `demo-mukalla-admin` and phone `+967700000001` (owner).
+  2. Enter the dev OTP `000000`.
+  3. On first sign-in, set up an authenticator app: scan the QR code or type the key.
+  4. Enter the 6-digit code from the app.
+
+  Finance (`+967700000002`) and reviewer (`+967700000003`) see role-restricted menus.
+- **Platform portal:** open http://localhost:3000/platform/login and sign in with `DEMO_PLATFORM_ADMIN_PHONE` and `DEMO_PLATFORM_ADMIN_PASSWORD`, followed by the same authenticator steps.
+- **Lost authenticator:**
+  - an operator owner or admin can reset a staff member's authenticator under **Members**;
+  - RideFlow staff can reset an operator owner's or admin's authenticator from the operator page.
 
 ## Demo data (`seed_demo`, idempotent, all fake)
 
@@ -101,6 +122,15 @@ docker compose down                                                  # stop (kee
   - Cross-tenant lookups return 404.
 - **Append-only records.** Audit events, ledgers, ride events, location evidence and config versions are append-only, and database triggers reject UPDATE and DELETE.
 - **No automatic penalties.** The system never fines anyone and never sanctions from star ratings or a single GPS fix. Incidents require human verification, restrictions require human activation, and appeals are decided by a different reviewer.
+
+## Admin portal security (ADR-0005)
+
+- **BFF sessions.** The browser talks only to the Next.js server, never directly to the API.
+  - JWTs live in HttpOnly, SameSite=Strict cookies.
+  - Mutations require a same-origin request and a CSRF double-submit token.
+  - Expired access tokens are renewed by one single-flight refresh.
+- **Mandatory administrator MFA.** Administrator accounts must use TOTP. Staff permissions exist only in MFA-verified sessions.
+- **Separate portals.** Platform and operator sessions are separate. The UI hides actions the role cannot perform, but the API remains the only security boundary.
 
 ## Tests and CI
 

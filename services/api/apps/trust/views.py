@@ -12,7 +12,7 @@ from apps.core.permissions import IsDriver, IsRiderOrDriver, TenantPermission, r
 from apps.core.views import schema_safe
 
 from . import services
-from .models import Appeal, Dispute, EnforcementAction, TrustSnapshot, Violation
+from .models import Appeal, Dispute, EnforcementAction, Rating, TrustSnapshot, Violation
 from .serializers import (
     AppealCreateSerializer,
     AppealDecisionSerializer,
@@ -262,6 +262,20 @@ class AdminDisputeViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, view
         serializer.is_valid(raise_exception=True)
         note = services.add_dispute_note(self.get_object(), request.user, "staff", serializer.validated_data["note"])
         return Response(DisputeNoteSerializer(note).data, status=status.HTTP_201_CREATED)
+
+
+@extend_schema(tags=["admin-trust"])
+class AdminRatingViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = RatingSerializer
+    permission_classes = [TenantPermission]
+    required_permission = "violations.review"
+    filterset_fields = ["ratee_role", "stars", "ride", "ratee"]
+    ordering_fields = ["created_at", "stars"]
+    ordering = ["-created_at"]
+
+    @schema_safe(Rating)
+    def get_queryset(self):
+        return Rating.objects.select_related("rater", "ratee")
 
 
 @extend_schema(tags=["admin-trust"])

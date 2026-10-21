@@ -39,7 +39,7 @@ def test_platform_provisions_tenant_with_apps_and_first_admin(platform_api):
         format="json",
         HTTP_X_RIDEFLOW_APP=admin_app["client_id"],
     )
-    assert r.status_code == 200 and r.data["tenant"]["roles"] == ["owner"]
+    assert r.status_code == 200 and r.data["mfa_required"] is True and r.data["tenant"]["roles"] == ["owner"]
     assert AuditEvent.objects.filter(action="platform.tenant_created", actor=platform_api.user).exists()
 
 

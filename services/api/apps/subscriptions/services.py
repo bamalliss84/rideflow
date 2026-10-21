@@ -96,6 +96,9 @@ def submit_claim(driver, *, plan, deposit_account, amount_minor, reference, depo
     audit.record(
         "subscription.claim_submitted", request=request, target=claim, data={"reference": reference, "amount_minor": amount_minor}
     )
+    from apps.notifications.services import notify_staff
+
+    notify_staff("subscriptions.review", "staff.deposit_submitted", {"claim_id": str(claim.pk), "reference": reference})
     return claim
 
 

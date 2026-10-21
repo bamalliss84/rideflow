@@ -11,6 +11,7 @@ router.register("admin/enforcement-actions", views.AdminEnforcementViewSet, base
 router.register("admin/appeals", views.AdminAppealViewSet, basename="admin-appeal")
 router.register("admin/disputes", views.AdminDisputeViewSet, basename="admin-dispute")
 router.register("admin/trust-snapshots", views.AdminTrustSnapshotViewSet, basename="admin-trust-snapshot")
+router.register("admin/ratings", views.AdminRatingViewSet, basename="admin-rating")
 
 urlpatterns = [
     path("rides/<uuid:ride_id>/rating", views.RideRatingView.as_view(), name="ride-rating"),

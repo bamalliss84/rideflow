@@ -52,5 +52,17 @@ def notify(user, kind, payload):
     return notification
 
 
+def notify_staff(permission, kind, payload):
+    """Notifies every active staff member of the current tenant whose role grants `permission`."""
+    from apps.accounts.models import User
+    from apps.core.permissions import ROLE_PERMISSIONS, STAFF_ROLES
+    from apps.tenancy.models import MembershipStatus, TenantMembership
+
+    roles = [role for role in STAFF_ROLES if permission in ROLE_PERMISSIONS[role]]
+    user_ids = set(TenantMembership.objects.filter(role__in=roles, status=MembershipStatus.ACTIVE).values_list("user_id", flat=True))
+    for user in User.objects.filter(pk__in=user_ids, is_active=True):
+        notify(user, kind, payload)
+
+
 def replay(tenant_id, user_id, after_cursor, limit=100):
     return list(Notification.all_tenants.filter(tenant_id=tenant_id, user_id=user_id, id__gt=after_cursor).order_by("id")[:limit])

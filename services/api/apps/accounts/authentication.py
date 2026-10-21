@@ -1,3 +1,4 @@
+from django.conf import settings
 from rest_framework import status
 from rest_framework.exceptions import APIException, AuthenticationFailed
 from rest_framework_simplejwt.authentication import JWTAuthentication
@@ -15,9 +16,11 @@ class AppContextInvalid(APIException):
     default_code = "app_invalid"
 
 
-def issue_tokens(user, *, scope, tenant=None, app=None):
+def issue_tokens(user, *, scope, tenant=None, app=None, mfa=False):
     refresh = RefreshToken.for_user(user)
     refresh["scope"] = scope
+    if mfa:
+        refresh["mfa"] = True
     if tenant is not None:
         refresh["tid"] = str(tenant.pk)
     if app is not None:
@@ -59,9 +62,12 @@ class TenantJWTAuthentication(JWTAuthentication):
             return None
         user, token = result
         scope = token.get("scope")
+        mfa_ok = bool(token.get("mfa")) or not settings.ADMIN_MFA_REQUIRED
         if scope == "platform":
             if not user.is_platform_admin:
                 raise AuthenticationFailed("Platform access revoked.", code="platform_revoked")
+            if not mfa_ok:
+                raise AuthenticationFailed("Multi-factor authentication is required.", code="mfa_required")
             bind_request(request, scope="platform")
             return user, token
         if scope != "tenant":
@@ -78,6 +84,11 @@ class TenantJWTAuthentication(JWTAuthentication):
         from apps.tenancy.services import active_roles
 
         roles = active_roles(user)
+        if not mfa_ok:
+            # Staff roles are only granted to MFA-verified sessions (a rider-app token never carries them).
+            from apps.core.permissions import STAFF_ROLES
+
+            roles = roles - STAFF_ROLES
         if not roles:
             context.set_locked()
             raise AuthenticationFailed("No active membership in this tenant.", code="membership_inactive")

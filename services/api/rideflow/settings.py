@@ -162,6 +162,7 @@ REST_FRAMEWORK = {
         "otp_verify_ip": env("THROTTLE_OTP_VERIFY_IP", "120/hour"),
         "platform_login": env("THROTTLE_PLATFORM_LOGIN", "10/hour"),
         "location": env("THROTTLE_LOCATION", "120/min"),
+        "mfa_ip": env("THROTTLE_MFA_IP", "60/hour"),
     },
     "EXCEPTION_HANDLER": "apps.core.exceptions.api_exception_handler",
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
@@ -210,6 +211,9 @@ SPECTACULAR_SETTINGS = {
 
 # OTP
 OTP_PROVIDER = env("OTP_PROVIDER", "dev")
+if OTP_PROVIDER == "dev" and not DEBUG:
+    # The development adapter logs codes; it must never run outside development.
+    raise RuntimeError("OTP_PROVIDER=dev is only allowed with DJANGO_DEBUG=1")
 OTP_DEV_CODE = env("OTP_DEV_CODE", "")
 OTP_TTL_SECONDS = int(env("OTP_TTL_SECONDS", "300"))
 OTP_MAX_ATTEMPTS = int(env("OTP_MAX_ATTEMPTS", "5"))
@@ -217,6 +221,10 @@ OTP_MAX_ATTEMPTS = int(env("OTP_MAX_ATTEMPTS", "5"))
 # Upload limits (tenant policy may lower these)
 UPLOAD_MAX_BYTES = int(env("UPLOAD_MAX_BYTES", str(5 * 1024 * 1024)))
 DATA_UPLOAD_MAX_MEMORY_SIZE = UPLOAD_MAX_BYTES + 1024 * 1024
+
+# Administrator MFA (TOTP). Required for staff roles and the platform scope.
+ADMIN_MFA_REQUIRED = env_bool("ADMIN_MFA_REQUIRED", True)
+MFA_ENCRYPTION_KEY = env("MFA_ENCRYPTION_KEY", "")  # Fernet key; derived from SECRET_KEY when empty (dev)
 
 IDEMPOTENCY_TTL_HOURS = int(env("IDEMPOTENCY_TTL_HOURS", "48"))
 

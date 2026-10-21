@@ -109,10 +109,11 @@ def make_driver(t, *, approved=True, online=True, subscribed=True, offset=(0.001
 class Api:
     """APIClient bound to a user + tenant token; POST/PATCH add a fresh Idempotency-Key unless one is given."""
 
-    def __init__(self, user, tenant=None, platform=False, app=None):
+    def __init__(self, user, tenant=None, platform=False, app=None, mfa=True):
         self.user = user
         self.client = APIClient()
-        tokens = issue_tokens(user, scope="platform" if platform else "tenant", tenant=tenant, app=app)
+        # mfa=True simulates a session that completed the administrator second factor.
+        tokens = issue_tokens(user, scope="platform" if platform else "tenant", tenant=tenant, app=app, mfa=mfa)
         self.tokens = tokens
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['access']}")
 

@@ -82,6 +82,9 @@ def submit_for_review(driver, request=None):
     driver.submitted_at = timezone.now()
     driver.save(update_fields=["status", "submitted_at", "updated_at"])
     audit.record("driver.submitted", request=request, target=driver)
+    from apps.notifications.services import notify_staff
+
+    notify_staff("drivers.review", "staff.driver_submitted", {"driver_id": str(driver.pk), "name": driver.user.full_name})
     return driver
 
 

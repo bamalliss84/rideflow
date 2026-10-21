@@ -35,7 +35,10 @@ if (-not $ready) { docker compose logs --tail 50 api; Write-Error "API did not b
 
 if ($Seed) { docker compose exec -T api python manage.py seed_demo }
 
+$adminPort = (Select-String -Path ".env" -Pattern "^ADMIN_PORT=(\d+)" | ForEach-Object { $_.Matches[0].Groups[1].Value })
+if (-not $adminPort) { $adminPort = "3000" }
 Write-Host ""
+Write-Host "Admin portal      http://localhost:$adminPort  (operators: /login, RideFlow staff: /platform/login)"
 Write-Host "RideFlow API      http://127.0.0.1:$port/api/v1/"
 Write-Host "Swagger UI        http://127.0.0.1:$port/api/docs/"
 Write-Host "ReDoc             http://127.0.0.1:$port/api/redoc/"

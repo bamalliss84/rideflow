@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from apps.core.fields import name_field
+
 from .models import (
     Appeal,
     Dispute,
@@ -33,16 +35,24 @@ class RatingCreateSerializer(serializers.Serializer):
 
 
 class RatingSerializer(serializers.ModelSerializer):
+    rater_name = name_field("rater.full_name")
+    ratee_name = name_field("ratee.full_name")
+
     class Meta:
         model = Rating
-        fields = ["id", "ride", "rater_role", "ratee_role", "stars", "tags", "comment", "created_at"]
+        fields = ["rater_name", "ratee_name", "id", "ride", "rater_role", "ratee_role", "stars", "tags", "comment", "created_at"]
         read_only_fields = fields
 
 
 class TrustSnapshotSerializer(serializers.ModelSerializer):
+    user_name = name_field("user.full_name")
+    user_phone = name_field("user.phone")
+
     class Meta:
         model = TrustSnapshot
         fields = [
+            "user_name",
+            "user_phone",
             "user",
             "role",
             "score",
@@ -69,9 +79,16 @@ class TrustSummarySerializer(serializers.Serializer):
 
 
 class ViolationSerializer(serializers.ModelSerializer):
+    subject_name = name_field("subject.full_name")
+    subject_phone = name_field("subject.phone")
+    reviewed_by_name = name_field("reviewed_by.full_name")
+
     class Meta:
         model = Violation
         fields = [
+            "subject_name",
+            "subject_phone",
+            "reviewed_by_name",
             "id",
             "subject",
             "subject_role",
@@ -95,9 +112,14 @@ class ViolationReviewSerializer(serializers.Serializer):
 
 
 class EnforcementSerializer(serializers.ModelSerializer):
+    subject_name = name_field("subject.full_name")
+    decided_by_name = name_field("decided_by.full_name")
+
     class Meta:
         model = EnforcementAction
         fields = [
+            "subject_name",
+            "decided_by_name",
             "id",
             "subject",
             "subject_role",
@@ -124,9 +146,24 @@ class AppealCreateSerializer(serializers.Serializer):
 
 
 class AppealSerializer(serializers.ModelSerializer):
+    appellant_name = name_field("appellant.full_name")
+    decided_by_name = name_field("decided_by.full_name")
+
     class Meta:
         model = Appeal
-        fields = ["id", "violation", "appellant", "reason", "status", "decided_by", "decided_at", "decision_note", "created_at"]
+        fields = [
+            "appellant_name",
+            "decided_by_name",
+            "id",
+            "violation",
+            "appellant",
+            "reason",
+            "status",
+            "decided_by",
+            "decided_at",
+            "decision_note",
+            "created_at",
+        ]
         read_only_fields = fields
 
 
@@ -141,18 +178,26 @@ class DisputeCreateSerializer(serializers.Serializer):
 
 
 class DisputeNoteSerializer(serializers.ModelSerializer):
+    author_name = name_field("author.full_name")
+
     class Meta:
         model = DisputeNote
-        fields = ["id", "author", "author_role", "note", "created_at"]
+        fields = ["author_name", "id", "author", "author_role", "note", "created_at"]
         read_only_fields = ["id", "author", "author_role", "created_at"]
 
 
 class DisputeSerializer(serializers.ModelSerializer):
+    opened_by_name = name_field("opened_by.full_name")
+    against_name = name_field("against.full_name")
+    resolved_by_name = name_field("resolved_by.full_name")
     notes = DisputeNoteSerializer(many=True, read_only=True)
 
     class Meta:
         model = Dispute
         fields = [
+            "opened_by_name",
+            "against_name",
+            "resolved_by_name",
             "id",
             "ride",
             "opened_by",

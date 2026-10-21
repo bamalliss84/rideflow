@@ -320,7 +320,7 @@ class AdminRideViewSet(viewsets.ReadOnlyModelViewSet):
 
     @schema_safe(Ride)
     def get_queryset(self):
-        return Ride.objects.all()
+        return Ride.objects.select_related("rider", "driver__user", "city")
 
     @extend_schema(responses=RideEventSerializer(many=True))
     @action(detail=True, methods=["get"])

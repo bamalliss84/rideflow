@@ -1,0 +1,106 @@
+@import "tailwindcss";
+
+/*
+ * RideFlow design tokens.
+ * Brand: navy #10243A (primary), teal #0D9488 (accent), surface #F5F7FA, amber #E9A23B (pending),
+ * coral #E45858 (danger). Text-on-colour pairs are chosen for WCAG AA contrast:
+ * white on navy-900 (15:1), white on teal-700 (5.5:1), coral-700 on white (6:1), amber-800 on amber-50 (6.8:1).
+ */
+@theme {
+  --font-sans: var(--font-plex), "Segoe UI", Tahoma, "Noto Sans Arabic", Arial, sans-serif;
+
+  --color-navy-50: #f2f5f9;
+  --color-navy-100: #e3e9f1;
+  --color-navy-200: #c6d2e1;
+  --color-navy-300: #9cb0c8;
+  --color-navy-400: #6b85a6;
+  --color-navy-500: #4a6587;
+  --color-navy-600: #365071;
+  --color-navy-700: #26405e;
+  --color-navy-800: #1a3049;
+  --color-navy-900: #10243a;
+  --color-navy-950: #0a1828;
+
+  --color-teal-50: #ecfbf8;
+  --color-teal-100: #cdf3ec;
+  --color-teal-200: #9de6da;
+  --color-teal-300: #63d1c2;
+  --color-teal-400: #2fb5a7;
+  --color-teal-500: #14a394;
+  --color-teal-600: #0d9488;
+  --color-teal-700: #0f766e;
+  --color-teal-800: #115e59;
+  --color-teal-900: #134e4a;
+
+  --color-amber-50: #fef8ee;
+  --color-amber-100: #fcefd6;
+  --color-amber-200: #f8dcaa;
+  --color-amber-300: #f2c272;
+  --color-amber-400: #eeb257;
+  --color-amber-500: #e9a23b;
+  --color-amber-600: #c98420;
+  --color-amber-700: #a2661a;
+  --color-amber-800: #82511a;
+
+  --color-coral-50: #fdf3f3;
+  --color-coral-100: #fbe3e3;
+  --color-coral-200: #f7caca;
+  --color-coral-300: #f0a3a3;
+  --color-coral-400: #ea7b7b;
+  --color-coral-500: #e45858;
+  --color-coral-600: #c94343;
+  --color-coral-700: #a93535;
+  --color-coral-800: #8c3030;
+
+  --color-surface: #f5f7fa;
+  --color-ink: #10243a;
+  --color-muted: #586a80;
+  --color-subtle: #8394a8;
+  --color-line: #e3e8ef;
+  --color-line-strong: #cfd7e2;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+
+  --shadow-card: 0 1px 2px rgb(16 36 58 / 0.04), 0 1px 1px rgb(16 36 58 / 0.03);
+  --shadow-pop: 0 10px 30px -10px rgb(16 36 58 / 0.25), 0 4px 10px -6px rgb(16 36 58 / 0.12);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    background: var(--color-surface);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-feature-settings: "tnum" 1;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-teal-600);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: var(--color-teal-100);
+  }
+  dialog::backdrop {
+    background: rgb(10 24 40 / 0.45);
+  }
+  /* Numbers/phones/codes always read left-to-right, even inside RTL text. */
+  .ltr-nums {
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

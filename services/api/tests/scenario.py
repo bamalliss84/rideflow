@@ -13,7 +13,7 @@ from apps.notifications.models import Notification
 from apps.rides.models import Bid, Ride, RideAmendment
 from apps.subscriptions.models import DepositClaim, DriverSubscription, SubscriptionLedgerEntry
 from apps.tenancy.models import TenantConfig, TenantMembership
-from apps.trust.models import Appeal, Dispute, EnforcementAction, TrustSnapshot, Violation
+from apps.trust.models import Appeal, Dispute, EnforcementAction, Rating, TrustSnapshot, Violation
 
 from .factories import PDF, api_for, make_driver, make_member, ride_payload
 
@@ -89,6 +89,8 @@ def populate(t):
             appeal=Appeal.objects.get(pk=appeal["id"]),
             dispute=Dispute.objects.get(pk=dispute["id"]),
             snapshot=TrustSnapshot.objects.first(),
+            rating=Rating.objects.first(),
+            rider_membership=TenantMembership.objects.get(user=rider, role="rider"),
             membership=TenantMembership.objects.get(user=owner, role="owner"),
             config=TenantConfig.objects.first(),
             audit=AuditEvent.objects.filter(tenant=t.tenant).first(),

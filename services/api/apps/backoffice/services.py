@@ -175,6 +175,14 @@ def dashboard_metrics(tenant, date_from=None, date_to=None):
             "median_assignment_to_arrival": _median(arrival_delays),
         },
         "riders": {"repeat_riders": repeat_riders, "unique_riders": rides.values("rider").distinct().count()},
+        "live": {
+            "requests_open": Ride.objects.filter(status__in=[RideStatus.REQUESTED, RideStatus.BIDDING]).count(),
+            "awaiting_driver_confirmation": Ride.objects.filter(status=RideStatus.MATCH_PENDING).count(),
+            "on_trip": Ride.objects.filter(
+                status__in=[RideStatus.ASSIGNED, RideStatus.EN_ROUTE, RideStatus.ARRIVED, RideStatus.IN_PROGRESS]
+            ).count(),
+            "open_bids": Bid.objects.filter(status="open", expires_at__gt=now).count(),
+        },
         "queues": {
             "drivers_under_review": drivers["under_review"],
             "deposit_claims_pending": DepositClaim.objects.filter(
@@ -237,3 +245,106 @@ def subscriptions_report(tenant, date_from=None, date_to=None):
         "approved_total_minor": approved_total,
         "approved_by_plan": by_plan,
     }
+
+
+# ---------------------------------------------------------------- platform overview (aggregates only, no PII)
+
+
+def platform_overview():
+    """Cross-tenant aggregate counts for RideFlow staff. Explicit system context; never returns tenant records."""
+    from django.db.models.functions import TruncMonth
+
+    from apps.core.context import system_context
+    from apps.drivers.models import DriverProfile
+    from apps.rides.models import Ride
+    from apps.subscriptions.models import DriverSubscription
+
+    now = timezone.now()
+    since = now - timedelta(days=30)
+    with system_context():
+        tenants = list(Tenant.objects.order_by("name"))
+
+        def by_tenant(qs):
+            return {row["tenant_id"]: row["n"] for row in qs.values("tenant_id").annotate(n=Count("id"))}
+
+        members = TenantMembership.all_tenants.filter(status=MembershipStatus.ACTIVE)
+        staff = by_tenant(members.filter(role__in=["owner", "admin", "reviewer", "finance", "support"]))
+        riders = by_tenant(members.filter(role=Role.RIDER))
+        drivers = by_tenant(DriverProfile.all_tenants.all())
+        approved = by_tenant(DriverProfile.all_tenants.filter(status="approved"))
+        rides = by_tenant(Ride.all_tenants.filter(created_at__gte=since))
+        completed = by_tenant(Ride.all_tenants.filter(created_at__gte=since, completed_at__isnull=False))
+        subs = {
+            row["tenant_id"]: row["n"]
+            for row in DriverSubscription.all_tenants.filter(is_revoked=False, starts_at__lte=now, ends_at__gte=now)
+            .values("tenant_id")
+            .annotate(n=Count("driver", distinct=True))
+        }
+        months = list(
+            Tenant.objects.annotate(month=TruncMonth("created_at")).values("month").annotate(n=Count("id")).order_by("month")
+        )
+        app_count = TenantApplication.objects.filter(is_active=True).count()
+        admin_count = User.objects.filter(is_platform_admin=True, is_active=True).count()
+    status_counts = {"total": len(tenants), "active": 0, "suspended": 0}
+    for t in tenants:
+        status_counts[t.status] = status_counts.get(t.status, 0) + 1
+    return {
+        "generated_at": now,
+        "tenants": status_counts,
+        "applications": app_count,
+        "platform_admins": admin_count,
+        "tenants_created_by_month": [{"month": m["month"].date().isoformat(), "count": m["n"]} for m in months],
+        "per_tenant": [
+            {
+                "id": t.pk,
+                "name": t.name,
+                "slug": t.slug,
+                "status": t.status,
+                "currency": t.currency,
+                "created_at": t.created_at,
+                "staff": staff.get(t.pk, 0),
+                "riders": riders.get(t.pk, 0),
+                "drivers": drivers.get(t.pk, 0),
+                "drivers_approved": approved.get(t.pk, 0),
+                "rides_30d": rides.get(t.pk, 0),
+                "rides_completed_30d": completed.get(t.pk, 0),
+                "active_driver_subscriptions": subs.get(t.pk, 0),
+            }
+            for t in tenants
+        ],
+    }
+
+
+def reset_member_mfa(membership, *, actor, request=None, platform=False):
+    """Removes the authenticator of a staff member so they re-enrol at next sign-in (lost device).
+
+    Tenant administrators may only reset users who hold no staff membership in another tenant;
+    otherwise the reset must be done by RideFlow platform staff.
+    """
+    from apps.accounts.models import MFADevice
+    from apps.core.context import system_context
+    from apps.core.permissions import STAFF_ROLES
+
+    if membership.user_id == actor.pk:
+        raise BusinessRuleViolation("You cannot reset your own authenticator.", code="self_change")
+    if membership.role not in STAFF_ROLES:
+        raise BusinessRuleViolation("Only staff members use an authenticator.", code="not_staff")
+    if not platform:
+        with system_context():
+            elsewhere = (
+                TenantMembership.all_tenants.filter(user_id=membership.user_id, role__in=STAFF_ROLES)
+                .exclude(tenant_id=membership.tenant_id)
+                .exists()
+            )
+        if elsewhere:
+            raise BusinessRuleViolation("This user is staff at another operator; ask RideFlow support.", code="cross_tenant_user")
+    deleted, _ = MFADevice.objects.filter(user_id=membership.user_id).delete()
+    audit.record(
+        "platform.member_mfa_reset" if platform else "tenant.member_mfa_reset",
+        request=request,
+        actor=actor,
+        target=membership,
+        tenant_id=membership.tenant_id,
+        data={"had_device": bool(deleted)},
+    )
+    return membership

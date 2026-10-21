@@ -1,0 +1,35 @@
+{
+  "name": "@rideflow/admin",
+  "version": "0.2.0",
+  "private": true,
+  "description": "RideFlow administration portal (platform + transport operator)",
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000",
+    "lint": "eslint . --max-warnings=0",
+    "typecheck": "tsc --noEmit",
+    "gen:api": "openapi-typescript ../../packages/contracts/openapi.yaml -o src/lib/api/schema.ts",
+    "check": "npm run typecheck && npm run lint"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "5.104.5",
+    "lucide-react": "1.61.0",
+    "next": "16.4.2",
+    "qrcode": "1.5.4",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.3.3",
+    "@types/node": "24.19.2",
+    "@types/qrcode": "1.5.6",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "eslint": "9.39.5",
+    "eslint-config-next": "16.4.2",
+    "openapi-typescript": "7.13.0",
+    "tailwindcss": "4.3.3",
+    "typescript": "5.9.3"
+  }
+}

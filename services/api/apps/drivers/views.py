@@ -1,3 +1,4 @@
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django_filters import rest_framework as filters
 from drf_spectacular.utils import extend_schema
@@ -117,10 +118,14 @@ class AdminDriverFilter(TenantFilterSet):
     status = filters.CharFilter()
     is_online = filters.BooleanFilter()
     phone = filters.CharFilter(field_name="user__phone", lookup_expr="icontains")
+    q = filters.CharFilter(method="search", label="Name or phone contains")
+
+    def search(self, queryset, name, value):
+        return queryset.filter(Q(user__full_name__icontains=value) | Q(user__phone__icontains=value))
 
     class Meta:
         model = DriverProfile
-        fields = ["status", "is_online", "phone"]
+        fields = ["status", "is_online", "phone", "q"]
 
 
 @extend_schema(tags=["admin-drivers"])

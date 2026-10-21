@@ -1090,6 +1090,11 @@ paths:
         schema:
           type: string
       - in: query
+        name: q
+        schema:
+          type: string
+        description: Name or phone contains
+      - in: query
         name: status
         schema:
           type: string
@@ -1369,15 +1374,17 @@ paths:
       - in: query
         name: role
         schema:
-          type: string
-          enum:
-          - admin
-          - driver
-          - finance
-          - owner
-          - reviewer
-          - rider
-          - support
+          type: array
+          items:
+            type: string
+            enum:
+            - admin
+            - driver
+            - finance
+            - owner
+            - reviewer
+            - rider
+            - support
         description: |-
           * `rider` - Rider
           * `driver` - Driver
@@ -1386,6 +1393,8 @@ paths:
           * `reviewer` - Reviewer (drivers, disputes, violations)
           * `finance` - Finance (deposits, plans)
           * `support` - Support (read-only operations)
+        explode: true
+        style: form
       - in: query
         name: status
         schema:
@@ -1476,6 +1485,28 @@ paths:
               schema:
                 $ref: '#/components/schemas/Membership'
           description: ''
+  /api/v1/admin/members/{id}/reset-mfa:
+    post:
+      operationId: admin_members_reset_mfa_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: نوع نص UUID يحدد هذا tenant membership.
+        required: true
+      tags:
+      - admin-tenant
+      security:
+      - BearerJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Membership'
+          description: ''
   /api/v1/admin/members/{id}/suspend:
     post:
       operationId: admin_members_suspend_create
@@ -1497,6 +1528,79 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Membership'
+          description: ''
+  /api/v1/admin/ratings:
+    get:
+      operationId: admin_ratings_list
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - in: query
+        name: ratee
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: ratee_role
+        schema:
+          type: string
+      - in: query
+        name: ride
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: stars
+        schema:
+          type: integer
+      tags:
+      - admin-trust
+      security:
+      - BearerJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedRatingList'
+          description: ''
+  /api/v1/admin/ratings/{id}:
+    get:
+      operationId: admin_ratings_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: نوع نص UUID يحدد هذا rating.
+        required: true
+      tags:
+      - admin-trust
+      security:
+      - BearerJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Rating'
           description: ''
   /api/v1/admin/reports/rides-daily:
     get:
@@ -1549,6 +1653,80 @@ paths:
               schema:
                 type: object
                 additionalProperties: {}
+          description: ''
+  /api/v1/admin/riders:
+    get:
+      operationId: admin_riders_list
+      description: Riders (customers) of the operator with ride counters; detail adds
+        trust profile and recent rides.
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Name or phone contains
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - active
+          - suspended
+        description: |-
+          * `active` - Active
+          * `suspended` - Suspended
+      tags:
+      - admin-tenant
+      security:
+      - BearerJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedRiderList'
+          description: ''
+  /api/v1/admin/riders/{id}:
+    get:
+      operationId: admin_riders_retrieve
+      description: Riders (customers) of the operator with ride counters; detail adds
+        trust profile and recent rides.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: نوع نص UUID يحدد هذا tenant membership.
+        required: true
+      tags:
+      - admin-tenant
+      security:
+      - BearerJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RiderDetail'
           description: ''
   /api/v1/admin/rides:
     get:
@@ -2625,6 +2803,29 @@ paths:
               schema:
                 $ref: '#/components/schemas/Violation'
           description: ''
+  /api/v1/auth/app-context:
+    get:
+      operationId: auth_app_context_retrieve
+      description: Public, minimal description of an application context (login screens
+        show the operator name).
+      parameters:
+      - in: header
+        name: X-RideFlow-App
+        schema:
+          type: string
+        description: Client id of the registered tenant application (trusted app context).
+        required: true
+      tags:
+      - auth
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppContext'
+          description: ''
   /api/v1/auth/logout:
     post:
       operationId: auth_logout_create
@@ -2647,6 +2848,62 @@ paths:
       responses:
         '205':
           description: No response body
+  /api/v1/auth/mfa/setup:
+    post:
+      operationId: auth_mfa_setup_create
+      description: Starts (or restarts, while unconfirmed) TOTP enrolment for the
+        user of a valid MFA challenge.
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MFATokenRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MFATokenRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MFATokenRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MFASetupResponse'
+          description: ''
+  /api/v1/auth/mfa/verify:
+    post:
+      operationId: auth_mfa_verify_create
+      description: Second factor. Confirms enrolment on first use and issues MFA-verified
+        tokens.
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MFAVerifyRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MFAVerifyRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MFAVerifyRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MFASession'
+          description: ''
   /api/v1/auth/otp/request:
     post:
       operationId: auth_otp_request_create
@@ -2683,6 +2940,8 @@ paths:
   /api/v1/auth/otp/verify:
     post:
       operationId: auth_otp_verify_create
+      description: Rider/driver apps receive tokens. The admin app receives an MFA
+        challenge (MFAChallenge) instead.
       parameters:
       - in: header
         name: X-RideFlow-App
@@ -2739,7 +2998,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TokenPair'
+                $ref: '#/components/schemas/MFAChallenge'
           description: ''
   /api/v1/auth/token/refresh:
     post:
@@ -3490,6 +3749,100 @@ paths:
               schema:
                 $ref: '#/components/schemas/MarkRead'
           description: ''
+  /api/v1/platform/audit-events:
+    get:
+      operationId: platform_audit_events_list
+      description: 'Platform-level audit: platform actions and platform-staff logins
+        only (never tenant operations).'
+      parameters:
+      - in: query
+        name: action
+        schema:
+          type: string
+      - in: query
+        name: created_from
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: created_to
+        schema:
+          type: string
+          format: date-time
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - in: query
+        name: tenant
+        schema:
+          type: string
+          format: uuid
+      tags:
+      - platform
+      security:
+      - BearerJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAuditEventList'
+          description: ''
+  /api/v1/platform/audit-events/{id}:
+    get:
+      operationId: platform_audit_events_retrieve
+      description: 'Platform-level audit: platform actions and platform-staff logins
+        only (never tenant operations).'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: نوع نص UUID يحدد هذا audit event.
+        required: true
+      tags:
+      - platform
+      security:
+      - BearerJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditEvent'
+          description: ''
+  /api/v1/platform/overview:
+    get:
+      operationId: platform_overview_retrieve
+      description: Cross-tenant aggregate counts for RideFlow staff (no tenant records
+        or personal data).
+      tags:
+      - platform
+      security:
+      - BearerJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlatformOverview'
+          description: ''
   /api/v1/platform/tenants:
     get:
       operationId: platform_tenants_list
@@ -3645,6 +3998,57 @@ paths:
                 $ref: '#/components/schemas/Tenant'
           description: ''
   /api/v1/platform/tenants/{id}/admins:
+    get:
+      operationId: platform_tenants_admins_list
+      description: Owner/admin memberships of the tenant (provisioning view; no operational
+        data).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: نوع نص UUID يحدد هذا tenant.
+        required: true
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - active
+          - suspended
+        description: |-
+          * `active` - Active
+          * `suspended` - Suspended
+      tags:
+      - platform
+      security:
+      - BearerJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedMembershipList'
+          description: ''
     post:
       operationId: platform_tenants_admins_create
       description: Tenant provisioning only. No endpoint here exposes tenant operational
@@ -3675,6 +4079,36 @@ paths:
       - BearerJWT: []
       responses:
         '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Membership'
+          description: ''
+  /api/v1/platform/tenants/{id}/admins/{membership_id}/reset-mfa:
+    post:
+      operationId: platform_tenants_admins_reset_mfa_create
+      description: Tenant provisioning only. No endpoint here exposes tenant operational
+        data (T2).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: نوع نص UUID يحدد هذا tenant.
+        required: true
+      - in: path
+        name: membership_id
+        schema:
+          type: string
+          pattern: ^[0-9a-f-]{36}$
+        required: true
+      tags:
+      - platform
+      security:
+      - BearerJWT: []
+      responses:
+        '200':
           content:
             application/json:
               schema:
@@ -4858,6 +5292,41 @@ components:
           format: uuid
         status:
           type: string
+        rider_name:
+          type: string
+          readOnly: true
+        rider_phone:
+          type: string
+          readOnly: true
+        driver_name:
+          type: string
+          readOnly: true
+          nullable: true
+        driver_phone:
+          type: string
+          readOnly: true
+          nullable: true
+        city_name:
+          type: string
+          readOnly: true
+        estimated_distance_m:
+          type: integer
+        cash_driver_confirmed_at:
+          type: string
+          format: date-time
+          nullable: true
+        cash_rider_confirmed_at:
+          type: string
+          format: date-time
+          nullable: true
+        arrived_at:
+          type: string
+          format: date-time
+          nullable: true
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
         version:
           type: integer
         city_id:
@@ -4921,26 +5390,36 @@ components:
       required:
       - agreed_fare_minor
       - arrival_within_geofence
+      - arrived_at
       - assigned_at
       - cancel_reason
       - cancellation_late
       - cancelled_at
       - cancelled_by_role
+      - cash_driver_confirmed_at
+      - cash_rider_confirmed_at
       - city_id
+      - city_name
       - completed_at
       - config_version
       - created_at
       - currency
       - driver_id
+      - driver_name
+      - driver_phone
       - dropoff
       - dropoff_landmark
       - estimate_max_minor
       - estimate_min_minor
+      - estimated_distance_m
       - id
       - no_show_evidence
       - pickup
       - pickup_landmark
       - rider_id
+      - rider_name
+      - rider_phone
+      - started_at
       - status
       - version
       - wave_count
@@ -5030,6 +5509,22 @@ components:
         * `pending` - Pending
         * `accepted` - Accepted
         * `rejected` - Rejected
+    AppContext:
+      type: object
+      properties:
+        tenant_name:
+          type: string
+        app_type:
+          type: string
+        locale:
+          type: string
+        tenant_status:
+          type: string
+      required:
+      - app_type
+      - locale
+      - tenant_name
+      - tenant_status
     AppTypeEnum:
       enum:
       - rider
@@ -5043,6 +5538,14 @@ components:
     Appeal:
       type: object
       properties:
+        appellant_name:
+          type: string
+          readOnly: true
+          nullable: true
+        decided_by_name:
+          type: string
+          readOnly: true
+          nullable: true
         id:
           type: string
           format: uuid
@@ -5082,9 +5585,11 @@ components:
           readOnly: true
       required:
       - appellant
+      - appellant_name
       - created_at
       - decided_at
       - decided_by
+      - decided_by_name
       - decision_note
       - id
       - reason
@@ -5154,6 +5659,10 @@ components:
     AuditEvent:
       type: object
       properties:
+        actor_name:
+          type: string
+          readOnly: true
+          nullable: true
         id:
           type: string
           format: uuid
@@ -5186,6 +5695,7 @@ components:
       required:
       - action
       - actor
+      - actor_name
       - actor_roles
       - created_at
       - data
@@ -5518,6 +6028,22 @@ components:
     DepositClaim:
       type: object
       properties:
+        deposit_account_label:
+          type: string
+          readOnly: true
+          nullable: true
+        first_approved_by_name:
+          type: string
+          readOnly: true
+          nullable: true
+        decided_by_name:
+          type: string
+          readOnly: true
+          nullable: true
+        driver_phone:
+          type: string
+          readOnly: true
+          nullable: true
         id:
           type: string
           format: uuid
@@ -5596,15 +6122,19 @@ components:
       - currency
       - decided_at
       - decided_by
+      - decided_by_name
       - decision_note
       - deposit_account
+      - deposit_account_label
       - deposited_on
       - discount_pct
       - driver_id
       - driver_name
+      - driver_phone
       - expected_amount_minor
       - first_approved_at
       - first_approved_by
+      - first_approved_by_name
       - id
       - plan
       - receipt_content_type
@@ -5654,6 +6184,18 @@ components:
     Dispute:
       type: object
       properties:
+        opened_by_name:
+          type: string
+          readOnly: true
+          nullable: true
+        against_name:
+          type: string
+          readOnly: true
+          nullable: true
+        resolved_by_name:
+          type: string
+          readOnly: true
+          nullable: true
         id:
           type: string
           format: uuid
@@ -5716,6 +6258,7 @@ components:
           readOnly: true
       required:
       - against
+      - against_name
       - against_role
       - category
       - created_at
@@ -5724,10 +6267,12 @@ components:
       - is_safety
       - notes
       - opened_by
+      - opened_by_name
       - opened_by_role
       - resolution_note
       - resolved_at
       - resolved_by
+      - resolved_by_name
       - ride
       - status
     DisputeCreateRequest:
@@ -5745,6 +6290,10 @@ components:
     DisputeNote:
       type: object
       properties:
+        author_name:
+          type: string
+          readOnly: true
+          nullable: true
         id:
           type: string
           format: uuid
@@ -5765,6 +6314,7 @@ components:
           readOnly: true
       required:
       - author
+      - author_name
       - author_role
       - created_at
       - id
@@ -5828,6 +6378,14 @@ components:
     DriverDocument:
       type: object
       properties:
+        driver:
+          type: string
+          format: uuid
+          readOnly: true
+        driver_name:
+          type: string
+          readOnly: true
+          nullable: true
         id:
           type: string
           format: uuid
@@ -5864,6 +6422,8 @@ components:
       - content_type
       - created_at
       - doc_type
+      - driver
+      - driver_name
       - id
       - review_note
       - status
@@ -5974,6 +6534,10 @@ components:
     DriverSubscription:
       type: object
       properties:
+        driver_name:
+          type: string
+          readOnly: true
+          nullable: true
         id:
           type: string
           format: uuid
@@ -6013,6 +6577,7 @@ components:
       required:
       - created_at
       - driver
+      - driver_name
       - ends_at
       - id
       - is_revoked
@@ -6064,6 +6629,14 @@ components:
     Enforcement:
       type: object
       properties:
+        subject_name:
+          type: string
+          readOnly: true
+          nullable: true
+        decided_by_name:
+          type: string
+          readOnly: true
+          nullable: true
         id:
           type: string
           format: uuid
@@ -6119,6 +6692,7 @@ components:
       - action_type
       - created_at
       - decided_by
+      - decided_by_name
       - duration_hours
       - ends_at
       - id
@@ -6127,6 +6701,7 @@ components:
       - starts_at
       - status
       - subject
+      - subject_name
       - subject_role
       - violation
     EnforcementStatusEnum:
@@ -6247,6 +6822,14 @@ components:
     LedgerEntry:
       type: object
       properties:
+        driver_name:
+          type: string
+          readOnly: true
+          nullable: true
+        created_by_name:
+          type: string
+          readOnly: true
+          nullable: true
         id:
           type: string
           format: uuid
@@ -6298,9 +6881,11 @@ components:
       - claim
       - created_at
       - created_by
+      - created_by_name
       - currency
       - days
       - driver
+      - driver_name
       - entry_type
       - id
       - note
@@ -6382,6 +6967,87 @@ components:
           minLength: 1
       required:
       - refresh
+    MFAChallenge:
+      type: object
+      properties:
+        mfa_required:
+          type: boolean
+        mfa_token:
+          type: string
+        mfa_enrolled:
+          type: boolean
+        expires_in:
+          type: integer
+        tenant:
+          allOf:
+          - $ref: '#/components/schemas/MembershipSummary'
+          nullable: true
+      required:
+      - expires_in
+      - mfa_enrolled
+      - mfa_required
+      - mfa_token
+    MFASession:
+      type: object
+      properties:
+        access:
+          type: string
+        refresh:
+          type: string
+        scope:
+          $ref: '#/components/schemas/ScopeEnum'
+        user_id:
+          type: string
+          format: uuid
+        tenant:
+          allOf:
+          - $ref: '#/components/schemas/MembershipSummary'
+          nullable: true
+      required:
+      - access
+      - refresh
+      - scope
+      - tenant
+      - user_id
+    MFASetupResponse:
+      type: object
+      properties:
+        secret:
+          type: string
+        otpauth_uri:
+          type: string
+        account:
+          type: string
+        issuer:
+          type: string
+      required:
+      - account
+      - issuer
+      - otpauth_uri
+      - secret
+    MFATokenRequest:
+      type: object
+      properties:
+        mfa_token:
+          type: string
+          minLength: 1
+          maxLength: 2048
+      required:
+      - mfa_token
+    MFAVerifyRequest:
+      type: object
+      properties:
+        mfa_token:
+          type: string
+          minLength: 1
+          maxLength: 2048
+        code:
+          type: string
+          minLength: 1
+          pattern: ^\d{6}$
+      required:
+      - code
+      - mfa_token
     MarkRead:
       type: object
       properties:
@@ -6403,6 +7069,16 @@ components:
       properties:
         user:
           $ref: '#/components/schemas/User'
+        scope:
+          type: string
+        is_platform_admin:
+          type: boolean
+        mfa:
+          type: object
+          additionalProperties: {}
+        currency_minor_units:
+          type: integer
+          nullable: true
         tenant:
           allOf:
           - $ref: '#/components/schemas/MembershipSummary'
@@ -6423,8 +7099,12 @@ components:
           nullable: true
       required:
       - currency
+      - currency_minor_units
       - driver_profile_id
+      - is_platform_admin
+      - mfa
       - permissions
+      - scope
       - tenant
       - time_zone
       - user
@@ -6470,6 +7150,9 @@ components:
         display_name:
           type: string
           maxLength: 120
+        mfa_enrolled:
+          type: boolean
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -6478,6 +7161,7 @@ components:
       - created_at
       - full_name
       - id
+      - mfa_enrolled
       - phone
       - role
       - user_id
@@ -6996,6 +7680,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Membership'
+    PaginatedRatingList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Rating'
     PaginatedRideEventList:
       type: object
       required:
@@ -7042,6 +7749,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Ride'
+    PaginatedRiderList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Rider'
     PaginatedServiceAreaList:
       type: object
       required:
@@ -7344,6 +8074,81 @@ components:
       required:
       - password
       - phone
+    PlatformOverview:
+      type: object
+      properties:
+        generated_at:
+          type: string
+          format: date-time
+        tenants:
+          type: object
+          additionalProperties:
+            type: integer
+        applications:
+          type: integer
+        platform_admins:
+          type: integer
+        tenants_created_by_month:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+        per_tenant:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlatformTenantSummary'
+      required:
+      - applications
+      - generated_at
+      - per_tenant
+      - platform_admins
+      - tenants
+      - tenants_created_by_month
+    PlatformTenantSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        status:
+          type: string
+        currency:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        staff:
+          type: integer
+        riders:
+          type: integer
+        drivers:
+          type: integer
+        drivers_approved:
+          type: integer
+        rides_30d:
+          type: integer
+        rides_completed_30d:
+          type: integer
+        active_driver_subscriptions:
+          type: integer
+      required:
+      - active_driver_subscriptions
+      - created_at
+      - currency
+      - drivers
+      - drivers_approved
+      - id
+      - name
+      - riders
+      - rides_30d
+      - rides_completed_30d
+      - slug
+      - staff
+      - status
     PolicyParam:
       type: object
       properties:
@@ -7375,6 +8180,14 @@ components:
     Rating:
       type: object
       properties:
+        rater_name:
+          type: string
+          readOnly: true
+          nullable: true
+        ratee_name:
+          type: string
+          readOnly: true
+          nullable: true
         id:
           type: string
           format: uuid
@@ -7405,7 +8218,9 @@ components:
       - comment
       - created_at
       - id
+      - ratee_name
       - ratee_role
+      - rater_name
       - rater_role
       - ride
       - stars
@@ -7643,6 +8458,102 @@ components:
       - from_status
       - seq
       - to_status
+    Rider:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Rider membership id
+        user_id:
+          type: string
+          format: uuid
+        full_name:
+          type: string
+        phone:
+          type: string
+        status:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        rides_total:
+          type: integer
+        rides_completed:
+          type: integer
+        last_ride_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - created_at
+      - full_name
+      - id
+      - last_ride_at
+      - phone
+      - rides_completed
+      - rides_total
+      - status
+      - user_id
+    RiderDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Rider membership id
+        user_id:
+          type: string
+          format: uuid
+        full_name:
+          type: string
+        phone:
+          type: string
+        status:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        rides_total:
+          type: integer
+        rides_completed:
+          type: integer
+        last_ride_at:
+          type: string
+          format: date-time
+          nullable: true
+        trust:
+          type: object
+          additionalProperties: {}
+          nullable: true
+        open_violations:
+          type: integer
+        recent_rides:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+      required:
+      - created_at
+      - full_name
+      - id
+      - last_ride_at
+      - open_violations
+      - phone
+      - recent_rides
+      - rides_completed
+      - rides_total
+      - status
+      - trust
+      - user_id
+    ScopeEnum:
+      enum:
+      - tenant
+      - platform
+      type: string
+      description: |-
+        * `tenant` - tenant
+        * `platform` - platform
     SelectBidRequest:
       type: object
       properties:
@@ -7988,16 +8899,6 @@ components:
       description: |-
         * `active` - Active
         * `suspended` - Suspended
-    TokenPair:
-      type: object
-      properties:
-        access:
-          type: string
-        refresh:
-          type: string
-      required:
-      - access
-      - refresh
     TokenRefresh:
       type: object
       properties:
@@ -8042,6 +8943,14 @@ components:
     TrustSnapshot:
       type: object
       properties:
+        user_name:
+          type: string
+          readOnly: true
+          nullable: true
+        user_phone:
+          type: string
+          readOnly: true
+          nullable: true
         user:
           type: string
           format: uuid
@@ -8096,6 +9005,8 @@ components:
       - tier
       - updated_at
       - user
+      - user_name
+      - user_phone
     User:
       type: object
       properties:
@@ -8120,6 +9031,10 @@ components:
     Vehicle:
       type: object
       properties:
+        driver_name:
+          type: string
+          readOnly: true
+          nullable: true
         id:
           type: string
           format: uuid
@@ -8161,6 +9076,7 @@ components:
       required:
       - color
       - created_at
+      - driver_name
       - id
       - make
       - model
@@ -8230,6 +9146,18 @@ components:
     Violation:
       type: object
       properties:
+        subject_name:
+          type: string
+          readOnly: true
+          nullable: true
+        subject_phone:
+          type: string
+          readOnly: true
+          nullable: true
+        reviewed_by_name:
+          type: string
+          readOnly: true
+          nullable: true
         id:
           type: string
           format: uuid
@@ -8293,9 +9221,12 @@ components:
       - review_note
       - reviewed_at
       - reviewed_by
+      - reviewed_by_name
       - ride
       - status
       - subject
+      - subject_name
+      - subject_phone
       - subject_role
     ViolationKindEnum:
       enum:

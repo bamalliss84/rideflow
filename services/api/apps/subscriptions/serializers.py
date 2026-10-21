@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from apps.core.fields import name_field
 from apps.core.files import validate_upload
 
 from .models import DepositAccount, DepositClaim, DriverSubscription, SubscriptionLedgerEntry, SubscriptionPlan
@@ -53,6 +54,10 @@ class DepositClaimCreateSerializer(serializers.Serializer):
 
 
 class DepositClaimSerializer(serializers.ModelSerializer):
+    deposit_account_label = name_field("deposit_account.bank_name")
+    first_approved_by_name = name_field("first_approved_by.full_name")
+    decided_by_name = name_field("decided_by.full_name")
+    driver_phone = name_field("driver.user.phone")
     plan = SubscriptionPlanSerializer(read_only=True)
     driver_id = serializers.UUIDField(read_only=True)
     driver_name = serializers.CharField(source="driver.user.full_name", read_only=True)
@@ -60,6 +65,10 @@ class DepositClaimSerializer(serializers.ModelSerializer):
     class Meta:
         model = DepositClaim
         fields = [
+            "deposit_account_label",
+            "first_approved_by_name",
+            "decided_by_name",
+            "driver_phone",
             "id",
             "driver_id",
             "driver_name",
@@ -84,18 +93,24 @@ class DepositClaimSerializer(serializers.ModelSerializer):
 
 
 class DriverSubscriptionSerializer(serializers.ModelSerializer):
+    driver_name = name_field("driver.user.full_name")
     plan_name = serializers.CharField(source="plan.name", read_only=True, allow_null=True)
 
     class Meta:
         model = DriverSubscription
-        fields = ["id", "driver", "plan", "plan_name", "starts_at", "ends_at", "source", "is_revoked", "created_at"]
+        fields = ["driver_name", "id", "driver", "plan", "plan_name", "starts_at", "ends_at", "source", "is_revoked", "created_at"]
         read_only_fields = fields
 
 
 class LedgerEntrySerializer(serializers.ModelSerializer):
+    driver_name = name_field("driver.user.full_name")
+    created_by_name = name_field("created_by.full_name")
+
     class Meta:
         model = SubscriptionLedgerEntry
         fields = [
+            "driver_name",
+            "created_by_name",
             "id",
             "driver",
             "entry_type",

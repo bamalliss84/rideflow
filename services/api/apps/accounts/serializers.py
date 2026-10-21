@@ -64,8 +64,48 @@ class UserSerializer(serializers.ModelSerializer):
 
 class MeSerializer(serializers.Serializer):
     user = UserSerializer()
+    scope = serializers.CharField()
+    is_platform_admin = serializers.BooleanField()
+    mfa = serializers.DictField()
+    currency_minor_units = serializers.IntegerField(allow_null=True)
     tenant = MembershipSummarySerializer(allow_null=True)
     permissions = serializers.ListField(child=serializers.CharField())
     driver_profile_id = serializers.UUIDField(allow_null=True)
     currency = serializers.CharField(allow_null=True)
     time_zone = serializers.CharField(allow_null=True)
+
+
+class MFAChallengeSerializer(serializers.Serializer):
+    mfa_required = serializers.BooleanField()
+    mfa_token = serializers.CharField()
+    mfa_enrolled = serializers.BooleanField()
+    expires_in = serializers.IntegerField()
+    tenant = MembershipSummarySerializer(allow_null=True, required=False)
+
+
+class MFATokenSerializer(serializers.Serializer):
+    mfa_token = serializers.CharField(max_length=2048)
+
+
+class MFASetupResponseSerializer(serializers.Serializer):
+    secret = serializers.CharField()
+    otpauth_uri = serializers.CharField()
+    account = serializers.CharField()
+    issuer = serializers.CharField()
+
+
+class MFAVerifySerializer(MFATokenSerializer):
+    code = serializers.RegexField(r"^\d{6}$")
+
+
+class MFASessionSerializer(TokenPairSerializer):
+    scope = serializers.ChoiceField(choices=["tenant", "platform"])
+    user_id = serializers.UUIDField()
+    tenant = MembershipSummarySerializer(allow_null=True)
+
+
+class AppContextSerializer(serializers.Serializer):
+    tenant_name = serializers.CharField()
+    app_type = serializers.CharField()
+    locale = serializers.CharField()
+    tenant_status = serializers.CharField()

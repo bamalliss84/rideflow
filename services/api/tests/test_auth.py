@@ -61,7 +61,9 @@ def test_admin_app_requires_existing_staff_membership(ta):
     assert r.status_code == 403
     staff = make_member(ta, "finance")
     r = _otp(APIClient(), ta.apps["admin"], staff.phone)
-    assert r.status_code == 200 and r.data["tenant"]["roles"] == ["finance"]
+    # staff never get tokens from the first factor alone: an MFA challenge is returned instead
+    assert r.status_code == 200 and r.data["mfa_required"] is True and "access" not in r.data
+    assert r.data["tenant"]["roles"] == ["finance"]
 
 
 def test_wrong_code_counts_attempts_and_locks(ta, settings):
@@ -134,7 +136,7 @@ def test_platform_login(db):
     r = APIClient().post("/api/v1/auth/platform/login", {"phone": admin.phone, "password": "wrong"}, format="json")
     assert r.status_code == 401
     r = APIClient().post("/api/v1/auth/platform/login", {"phone": admin.phone, "password": "a-strong-password-1"}, format="json")
-    assert r.status_code == 200 and "access" in r.data
+    assert r.status_code == 200 and r.data["mfa_required"] is True and "access" not in r.data
 
 
 def test_unauthenticated_requests_are_rejected(ta):

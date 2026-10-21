@@ -8,3 +8,4 @@ channels-redis==4.3.0
 daphne==4.2.3
 psycopg[binary]==3.3.6
 redis==8.1.0
+cryptography==50.0.2

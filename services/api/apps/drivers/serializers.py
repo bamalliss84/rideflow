@@ -1,14 +1,30 @@
 from rest_framework import serializers
 
+from apps.core.fields import name_field
 from apps.core.files import validate_upload
 
 from .models import DocumentType, DriverDocument, DriverProfile, Vehicle
 
 
 class VehicleSerializer(serializers.ModelSerializer):
+    driver_name = name_field("driver.user.full_name")
+
     class Meta:
         model = Vehicle
-        fields = ["id", "plate_number", "make", "model", "color", "year", "seats", "status", "is_active", "review_note", "created_at"]
+        fields = [
+            "driver_name",
+            "id",
+            "plate_number",
+            "make",
+            "model",
+            "color",
+            "year",
+            "seats",
+            "status",
+            "is_active",
+            "review_note",
+            "created_at",
+        ]
         read_only_fields = ["id", "status", "review_note", "created_at"]
 
     def validate_plate_number(self, value):
@@ -22,12 +38,16 @@ class VehicleSerializer(serializers.ModelSerializer):
 
 
 class DriverDocumentSerializer(serializers.ModelSerializer):
+    driver = serializers.UUIDField(source="driver_id", read_only=True)
+    driver_name = name_field("driver.user.full_name")
     file = serializers.FileField(write_only=True)
     vehicle_id = serializers.UUIDField(required=False, allow_null=True, write_only=True)
 
     class Meta:
         model = DriverDocument
         fields = [
+            "driver",
+            "driver_name",
             "id",
             "doc_type",
             "number",
