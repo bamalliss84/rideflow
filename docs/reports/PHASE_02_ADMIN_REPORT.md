@@ -222,4 +222,4 @@ Every operator and platform admin endpoint in the contract is used by a screen. 
 - **Browser, platform `+967700000000`:** the same sequence (password, setup with QR, TOTP, `/platform`; then sign-out, challenge only, TOTP, `/platform`).
 - **Final state:** both demo authenticators were reset again so the owner can enrol their own device; `MFADevice` count is 0.
 
-**Fix commit:** `<MFA_FIX_SHA>`
+**Fix commit:** `8faa72d163ec5cc69cbf89d3d7c3d26247d19589`
