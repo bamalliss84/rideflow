@@ -217,7 +217,7 @@ Every operator and platform admin endpoint in the contract is used by a screen. 
 - **No browser check of this flow.** A host-run portal process for that check was denied by the session permission policy.
 - **Running stack.** The currently running containers still run the previous configuration (MFA enforced) until that rebuild.
 
-**Commit:** `<DEV_BYPASS_SHA>`
+**Commit:** `89fe588`
 
 ## 9. Fix 2026-10-22: operator MFA onboarding showed the 6-digit challenge without any QR code
 
