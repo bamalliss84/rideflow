@@ -226,6 +226,15 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = UPLOAD_MAX_BYTES + 1024 * 1024
 ADMIN_MFA_REQUIRED = env_bool("ADMIN_MFA_REQUIRED", True)
 MFA_ENCRYPTION_KEY = env("MFA_ENCRYPTION_KEY", "")  # Fernet key; derived from SECRET_KEY when empty (dev)
 
+# Deployment environment name. Only the literal "local" marks a developer machine.
+RIDEFLOW_ENV = env("RIDEFLOW_ENV", "production")
+# LOCAL DEVELOPMENT ONLY: let admin logins skip the TOTP step (first factor still required).
+# Disabled by default; effective only with DEBUG + RIDEFLOW_ENV=local + local-only ALLOWED_HOSTS
+# (see apps.accounts.mfa.dev_bypass_active). Refuse to start if requested anywhere else.
+DEV_ADMIN_MFA_BYPASS = env_bool("DEV_ADMIN_MFA_BYPASS", False)
+if DEV_ADMIN_MFA_BYPASS and not (DEBUG and RIDEFLOW_ENV == "local"):
+    raise RuntimeError("DEV_ADMIN_MFA_BYPASS=1 is only allowed with DJANGO_DEBUG=1 and RIDEFLOW_ENV=local")
+
 IDEMPOTENCY_TTL_HOURS = int(env("IDEMPOTENCY_TTL_HOURS", "48"))
 
 SECURE_CONTENT_TYPE_NOSNIFF = True

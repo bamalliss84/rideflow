@@ -27,8 +27,14 @@ function PlatformLogin() {
     setBusy(true);
     setError(null);
     try {
-      setChallenge(await authCall<Challenge>("platform-login", { phone: phone.trim(), password }));
+      const res = await authCall<Challenge | { dev_mfa_bypass: true }>("platform-login", { phone: phone.trim(), password });
       setPassword("");
+      if ("dev_mfa_bypass" in res) {
+        router.replace(next && next.startsWith("/platform") && !next.startsWith("//") ? next : "/platform");
+        router.refresh();
+        return;
+      }
+      setChallenge(res);
     } catch (err) {
       setError(err);
     } finally {

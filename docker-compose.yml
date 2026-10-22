@@ -19,6 +19,10 @@ x-api-env: &api-env
   DEMO_PLATFORM_ADMIN_PASSWORD: ${DEMO_PLATFORM_ADMIN_PASSWORD:-change-me-local-only}
   SEED_DEMO_ON_START: ${SEED_DEMO_ON_START:-0}
   ADMIN_MFA_REQUIRED: ${ADMIN_MFA_REQUIRED:-1}
+  # Local development only (this compose file is the dev stack): admin logins skip TOTP.
+  # Production keeps the defaults (RIDEFLOW_ENV=production, DEV_ADMIN_MFA_BYPASS off).
+  RIDEFLOW_ENV: ${RIDEFLOW_ENV:-local}
+  DEV_ADMIN_MFA_BYPASS: ${DEV_ADMIN_MFA_BYPASS:-1}
   MFA_ENCRYPTION_KEY: ${MFA_ENCRYPTION_KEY:-}
 
 services:
@@ -81,6 +85,8 @@ services:
       # Local development is plain http on localhost; set to true (default) behind HTTPS.
       COOKIE_SECURE: ${ADMIN_COOKIE_SECURE:-false}
       DEFAULT_WORKSPACE: ${ADMIN_DEFAULT_WORKSPACE:-}
+      # BFF accepts backend-authorized dev sessions without TOTP only when this is also on.
+      DEV_ADMIN_MFA_BYPASS: ${DEV_ADMIN_MFA_BYPASS:-1}
     ports:
       - "127.0.0.1:${ADMIN_PORT:-3000}:3000"
     depends_on:

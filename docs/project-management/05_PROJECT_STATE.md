@@ -62,6 +62,12 @@ OpenAPI validates with `--fail-on-warn`. A live HTTP smoke test (including cross
 - Admin MFA and the production adapters (SMS, push, upload scanning) are missing before any shared environment.
 - No pricing data.
 
+## Local development login (D033, 2026-10-22)
+
+`DEV_ADMIN_MFA_BYPASS` lets admin logins skip TOTP in the local Docker stack only. OTP and password are still required, and production MFA is unchanged.
+
+**Pending local action:** sync the Windows clock (Docker's npm fetch currently fails TLS with `CERT_NOT_YET_VALID`), then run `docker compose up -d --build` to apply it. Commit: `<DEV_BYPASS_SHA>`.
+
 ## Test evidence, Phase 2 (2026-10-22)
 
 - **Backend:** `pytest --create-db` 113 passed; ruff clean; no migration drift; OpenAPI valid (135 paths).
@@ -96,5 +102,6 @@ Do not change approved policy. Owner approval of the PROPOSED/PROVISIONAL policy
 | 2026-10-21 | T00-B | main / no commit | 9 pack files edited + 11 new docs | doc checks only | pending | - | D017–D019 | T00-C |
 | 2026-10-21 | Phase 1 backend | main / `0da382308386677be1ddc490314cbd18b5a06656` | repo foundation + services/api + tests + docs | 103 passed; lint/format/migrations/OpenAPI ok; live smoke ok | pending | fixed during session: FOR UPDATE on outer join, django-filter class-level queryset vs fail-closed manager, OTP per-IP limit too strict | D020–D028 | Phase 2 (MFA, CI green, Next.js scaffold) |
 | 2026-10-22 | Phase 2 admin portal | main / `daefc54c93fb7eb915dd752bb1f130351a4371bb` | apps/admin (new), backend MFA + portal endpoints, compose/CI/docs | 113 backend passed; tsc/eslint/build ok; browser walkthrough ok | pending | fixed: refresh-token rotation race (single-flight refresh), django-filter + fail-closed manager, React hook state anti-patterns | D029–D032 | Phase 3 |
+| 2026-10-22 | Dev-only admin MFA bypass (D033) | main / `<DEV_BYPASS_SHA>` | accounts auth/mfa/views, settings, compose, BFF auth route, login screens, tests, docs | focused 47 passed; full 125 passed; tsc/eslint/build ok; live API check on :8011 ok | pending | admin image rebuild blocked by system clock (TLS CERT_NOT_YET_VALID) | D033 | sync clock, rebuild |
 
 Template: Date/time | Task ID | Branch/commit | Files changed | Tests and outputs | Accepted? | Bugs | Decisions | Next task.

@@ -16,11 +16,14 @@ class AppContextInvalid(APIException):
     default_code = "app_invalid"
 
 
-def issue_tokens(user, *, scope, tenant=None, app=None, mfa=False):
+def issue_tokens(user, *, scope, tenant=None, app=None, mfa=False, mfa_dev=False):
     refresh = RefreshToken.for_user(user)
     refresh["scope"] = scope
     if mfa:
         refresh["mfa"] = True
+    elif mfa_dev:
+        # Development-only marker: never equivalent to `mfa`; honoured only while dev_bypass_active().
+        refresh["mfa_dev"] = True
     if tenant is not None:
         refresh["tid"] = str(tenant.pk)
     if app is not None:
@@ -62,7 +65,9 @@ class TenantJWTAuthentication(JWTAuthentication):
             return None
         user, token = result
         scope = token.get("scope")
-        mfa_ok = bool(token.get("mfa")) or not settings.ADMIN_MFA_REQUIRED
+        from .mfa import dev_bypass_active
+
+        mfa_ok = bool(token.get("mfa")) or not settings.ADMIN_MFA_REQUIRED or (bool(token.get("mfa_dev")) and dev_bypass_active())
         if scope == "platform":
             if not user.is_platform_admin:
                 raise AuthenticationFailed("Platform access revoked.", code="platform_revoked")

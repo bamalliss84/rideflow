@@ -44,5 +44,12 @@ D032 ENGINEERING (Claude, 2026-10-22), UI conventions:
 - Light theme only in Phase 2.
 - Maps are schematic SVG previews (no external tile provider, so no third-party data sharing or keys). A real map provider is a later decision.
 - Exports are client-side CSV of data already returned by the API.
+D033 APPROVED by owner 2026-10-22: Local-development-only admin MFA bypass, `DEV_ADMIN_MFA_BYPASS` (default off).
+- **Effective only when all of these hold:** `DJANGO_DEBUG=1`, `RIDEFLOW_ENV=local`, and only local `ALLOWED_HOSTS` (localhost, 127.0.0.1, ::1, api, *.localhost). The API refuses to start if the flag is set without DEBUG and RIDEFLOW_ENV=local.
+- **First factor unchanged.** The first factor (operator OTP / platform password) is still required.
+- **Separate token claim.** Tokens carry `mfa_dev` (never `mfa`), honoured only while the bypass is active. Turning the flag off makes existing dev sessions lose staff and platform rights on the next request.
+- **BFF opt-in.** The BFF needs its own `DEV_ADMIN_MFA_BYPASS=1` before it accepts such a session.
+- **Where it is enabled.** Only by the local `docker-compose.yml` defaults; production defaults are unchanged.
+- **Audit.** Logins record `dev_mfa_bypass`.
 
 Rule: New decisions get sequential ID, date, approver, rationale, impact and linked task. Never silently reinterpret proposals as approved.

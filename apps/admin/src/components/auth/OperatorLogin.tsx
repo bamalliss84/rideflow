@@ -67,7 +67,13 @@ export function OperatorLogin({ initialWorkspace }: { initialWorkspace: string }
   const verifyCode = (e: FormEvent) => {
     e.preventDefault();
     void run(async () => {
-      const res = await authCall<Challenge>("otp-verify", { workspace: workspace.trim(), phone: phone.trim(), code });
+      const res = await authCall<Challenge | { dev_mfa_bypass: true }>("otp-verify", { workspace: workspace.trim(), phone: phone.trim(), code });
+      if ("dev_mfa_bypass" in res) {
+        // Session already established by the BFF because the backend authorized a local-dev session.
+        router.replace(safeNext(params.get("next"), "/operator"));
+        router.refresh();
+        return;
+      }
       setChallenge(res);
       setStep("mfa");
     });

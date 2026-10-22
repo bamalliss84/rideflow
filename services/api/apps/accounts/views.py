@@ -271,11 +271,13 @@ class OTPVerifyView(APIView):
                     from apps.drivers.services import ensure_driver_profile
 
                     ensure_driver_profile(user)
+                dev_bypass = False
             else:
                 staff = TenantMembership.objects.filter(user=user, role__in=STAFF_ROLES, status=MembershipStatus.ACTIVE)
                 if not staff.exists():
                     raise PermissionDenied("No administrative membership for this operator.")
-                if settings.ADMIN_MFA_REQUIRED:
+                dev_bypass = settings.ADMIN_MFA_REQUIRED and mfa.dev_bypass_active()
+                if settings.ADMIN_MFA_REQUIRED and not dev_bypass:
                     roles = sorted(staff.values_list("role", flat=True))
                     audit.record("auth.first_factor_ok", request=request, actor=user, target=user, data={"app": app.client_id})
                     return Response(
@@ -286,22 +288,24 @@ class OTPVerifyView(APIView):
                     )
 
             roles = sorted(TenantMembership.objects.filter(user=user, status=MembershipStatus.ACTIVE).values_list("role", flat=True))
+            dev_session = app.app_type == AppType.ADMIN and dev_bypass
             audit.record(
                 "auth.login",
                 request=request,
                 actor=user,
                 target=user,
-                data={"app": app.client_id, "app_type": app.app_type, "new_user": is_new},
+                data={"app": app.client_id, "app_type": app.app_type, "new_user": is_new, "dev_mfa_bypass": dev_session},
             )
-        tokens = issue_tokens(user, scope="tenant", tenant=tenant, app=app)
-        return Response(
-            {
-                **tokens,
-                "user_id": user.pk,
-                "is_new_user": is_new,
-                "tenant": {"tenant_id": tenant.pk, "tenant_name": tenant.name, "roles": roles},
-            }
-        )
+        tokens = issue_tokens(user, scope="tenant", tenant=tenant, app=app, mfa_dev=dev_session)
+        body = {
+            **tokens,
+            "user_id": user.pk,
+            "is_new_user": is_new,
+            "tenant": {"tenant_id": tenant.pk, "tenant_name": tenant.name, "roles": roles},
+        }
+        if dev_session:
+            body.update({"scope": "tenant", "dev_mfa_bypass": True})
+        return Response(body)
 
 
 class PlatformLoginView(APIView):
@@ -319,11 +323,15 @@ class PlatformLoginView(APIView):
         user = User.objects.filter(phone=serializer.validated_data["phone"], is_active=True).first()
         if user is None or not user.is_platform_admin or not user.check_password(serializer.validated_data["password"]):
             return Response({"code": "invalid_credentials", "detail": "Invalid credentials."}, status=401)
-        if settings.ADMIN_MFA_REQUIRED:
+        dev_bypass = settings.ADMIN_MFA_REQUIRED and mfa.dev_bypass_active()
+        if settings.ADMIN_MFA_REQUIRED and not dev_bypass:
             audit.record("platform.first_factor_ok", request=request, actor=user, target=user, tenant_id=None)
             return Response(_challenge(user, scope="platform"))
-        audit.record("platform.login", request=request, actor=user, target=user, tenant_id=None)
-        return Response(issue_tokens(user, scope="platform"))
+        audit.record("platform.login", request=request, actor=user, target=user, tenant_id=None, data={"dev_mfa_bypass": dev_bypass})
+        body = {**issue_tokens(user, scope="platform", mfa_dev=dev_bypass), "scope": "platform", "user_id": user.pk, "tenant": None}
+        if dev_bypass:
+            body["dev_mfa_bypass"] = True
+        return Response(body)
 
 
 class LogoutView(APIView):
@@ -363,6 +371,7 @@ class MeView(APIView):
             "mfa": {
                 "enrolled": bool(device and device.is_confirmed),
                 "session_verified": bool(request.auth and request.auth.get("mfa")),
+                "dev_bypass": bool(request.auth and request.auth.get("mfa_dev") and not request.auth.get("mfa")),
             },
             "currency_minor_units": tenant.currency_minor_units if tenant else None,
             "tenant": {"tenant_id": tenant.pk, "tenant_name": tenant.name, "roles": roles} if tenant else None,

@@ -79,6 +79,15 @@ docker compose down                                                  # stop (kee
 
 ## Admin portal sign-in (local demo)
 
+**Local Docker development (default since D033):** administrator logins skip the TOTP step.
+
+- **Operator:** workspace, phone, dev OTP `000000`, then the dashboard.
+- **Platform:** phone and password, then the dashboard.
+
+This is controlled by `DEV_ADMIN_MFA_BYPASS=1` together with `RIDEFLOW_ENV=local`, which `docker-compose.yml` sets for the dev stack only. The API refuses the flag unless `DJANGO_DEBUG=1` and `RIDEFLOW_ENV=local`. To test real MFA locally, set `DEV_ADMIN_MFA_BYPASS=0` in `.env` and run `docker compose up -d --build`.
+
+With real MFA enabled:
+
 - **Operator portal:** open http://localhost:3000/login and follow these steps:
   1. Enter workspace `demo-mukalla-admin` and phone `+967700000001` (owner).
   2. Enter the dev OTP `000000`.

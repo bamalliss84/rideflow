@@ -98,6 +98,23 @@ def read_challenge(token):
         raise ChallengeInvalid("MFA challenge is invalid or expired.") from exc
 
 
+LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1", "[::1]", "api"}
+
+
+def dev_bypass_active():
+    """True only on an explicitly configured, non-exposed local development backend.
+
+    Evaluated on every request, so turning the flag off (and restarting) immediately stops honouring
+    tokens that were issued through the bypass (claim `mfa_dev`).
+    """
+    if not getattr(settings, "DEV_ADMIN_MFA_BYPASS", False) or not settings.DEBUG:
+        return False
+    if getattr(settings, "RIDEFLOW_ENV", "") != "local":
+        return False
+    hosts = list(settings.ALLOWED_HOSTS)
+    return bool(hosts) and all(h in LOCAL_HOSTS or h.endswith(".localhost") for h in hosts)
+
+
 def register_attempt(token):
     """Counts verification attempts per challenge; returns False once the limit is exceeded."""
     key = "mfa_attempts:" + hashlib.sha256(token.encode()).hexdigest()

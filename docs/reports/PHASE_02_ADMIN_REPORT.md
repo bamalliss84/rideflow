@@ -174,6 +174,51 @@ Every operator and platform admin endpoint in the contract is used by a screen. 
   5. Choose a map provider.
   6. Start Flutter rider and driver apps on the same contract.
 
+## 10. Change 2026-10-22: local-development admin login without TOTP (`DEV_ADMIN_MFA_BYPASS`, D033)
+
+**Design.** Production MFA is unchanged.
+
+- **Backend setting.** `DEV_ADMIN_MFA_BYPASS` defaults to off. `apps.accounts.mfa.dev_bypass_active()` is evaluated on every request and requires all of:
+  - `DEBUG`;
+  - `RIDEFLOW_ENV == "local"`;
+  - only local `ALLOWED_HOSTS`.
+
+  Settings refuse to load when the flag is set without DEBUG and RIDEFLOW_ENV=local.
+- **Login.** The first factor is unchanged: OTP through the existing dev OTP provider, or the platform password. When the bypass is active, the login returns tokens with the claim `mfa_dev` and `dev_mfa_bypass: true`, with no challenge and no QR code. No MFA secret is created, read or reset.
+- **Authentication.** Staff roles and the platform scope are granted when the token has `mfa`, or has `mfa_dev` **and** the bypass is active right now. Turning the flag off therefore revokes existing dev sessions immediately. `/me` reports `mfa.dev_bypass`.
+- **BFF.** The BFF sets session cookies for such a response only if the backend flagged it **and** the BFF's own env `DEV_ADMIN_MFA_BYPASS=1` is set; otherwise it refuses (`mfa_not_enforced`, as before). The login screens skip the MFA step only when the BFF returns an established dev session. No frontend-only switch exists.
+- **Unchanged:** tenant isolation, roles, CSRF, cookies and audit. Login audit events record `dev_mfa_bypass`.
+- **Enabled only in the local dev stack.** `docker-compose.yml` sets `RIDEFLOW_ENV=local` and `DEV_ADMIN_MFA_BYPASS=1` for api, worker and admin. `.env.example` documents it. Production defaults stay off.
+
+**Tests actually run.**
+
+- **New focused tests** in `test_mfa_and_portal_api.py`:
+  - operator dev login still requires the OTP, then gets a session without TOTP; no MFA device is created; `/me` reports `dev_bypass`; audit recorded;
+  - platform dev login still requires the password;
+  - bypass refused for DEBUG off, RIDEFLOW_ENV production or staging, a public host in ALLOWED_HOSTS, or the flag off (5 cases);
+  - after the flag is turned off, earlier dev tokens give 401 for operator and platform, and login returns to the MFA challenge;
+  - a dev token used with another tenant's app returns 401;
+  - settings refuse the flag outside local.
+- **Focused suites:** MFA/portal API, auth and tenant isolation, 47 passed. **Full backend suite: 125 passed.** ruff clean.
+- **Frontend:** `tsc --noEmit` 0 errors; `eslint` 0 findings; `next build` succeeded on the host.
+- **Live backend check:**
+  - temporary bypass-enabled API instance on :8011:
+    - wrong OTP returns 400;
+    - correct OTP issues a session with `dev_mfa_bypass` and opens the dashboard (200);
+    - wrong platform password returns 401;
+    - platform login issues a session with `dev_mfa_bypass`; overview 200; operator data 403.
+  - the same dev token on the main stack (bypass off) returns 401.
+  - main stack (:8010, bypass off) still returns MFA challenges.
+  - the temporary instance was removed. The existing MFA device was left untouched.
+
+**Not verified / blocker.**
+
+- **Image rebuild blocked.** The `admin` Docker image could not be rebuilt. `npm ci` inside Docker fails with `CERT_NOT_YET_VALID`: the registry certificate is valid from 10:16 UTC while this machine's clock reads 07:02 UTC. Fix the system clock, then run `docker compose up -d --build`. TLS verification was not weakened.
+- **No browser check of this flow.** A host-run portal process for that check was denied by the session permission policy.
+- **Running stack.** The currently running containers still run the previous configuration (MFA enforced) until that rebuild.
+
+**Commit:** `<DEV_BYPASS_SHA>`
+
 ## 9. Fix 2026-10-22: operator MFA onboarding showed the 6-digit challenge without any QR code
 
 **Symptom.** After the development OTP sign-in, `+967700000001` went straight to the 6-digit TOTP screen, although the owner had never scanned a QR code.

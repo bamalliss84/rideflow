@@ -42,7 +42,7 @@ def test_tenant_admin_enrolment_and_login(ta):
     session = APIClient()
     session.credentials(HTTP_AUTHORIZATION=f"Bearer {r.data['access']}")
     me = session.get("/api/v1/me").data
-    assert me["mfa"] == {"enrolled": True, "session_verified": True}
+    assert me["mfa"] == {"enrolled": True, "session_verified": True, "dev_bypass": False}
     assert session.get("/api/v1/admin/drivers").status_code == 200
 
     # second sign-in: already enrolled, setup refused, the same code cannot be replayed
@@ -200,3 +200,111 @@ def test_dev_reset_mfa_is_development_only_and_audited(ta, settings):
     assert AuditEvent.objects.filter(action="dev.mfa_reset", target_id=str(owner.pk)).exists()
     _client, challenge = _first_factor(ta, owner)
     assert challenge["mfa_enrolled"] is False  # first factor still required; enrolment forced again
+
+
+# ---- DEV_ADMIN_MFA_BYPASS (local development only)
+
+
+@pytest.fixture
+def local_dev(settings):
+    settings.DEBUG = True
+    settings.RIDEFLOW_ENV = "local"
+    settings.DEV_ADMIN_MFA_BYPASS = True
+    settings.ALLOWED_HOSTS = ["localhost", "127.0.0.1", "api", "testserver.localhost"]
+    return settings
+
+
+def _admin_login(t, user, code="123456"):
+    client = APIClient(SERVER_NAME="testserver.localhost")
+    app = t.apps["admin"].client_id
+    client.post("/api/v1/auth/otp/request", {"phone": user.phone}, format="json", HTTP_X_RIDEFLOW_APP=app)
+    return client.post("/api/v1/auth/otp/verify", {"phone": user.phone, "code": code}, format="json", HTTP_X_RIDEFLOW_APP=app)
+
+
+def test_dev_bypass_issues_admin_session_without_totp_but_keeps_otp(ta, local_dev):
+    owner = make_member(ta, "owner")
+    assert _admin_login(ta, owner, code="000000").status_code == 400  # first factor still required
+    r = _admin_login(ta, owner)
+    assert r.status_code == 200 and r.data["dev_mfa_bypass"] is True and "access" in r.data and "mfa_token" not in r.data
+    assert not MFADevice.objects.filter(user=owner).exists()  # no enrolment created or touched
+    session = APIClient(SERVER_NAME="testserver.localhost")
+    session.credentials(HTTP_AUTHORIZATION=f"Bearer {r.data['access']}")
+    me = session.get("/api/v1/me").data
+    assert me["mfa"]["dev_bypass"] is True and me["mfa"]["session_verified"] is False
+    assert session.get("/api/v1/admin/drivers").status_code == 200
+    from apps.core.models import AuditEvent
+
+    assert AuditEvent.objects.filter(action="auth.login", actor=owner, data__dev_mfa_bypass=True).exists()
+
+
+def test_dev_bypass_platform_password_still_required(local_dev, db):
+    admin = make_user("Platform")
+    admin.is_platform_admin = True
+    admin.set_password("a-strong-password-1")
+    admin.save()
+    client = APIClient(SERVER_NAME="testserver.localhost")
+    assert client.post("/api/v1/auth/platform/login", {"phone": admin.phone, "password": "wrong"}, format="json").status_code == 401
+    r = client.post("/api/v1/auth/platform/login", {"phone": admin.phone, "password": "a-strong-password-1"}, format="json")
+    assert r.status_code == 200 and r.data["dev_mfa_bypass"] is True and r.data["scope"] == "platform"
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {r.data['access']}")
+    assert client.get("/api/v1/platform/tenants").status_code == 200
+
+
+@pytest.mark.parametrize(
+    "override",
+    [
+        {"DEBUG": False},
+        {"RIDEFLOW_ENV": "production"},
+        {"RIDEFLOW_ENV": "staging"},
+        {"ALLOWED_HOSTS": ["admin.example.com", "testserver.localhost"]},
+        {"DEV_ADMIN_MFA_BYPASS": False},
+    ],
+)
+def test_dev_bypass_rejected_outside_local_development(ta, local_dev, override):
+    for key, value in override.items():
+        setattr(local_dev, key, value)
+    r = _admin_login(ta, make_member(ta, "owner"))
+    assert r.status_code == 200 and r.data["mfa_required"] is True and "access" not in r.data
+
+
+def test_disabling_bypass_revokes_dev_sessions_immediately(ta, local_dev, db):
+    owner = make_member(ta, "owner")
+    access = _admin_login(ta, owner).data["access"]
+    admin = make_user("Platform")
+    admin.is_platform_admin = True
+    admin.set_password("a-strong-password-1")
+    admin.save()
+    platform_access = (
+        APIClient(SERVER_NAME="testserver.localhost")
+        .post("/api/v1/auth/platform/login", {"phone": admin.phone, "password": "a-strong-password-1"}, format="json")
+        .data["access"]
+    )
+    local_dev.DEV_ADMIN_MFA_BYPASS = False
+    session = APIClient(SERVER_NAME="testserver.localhost")
+    session.credentials(HTTP_AUTHORIZATION=f"Bearer {access}")
+    assert session.get("/api/v1/admin/drivers").status_code == 401  # owner-only user: staff role no longer granted
+    session.credentials(HTTP_AUTHORIZATION=f"Bearer {platform_access}")
+    assert session.get("/api/v1/platform/tenants").status_code == 401
+    assert _admin_login(ta, owner).data["mfa_required"] is True  # normal MFA flow again
+
+
+def test_dev_bypass_does_not_cross_tenants(ta, tb, local_dev):
+    owner = make_member(ta, "owner")
+    access = _admin_login(ta, owner).data["access"]
+    session = APIClient(SERVER_NAME="testserver.localhost")
+    session.credentials(HTTP_AUTHORIZATION=f"Bearer {access}", HTTP_X_RIDEFLOW_APP=tb.apps["admin"].client_id)
+    assert session.get("/api/v1/admin/drivers").status_code == 401
+
+
+def test_settings_refuse_bypass_outside_local(monkeypatch):
+    import importlib
+
+    import rideflow.settings as base
+
+    monkeypatch.setenv("DEV_ADMIN_MFA_BYPASS", "1")
+    monkeypatch.setenv("RIDEFLOW_ENV", "production")
+    with pytest.raises(RuntimeError, match="DEV_ADMIN_MFA_BYPASS"):
+        importlib.reload(base)
+    monkeypatch.setenv("RIDEFLOW_ENV", "local")
+    monkeypatch.setenv("DEV_ADMIN_MFA_BYPASS", "0")
+    importlib.reload(base)

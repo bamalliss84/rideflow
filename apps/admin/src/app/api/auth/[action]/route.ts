@@ -40,6 +40,18 @@ async function adminApp(workspace: string | undefined) {
   return data.app_type === "admin" ? data : null;
 }
 
+/**
+ * Local development only: the backend may authorize an admin session without TOTP (DEV_ADMIN_MFA_BYPASS,
+ * enforced server-side). The BFF additionally requires its own opt-in; otherwise it refuses such sessions.
+ */
+function devSession(payload: Record<string, unknown>, scope: Scope) {
+  const allowed = process.env.DEV_ADMIN_MFA_BYPASS === "1" && process.env.NODE_ENV !== "test";
+  if (!allowed || payload.dev_mfa_bypass !== true || typeof payload.access !== "string" || typeof payload.refresh !== "string") return null;
+  const out = json({ scope, tenant: payload.tenant ?? null, dev_mfa_bypass: true });
+  setSessionCookies(out, { access: payload.access, refresh: payload.refresh }, scope);
+  return out;
+}
+
 async function pass(res: Response) {
   return json(await readJson(res), res.status);
 }
@@ -86,14 +98,14 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ action: st
       if (!(await adminApp(data.workspace))) return bad("workspace_invalid", "Unknown operator workspace.", 404);
       const res = await post(req, "auth/otp/verify", { phone: data.phone, code: data.code }, { "X-RideFlow-App": data.workspace as string });
       const payload = await readJson(res);
-      // Defence in depth: the admin portal must never receive tokens without the second factor.
-      if (res.ok && !payload.mfa_required) return bad("mfa_not_enforced", "Administrator MFA is not enabled on the server.", 403);
+      // Defence in depth: tokens without the second factor are accepted only for an explicit dev session.
+      if (res.ok && !payload.mfa_required) return devSession(payload, "tenant") ?? bad("mfa_not_enforced", "Administrator MFA is not enabled on the server.", 403);
       return json(payload, res.status);
     }
     case "platform-login": {
       const res = await post(req, "auth/platform/login", { phone: data.phone, password: data.password });
       const payload = await readJson(res);
-      if (res.ok && !payload.mfa_required) return bad("mfa_not_enforced", "Administrator MFA is not enabled on the server.", 403);
+      if (res.ok && !payload.mfa_required) return devSession(payload, "platform") ?? bad("mfa_not_enforced", "Administrator MFA is not enabled on the server.", 403);
       return json(payload, res.status);
     }
     case "mfa-setup":
