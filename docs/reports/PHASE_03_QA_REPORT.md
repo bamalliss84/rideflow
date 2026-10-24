@@ -5,7 +5,7 @@
 | Date | 2026-10-24/25 |
 | Environment | Windows 11, Docker Desktop 4.96.1 (WSL2), local stack: PostGIS, Redis, API (Django dev `runserver`/daphne, DEBUG=1), admin (Next.js production build), Chrome stable for Playwright |
 | Baseline commit | `25098a6` (CI green, verified via the GitHub Actions API) |
-| Final commit | `<PHASE3_SHA>` |
+| Final commit | `c934039` |
 
 **Status words:**
 - **PASSED:** executed and verified.
