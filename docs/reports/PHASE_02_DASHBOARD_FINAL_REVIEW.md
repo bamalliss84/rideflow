@@ -219,7 +219,7 @@ The admin app has no frontend unit-test runner. Frontend verification is the typ
 
 ## 9. Commit
 
-`<FINAL_REVIEW_SHA>`
+`0300cb0`
 
 ## 10. Local URLs for owner review
 
