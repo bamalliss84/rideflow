@@ -70,6 +70,11 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ action: str
     if (!app) return bad("workspace_invalid", "Unknown operator workspace.", 404);
     return json({ tenant_name: app.tenant_name, tenant_status: app.tenant_status, locale: app.locale });
   }
+  if (action === "recovery-codes") {
+    const access = req.cookies.get(COOKIE.access)?.value;
+    if (!access) return json({ code: "not_authenticated" }, 401);
+    return pass(await backend("auth/mfa/recovery-codes", { headers: { Authorization: `Bearer ${access}` } }));
+  }
   if (action === "session") {
     const access = req.cookies.get(COOKIE.access)?.value;
     if (!access) {
@@ -111,13 +116,21 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ action: st
     case "mfa-setup":
       return pass(await post(req, "auth/mfa/setup", { mfa_token: data.mfa_token }));
     case "mfa-verify": {
-      const res = await post(req, "auth/mfa/verify", { mfa_token: data.mfa_token, code: data.code });
+      const factor = data.recovery_code ? { recovery_code: data.recovery_code } : { code: data.code };
+      const res = await post(req, "auth/mfa/verify", { mfa_token: data.mfa_token, ...factor });
       const payload = await readJson(res);
       if (!res.ok) return json(payload, res.status);
       const scope = payload.scope as Scope;
       const out = json({ scope, tenant: payload.tenant ?? null });
       setSessionCookies(out, { access: String(payload.access), refresh: String(payload.refresh) }, scope);
       return out;
+    }
+    case "recovery-codes": {
+      // Regenerates the signed-in administrator's recovery codes (requires a fresh authenticator code).
+      if (!csrfValid(req)) return bad("csrf_failed", "Request blocked.", 403);
+      const access = req.cookies.get(COOKIE.access)?.value;
+      if (!access) return json({ code: "not_authenticated" }, 401);
+      return pass(await post(req, "auth/mfa/recovery-codes", { code: data.code }, { Authorization: `Bearer ${access}`, "Idempotency-Key": crypto.randomUUID() }));
     }
     case "refresh": {
       if (!csrfValid(req)) return bad("csrf_failed", "Request blocked.", 403);

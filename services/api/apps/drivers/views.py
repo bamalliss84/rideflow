@@ -171,7 +171,7 @@ class AdminDocumentViewSet(viewsets.ReadOnlyModelViewSet):
 
     @schema_safe(DriverDocument)
     def get_queryset(self):
-        return DriverDocument.objects.select_related("driver")
+        return DriverDocument.objects.select_related("driver__user", "vehicle")
 
     @extend_schema(responses={(200, "application/octet-stream"): bytes})
     @action(detail=True, methods=["get"])
@@ -205,7 +205,7 @@ class AdminVehicleViewSet(viewsets.ReadOnlyModelViewSet):
 
     @schema_safe(Vehicle)
     def get_queryset(self):
-        return Vehicle.objects.all()
+        return Vehicle.objects.select_related("driver__user")
 
     @extend_schema(request=ReviewDecisionSerializer, responses=VehicleSerializer)
     @action(detail=True, methods=["post"])

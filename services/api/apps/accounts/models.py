@@ -72,6 +72,21 @@ class MFADevice(models.Model):
         return self.confirmed_at is not None
 
 
+class MFARecoveryCode(models.Model):
+    """One-time administrator recovery code. Only a keyed hash is stored; the code is shown once at generation."""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="mfa_recovery_codes")
+    code_hash = models.CharField(max_length=64)
+    used_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["user", "code_hash"], name="uniq_recovery_code_per_user")]
+
+    def __str__(self):
+        return f"Recovery code {self.user_id} ({'used' if self.used_at else 'unused'})"
+
+
 class PhoneOTP(TenantScopedModel):
     """One-time code issued within a tenant's application context. Only an HMAC of the code is stored."""
 

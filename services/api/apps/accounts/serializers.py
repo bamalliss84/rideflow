@@ -95,7 +95,27 @@ class MFASetupResponseSerializer(serializers.Serializer):
 
 
 class MFAVerifySerializer(MFATokenSerializer):
-    code = serializers.RegexField(r"^\d{6}$")
+    code = serializers.RegexField(r"^\d{6}$", required=False)
+    recovery_code = serializers.RegexField(r"^\s*[0-9a-fA-F]{5}[-\s]?[0-9a-fA-F]{5}\s*$", required=False)
+
+    def validate(self, attrs):
+        if ("code" in attrs) == ("recovery_code" in attrs):
+            raise serializers.ValidationError("Provide exactly one of code or recovery_code.")
+        return attrs
+
+
+class RecoveryCodesStatusSerializer(serializers.Serializer):
+    remaining = serializers.IntegerField()
+    total = serializers.IntegerField()
+    generated_at = serializers.DateTimeField(allow_null=True)
+
+
+class RecoveryCodesRegenerateSerializer(serializers.Serializer):
+    code = serializers.RegexField(r"^\d{6}$", help_text="Current authenticator code (re-authentication).")
+
+
+class RecoveryCodesSerializer(RecoveryCodesStatusSerializer):
+    codes = serializers.ListField(child=serializers.CharField(), help_text="Shown once; only hashes are stored.")
 
 
 class MFASessionSerializer(TokenPairSerializer):

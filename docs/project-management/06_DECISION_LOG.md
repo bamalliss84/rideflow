@@ -51,5 +51,19 @@ D033 APPROVED by owner 2026-10-22: Local-development-only admin MFA bypass, `DEV
 - **BFF opt-in.** The BFF needs its own `DEV_ADMIN_MFA_BYPASS=1` before it accepts such a session.
 - **Where it is enabled.** Only by the local `docker-compose.yml` defaults; production defaults are unchanged.
 - **Audit.** Logins record `dev_mfa_bypass`.
+D034 ENGINEERING (Claude, 2026-10-25, Phase 3; needs owner review, security-only, no business-policy change):
+
+**Administrator MFA recovery codes.**
+- 10 one-time codes per user, stored as keyed hashes.
+- Generated only in a TOTP-verified session plus a fresh authenticator code; regeneration invalidates old codes.
+- Redeemable only after the first factor, within the per-challenge attempt limit.
+
+**Production refuses to start with a weak or placeholder `DJANGO_SECRET_KEY` or without `MFA_ENCRYPTION_KEY`.** HSTS defaults on and API docs default off outside DEBUG.
+
+**Client IP for throttling** comes only from trusted proxy hops (`TRUSTED_PROXY_COUNT`, default 0). Platform login is limited per account as well as per IP.
+
+**Redis outages return 503 with `Retry-After`.**
+
+Linked: `docs/reports/PHASE_03_QA_REPORT.md`, `PHASE_03_DEFECT_REGISTER.md`.
 
 Rule: New decisions get sequential ID, date, approver, rationale, impact and linked task. Never silently reinterpret proposals as approved.

@@ -57,6 +57,7 @@ OpenAPI validates with `--fail-on-warn`. A live HTTP smoke test (including cross
 - **Still open:** D009, D010, D011, D013 (legal, release blocker), D014, D015, OD-02 confirmation, and OD-05 to OD-09.
 
 ## Current blockers
+- 2026-10-25: host drive C: is full (26 MB free). Docker Desktop's engine stopped during the Phase 3 final rebuild. Free space (do not purge Docker data), start Docker Desktop, run `docker compose up -d --build`, then `cd apps/admin && npx playwright test`.
 
 - Legal and transport approval (G0) is not verified.
 - Admin MFA and the production adapters (SMS, push, upload scanning) are missing before any shared environment.
@@ -67,6 +68,34 @@ OpenAPI validates with `--fail-on-warn`. A live HTTP smoke test (including cross
 `DEV_ADMIN_MFA_BYPASS` lets admin logins skip TOTP in the local Docker stack only. OTP and password are still required, and production MFA is unchanged.
 
 **Applied:** the local stack was rebuilt on 2026-10-24 after the system clock was corrected; the dev bypass is active in Docker. Commit: `89fe588`.
+
+## Phase 3: QA and security hardening (2026-10-25), CONDITIONAL PASS
+
+Reports: `docs/reports/PHASE_03_QA_REPORT.md`, `PHASE_03_DEFECT_REGISTER.md`, `PHASE_03_RELEASE_READINESS.md`.
+
+**Fixed (8 defects, all with regression tests):**
+- P3-01 (high): spoofable `X-Forwarded-For` throttles / platform-login brute force.
+- P3-02 (high): weak production secret key.
+- P3-03: required MFA encryption key.
+- P3-04: Redis outage now 503.
+- P3-05: N+1 in four admin lists.
+- P3-06: HSTS on, API docs hidden in production.
+- P3-07: proxy dot-segment guard.
+- P3-08: E2E session files excluded from Docker images.
+
+**Added:**
+- Administrator MFA recovery codes (D034).
+- Playwright E2E suite (25 tests, `cd apps/admin && npx playwright test`, dedicated `e2e-qa` tenant via `manage.py seed_e2e`).
+- `scripts/perf_smoke.py`.
+
+**Tests:**
+- Backend: 144 passed.
+- tsc/eslint: clean.
+- E2E: 24/25 full run, and the remaining failure (per-phone OTP limit, fixed in the harness) passed on re-run (8/8 auth).
+
+**BLOCKED:** the final rebuild and E2E re-run. Drive C: filled up and Docker Desktop stopped. Free disk space on C:, start Docker Desktop, then run `docker compose up -d --build`. Also listed in Current blockers.
+
+**Release blockers** (production server, SMS, malware scanning, maps, legal, owner policy approval, proxy config) are listed in the release-readiness report.
 
 ## Dashboard final review (2026-10-24)
 
@@ -127,5 +156,6 @@ Do not change approved policy. Owner approval of the PROPOSED/PROVISIONAL policy
 | 2026-10-22 | Phase 2 admin portal | main / `daefc54c93fb7eb915dd752bb1f130351a4371bb` | apps/admin (new), backend MFA + portal endpoints, compose/CI/docs | 113 backend passed; tsc/eslint/build ok; browser walkthrough ok | pending | fixed: refresh-token rotation race (single-flight refresh), django-filter + fail-closed manager, React hook state anti-patterns | D029–D032 | Phase 3 |
 | 2026-10-22 | Dev-only admin MFA bypass (D033) | main / `89fe588` | accounts auth/mfa/views, settings, compose, BFF auth route, login screens, tests, docs | focused 47 passed; full 125 passed; tsc/eslint/build ok; live API check on :8011 ok | pending | admin image rebuild blocked by system clock (TLS CERT_NOT_YET_VALID) | D033 | sync clock, rebuild |
 | 2026-10-24 | Phase 2 dashboard final review and UI/UX refinement | main / `0300cb0` | admin shared UI (shell, tables, tabs, cards, chart, bidi helpers, audit labels), 9 refined pages and bidi fixes across others, notifications API read state, contract, tests, docs | backend 126 passed; tsc/eslint 0; docker prod build ok; browser smoke at 375 on all operator routes plus selected 768/1280/1440 | ok | none | — | owner visual review |
+| 2026-10-25 | Phase 3 QA and security hardening | main / `<PHASE3_SHA>` | throttling/proxy trust, production settings, MFA recovery codes, N+1 fixes, Redis 503, E2E suite, perf script, reports | backend 144 passed; tsc/eslint 0; E2E 25 tests (24/25 full run + 8/8 auth re-run); perf smoke 720 req 0 errors | conditional | Docker engine down (C: full) blocks final rebuild and E2E re-run | D034 | free disk, rerun E2E; release blockers R-01..R-10 |
 
 Template: Date/time | Task ID | Branch/commit | Files changed | Tests and outputs | Accepted? | Bugs | Decisions | Next task.

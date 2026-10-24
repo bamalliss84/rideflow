@@ -27,6 +27,10 @@ export function MfaStep({ challenge, onDone, onRestart }: { challenge: Challenge
   const [setup, setSetup] = useState<Setup | null>(null);
   const [qr, setQr] = useState<string | null>(null);
   const [code, setCode] = useState("");
+  // Lost-device path: a one-time recovery code replaces the authenticator code (first factor already passed).
+  const [recovery, setRecovery] = useState(false);
+  const [recoveryCode, setRecoveryCode] = useState("");
+  const recoveryValid = /^[0-9a-f]{5}-?[0-9a-f]{5}$/i.test(recoveryCode.trim());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
 
@@ -48,15 +52,17 @@ export function MfaStep({ challenge, onDone, onRestart }: { challenge: Challenge
 
   const verify = async (e: FormEvent) => {
     e.preventDefault();
-    if (busy || code.length !== 6) return;
+    if (busy || (recovery ? !recoveryValid : code.length !== 6)) return;
     setBusy(true);
     setError(null);
     try {
-      const res = await authCall<{ scope: string }>("mfa-verify", { mfa_token: challenge.mfa_token, code });
+      const factor = recovery ? { recovery_code: recoveryCode.trim() } : { code };
+      const res = await authCall<{ scope: string }>("mfa-verify", { mfa_token: challenge.mfa_token, ...factor });
       onDone(res.scope);
     } catch (err) {
       setError(err);
       setCode("");
+      setRecoveryCode("");
       setBusy(false);
     }
   };
@@ -102,6 +108,23 @@ export function MfaStep({ challenge, onDone, onRestart }: { challenge: Challenge
 
       {!needsEnrolment || setup ? (
         <form onSubmit={verify} className="space-y-4">
+          {recovery ? (
+            <Field label={t.auth.recoveryCode} hint={t.auth.recoveryHint} required>
+              {(p) => (
+                <Input
+                  {...p}
+                  value={recoveryCode}
+                  onChange={(e) => setRecoveryCode(e.target.value.slice(0, 12))}
+                  autoComplete="off"
+                  autoFocus
+                  spellCheck={false}
+                  dir="ltr"
+                  className="text-center font-mono text-lg tracking-widest"
+                  placeholder="xxxxx-xxxxx"
+                />
+              )}
+            </Field>
+          ) : (
           <Field label={t.auth.mfaCode} required>
             {(p) => (
               <Input
@@ -117,10 +140,23 @@ export function MfaStep({ challenge, onDone, onRestart }: { challenge: Challenge
               />
             )}
           </Field>
+          )}
           <InlineError error={error} />
-          <Button type="submit" className="w-full" loading={busy} disabled={code.length !== 6}>
+          <Button type="submit" className="w-full" loading={busy} disabled={recovery ? !recoveryValid : code.length !== 6}>
             {t.auth.verify}
           </Button>
+          {!needsEnrolment ? (
+            <button
+              type="button"
+              className="w-full text-center text-xs font-medium text-teal-700 hover:underline"
+              onClick={() => {
+                setRecovery((v) => !v);
+                setError(null);
+              }}
+            >
+              {recovery ? t.auth.useAuthenticator : t.auth.useRecovery}
+            </button>
+          ) : null}
         </form>
       ) : (
         <InlineError error={error} />

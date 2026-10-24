@@ -14,6 +14,8 @@ const PASS_RESPONSE = ["content-type", "content-disposition", "idempotent-replay
  */
 async function handle(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
   const { path } = await ctx.params;
+  // Defence in depth (Next.js already normalises): never forward dot segments that could leave /api/v1.
+  if (path.some((p) => p === "." || p === ".." || p === "")) return json({ code: "not_found", detail: "Not found." }, 404);
   const subpath = path.map((p) => encodeURIComponent(p)).join("/");
   if (subpath.startsWith("auth")) return json({ code: "not_found", detail: "Not found." }, 404);
 

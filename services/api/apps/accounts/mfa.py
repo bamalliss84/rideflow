@@ -115,6 +115,62 @@ def dev_bypass_active():
     return bool(hosts) and all(h in LOCAL_HOSTS or h.endswith(".localhost") for h in hosts)
 
 
+RECOVERY_CODE_COUNT = 10
+
+
+def _recovery_key():
+    # Keyed with the MFA encryption key when configured (required in production), else derived like it.
+    base = settings.MFA_ENCRYPTION_KEY or f"rideflow-mfa:{settings.SECRET_KEY}"
+    return hashlib.sha256(f"rideflow-mfa-recovery:{base}".encode()).digest()
+
+
+def normalize_recovery_code(code):
+    return "".join(ch for ch in str(code).lower() if ch in "0123456789abcdef")
+
+
+def recovery_hash(user, code):
+    return hmac.new(_recovery_key(), f"{user.pk}:{normalize_recovery_code(code)}".encode(), hashlib.sha256).hexdigest()
+
+
+def generate_recovery_codes(user):
+    """Replaces every existing code of the user with RECOVERY_CODE_COUNT fresh ones (40 random bits each)."""
+    from django.db import transaction
+
+    from .models import MFARecoveryCode
+
+    codes = set()
+    while len(codes) < RECOVERY_CODE_COUNT:
+        raw = secrets.token_hex(5)
+        codes.add(f"{raw[:5]}-{raw[5:]}")
+    codes = sorted(codes)
+    with transaction.atomic():
+        MFARecoveryCode.objects.filter(user=user).delete()
+        MFARecoveryCode.objects.bulk_create([MFARecoveryCode(user=user, code_hash=recovery_hash(user, c)) for c in codes])
+    return codes
+
+
+def consume_recovery_code(user, code):
+    """Atomically marks a matching unused code as used. Returns True exactly once per code."""
+    from django.utils import timezone
+
+    from .models import MFARecoveryCode
+
+    if len(normalize_recovery_code(code)) != 10:
+        return False
+    return (
+        MFARecoveryCode.objects.filter(user=user, code_hash=recovery_hash(user, code), used_at__isnull=True).update(
+            used_at=timezone.now()
+        )
+        == 1
+    )
+
+
+def recovery_codes_remaining(user):
+    from .models import MFARecoveryCode
+
+    return MFARecoveryCode.objects.filter(user=user, used_at__isnull=True).count()
+
+
 def register_attempt(token):
     """Counts verification attempts per challenge; returns False once the limit is exceeded."""
     key = "mfa_attempts:" + hashlib.sha256(token.encode()).hexdigest()

@@ -376,7 +376,7 @@ class AuditEventViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         # AuditEvent is not RLS-scoped (platform rows have no tenant) so the tenant filter here is mandatory.
         tenant = getattr(self.request, "tenant", None)
-        return AuditEvent.objects.filter(tenant=tenant) if tenant else AuditEvent.objects.none()
+        return AuditEvent.objects.filter(tenant=tenant).select_related("actor") if tenant else AuditEvent.objects.none()
 
 
 class _ReportView(APIView):

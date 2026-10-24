@@ -3,3 +3,6 @@ node_modules
 *.tsbuildinfo
 .env*
 Dockerfile
+# End-to-end suite: never ship test code or saved sessions (e2e/.auth holds session cookies) in images.
+e2e
+playwright.config.ts

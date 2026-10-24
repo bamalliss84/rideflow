@@ -24,6 +24,9 @@ x-api-env: &api-env
   RIDEFLOW_ENV: ${RIDEFLOW_ENV:-local}
   DEV_ADMIN_MFA_BYPASS: ${DEV_ADMIN_MFA_BYPASS:-1}
   MFA_ENCRYPTION_KEY: ${MFA_ENCRYPTION_KEY:-}
+  # Proxy hops whose X-Forwarded-For is trusted for throttling (0 locally: the BFF forwards no client IP).
+  # Production behind a TLS proxy: 1 here and ADMIN_TRUSTED_PROXY_COUNT=1 for the portal.
+  TRUSTED_PROXY_COUNT: ${API_TRUSTED_PROXY_COUNT:-0}
 
 services:
   db:
@@ -87,6 +90,8 @@ services:
       DEFAULT_WORKSPACE: ${ADMIN_DEFAULT_WORKSPACE:-}
       # BFF accepts backend-authorized dev sessions without TOTP only when this is also on.
       DEV_ADMIN_MFA_BYPASS: ${DEV_ADMIN_MFA_BYPASS:-1}
+      # Reverse proxies in front of the portal (none locally). Set to 1 behind a TLS proxy that appends X-Forwarded-For.
+      TRUSTED_PROXY_COUNT: ${ADMIN_TRUSTED_PROXY_COUNT:-0}
     ports:
       - "127.0.0.1:${ADMIN_PORT:-3000}:3000"
     depends_on:

@@ -39,7 +39,25 @@ def raise_rule(code, detail, exc=BusinessRuleViolation):
     raise exc(detail=detail, code=code)
 
 
+class ServiceUnavailable(APIException):
+    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    default_detail = "A dependency is temporarily unavailable; retry shortly."
+    default_code = "service_unavailable"
+
+
+def _dependency_outage(exc):
+    """Redis (cache, throttles, channel layer) connection failures: transient, so 503 + Retry-After, not 500."""
+    try:
+        from redis.exceptions import ConnectionError as RedisConnectionError
+        from redis.exceptions import TimeoutError as RedisTimeoutError
+    except ImportError:  # pragma: no cover
+        return False
+    return isinstance(exc, (RedisConnectionError, RedisTimeoutError))
+
+
 def api_exception_handler(exc, context):
+    if _dependency_outage(exc):
+        exc = ServiceUnavailable()
     if isinstance(exc, DjangoValidationError):
         exc = DRFValidationError(detail=exc.message_dict if hasattr(exc, "message_dict") else exc.messages)
     if isinstance(exc, (TenantContextMissing, CrossTenantWrite)):
@@ -57,6 +75,8 @@ def api_exception_handler(exc, context):
     if isinstance(data, dict) and "detail" in data and len(data) == 1:
         data = data["detail"]
     response.data = {"code": code, "detail": data}
+    if isinstance(exc, ServiceUnavailable):
+        response["Retry-After"] = "5"
     return response
 
 

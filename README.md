@@ -149,3 +149,18 @@ With real MFA enabled:
 ## Tests and CI
 
 `scripts\test.ps1` runs the same checks as CI: `ruff` lint and format, migration consistency, and the full pytest suite against PostGIS. The suite covers tenant isolation (including a generated check of every route), permission negatives, parallel-transaction concurrency scenarios and WebSocket tests. GitHub Actions (`.github/workflows/ci.yml`) also runs a gitleaks secret scan, checks that the OpenAPI contract is up to date and runs a Docker smoke test.
+
+### End-to-end tests (Playwright, local)
+
+With the stack running (`docker compose up -d --build`), run:
+
+```
+cd apps/admin
+npx playwright test
+```
+
+The suite seeds a dedicated `e2e-qa` tenant (`manage.py seed_e2e`, DEBUG only). It creates its own drivers, rides and receipts through the public API and never touches the demo tenants. It uses the locally installed Chrome. Saved test sessions in `apps/admin/e2e/.auth/` are git- and docker-ignored.
+
+`python scripts/perf_smoke.py` runs a small, bounded latency check against the local API. It reflects the development server only, not production capacity.
+
+Phase 3 results are in `docs/reports/PHASE_03_QA_REPORT.md`.

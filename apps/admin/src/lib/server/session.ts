@@ -69,8 +69,17 @@ export function csrfValid(req: NextRequest): boolean {
   return timingSafeEqual(Buffer.from(cookie), Buffer.from(header));
 }
 
+// Reverse proxies in front of this server that append to X-Forwarded-For (0 = none: the header is client-controlled).
+const TRUSTED_PROXIES = Number(process.env.TRUSTED_PROXY_COUNT || 0);
+
+/**
+ * Client IP for the API's per-IP throttles. Only the entry appended by our own trusted proxy is used; with no
+ * trusted proxy nothing is forwarded (a client-supplied header must never choose its own throttle bucket).
+ */
 export function forwardedFor(req: NextRequest): Record<string, string> {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "";
+  if (!TRUSTED_PROXIES) return {};
+  const hops = (req.headers.get("x-forwarded-for") ?? "").split(",").map((h) => h.trim()).filter(Boolean);
+  const ip = hops[hops.length - TRUSTED_PROXIES];
   return ip ? { "X-Forwarded-For": ip } : {};
 }
 

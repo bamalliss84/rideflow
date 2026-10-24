@@ -29,6 +29,9 @@ if not SECRET_KEY:
         SECRET_KEY = "dev-only-insecure-secret-key-change-me-0123456789"
     else:
         raise RuntimeError("DJANGO_SECRET_KEY must be set when DEBUG is off")
+if not DEBUG and (len(SECRET_KEY) < 50 or SECRET_KEY.startswith(("dev-only-insecure", "django-insecure"))):
+    # JWT signing and (by default) MFA secret encryption depend on it.
+    raise RuntimeError("DJANGO_SECRET_KEY must be a random value of at least 50 characters when DEBUG is off")
 
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS", "")
@@ -160,10 +163,14 @@ REST_FRAMEWORK = {
         "otp_verify": env("THROTTLE_OTP_VERIFY", "20/hour"),  # per phone + app
         "otp_request_ip": env("THROTTLE_OTP_REQUEST_IP", "60/hour"),
         "otp_verify_ip": env("THROTTLE_OTP_VERIFY_IP", "120/hour"),
-        "platform_login": env("THROTTLE_PLATFORM_LOGIN", "10/hour"),
+        "platform_login": env("THROTTLE_PLATFORM_LOGIN", "10/hour"),  # per account (phone)
+        "platform_login_ip": env("THROTTLE_PLATFORM_LOGIN_IP", "30/hour"),
         "location": env("THROTTLE_LOCATION", "120/min"),
         "mfa_ip": env("THROTTLE_MFA_IP", "60/hour"),
     },
+    # Client IP for throttling: X-Forwarded-For is only trusted for this many proxy hops (0 = REMOTE_ADDR only).
+    # Otherwise any client could rotate the header to evade per-IP limits.
+    "NUM_PROXIES": int(env("TRUSTED_PROXY_COUNT", "0")),
     "EXCEPTION_HANDLER": "apps.core.exceptions.api_exception_handler",
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
 }
@@ -225,6 +232,9 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = UPLOAD_MAX_BYTES + 1024 * 1024
 # Administrator MFA (TOTP). Required for staff roles and the platform scope.
 ADMIN_MFA_REQUIRED = env_bool("ADMIN_MFA_REQUIRED", True)
 MFA_ENCRYPTION_KEY = env("MFA_ENCRYPTION_KEY", "")  # Fernet key; derived from SECRET_KEY when empty (dev)
+if not DEBUG and not MFA_ENCRYPTION_KEY:
+    # A derived key would silently invalidate every enrolled authenticator when SECRET_KEY is rotated.
+    raise RuntimeError("MFA_ENCRYPTION_KEY must be set when DEBUG is off")
 
 # Deployment environment name. Only the literal "local" marks a developer machine.
 RIDEFLOW_ENV = env("RIDEFLOW_ENV", "production")
@@ -239,6 +249,12 @@ IDEMPOTENCY_TTL_HOURS = int(env("IDEMPOTENCY_TTL_HOURS", "48"))
 
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
+# HSTS on by default outside development; TLS redirect is opt-in (usually done by the reverse proxy).
+SECURE_HSTS_SECONDS = int(env("SECURE_HSTS_SECONDS", "0" if DEBUG else "31536000"))
+SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", False)
+SECURE_REDIRECT_EXEMPT = [r"^health/"]
+# OpenAPI schema and Swagger/Redoc UIs: public in development only unless explicitly enabled.
+API_DOCS_ENABLED = env_bool("API_DOCS_ENABLED", DEBUG)
 if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True

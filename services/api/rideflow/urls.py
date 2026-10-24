@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
@@ -21,8 +22,11 @@ urlpatterns = [
     path("health/live", health.live, name="health-live"),
     path("health/ready", health.ready, name="health-ready"),
     path("api/v1/", include(api_v1)),
-    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
-    path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
-    path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
     path("django-admin/", admin.site.urls),
 ]
+if settings.API_DOCS_ENABLED:
+    urlpatterns += [
+        path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+        path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
+        path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
+    ]

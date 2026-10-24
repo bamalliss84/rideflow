@@ -1143,6 +1143,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/mfa/recovery-codes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Administrator MFA recovery codes: status (GET) and regeneration (POST).
+         *
+         *     Only sessions that passed the real second factor (`mfa` claim, not the development bypass) may manage
+         *     codes, and regeneration additionally requires a fresh authenticator code. Regenerating invalidates every
+         *     previous code. Codes are returned once; only keyed hashes are stored.
+         */
+        get: operations["auth_mfa_recovery_codes_retrieve"];
+        put?: never;
+        /**
+         * @description Administrator MFA recovery codes: status (GET) and regeneration (POST).
+         *
+         *     Only sessions that passed the real second factor (`mfa` claim, not the development bypass) may manage
+         *     codes, and regeneration additionally requires a fresh authenticator code. Regenerating invalidates every
+         *     previous code. Codes are returned once; only keyed hashes are stored.
+         */
+        post: operations["auth_mfa_recovery_codes_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/mfa/setup": {
         parameters: {
             query?: never;
@@ -2971,7 +3001,8 @@ export interface components {
         };
         MFAVerifyRequest: {
             mfa_token: string;
-            code: string;
+            code?: string;
+            recovery_code?: string;
         };
         /** @description Mark everything up to a cursor (`up_to`) or exactly one notification (`cursor`). */
         MarkRead: {
@@ -3593,6 +3624,24 @@ export interface components {
             tags?: components["schemas"]["TagsEnum"][];
             /** @default  */
             comment: string;
+        };
+        RecoveryCodes: {
+            remaining: number;
+            total: number;
+            /** Format: date-time */
+            generated_at: string | null;
+            /** @description Shown once; only hashes are stored. */
+            codes: string[];
+        };
+        RecoveryCodesRegenerateRequest: {
+            /** @description Current authenticator code (re-authentication). */
+            code: string;
+        };
+        RecoveryCodesStatus: {
+            remaining: number;
+            total: number;
+            /** Format: date-time */
+            generated_at: string | null;
         };
         ReviewDecisionRequest: {
             /** @default  */
@@ -6197,6 +6246,50 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    auth_mfa_recovery_codes_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecoveryCodesStatus"];
+                };
+            };
+        };
+    };
+    auth_mfa_recovery_codes_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecoveryCodesRegenerateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["RecoveryCodesRegenerateRequest"];
+                "multipart/form-data": components["schemas"]["RecoveryCodesRegenerateRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecoveryCodes"];
+                };
             };
         };
     };

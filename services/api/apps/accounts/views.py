@@ -15,7 +15,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from apps.core import audit
 from apps.core.context import tenant_context
 from apps.core.permissions import STAFF_ROLES, permissions_for_roles
-from apps.core.throttling import IPScopedThrottle, PhoneThrottle, ScopedTenantThrottle
+from apps.core.throttling import IPScopedThrottle, PhoneThrottle
 from apps.tenancy.models import AppType, MembershipStatus, Role, TenantMembership
 
 from . import mfa, otp
@@ -35,6 +35,9 @@ from .serializers import (
     OTPRequestSerializer,
     OTPVerifySerializer,
     PlatformLoginSerializer,
+    RecoveryCodesRegenerateSerializer,
+    RecoveryCodesSerializer,
+    RecoveryCodesStatusSerializer,
     UserSerializer,
 )
 
@@ -171,20 +174,29 @@ class MFAVerifyView(APIView):
             device = MFADevice.objects.select_for_update().filter(user=user).first()
             if device is None:
                 return Response({"code": "mfa_not_enrolled", "detail": "Set up an authenticator first."}, status=409)
-            step = mfa.matching_step(mfa.decrypt_secret(device.secret_encrypted), serializer.validated_data["code"])
-            if step is None or step <= device.last_used_step:
-                return Response({"code": "mfa_invalid", "detail": "Invalid or already used code."}, status=400)
-            enrolling = not device.is_confirmed
-            device.last_used_step = step
-            if enrolling:
-                device.confirmed_at = timezone.now()
-            device.save()
+            recovery = "recovery_code" in serializer.validated_data
+            if recovery:
+                # A recovery code replaces the authenticator code only; the first factor was already proven
+                # (the signed challenge) and the attempt limit above still applies.
+                if not device.is_confirmed or not mfa.consume_recovery_code(user, serializer.validated_data["recovery_code"]):
+                    return Response({"code": "mfa_invalid", "detail": "Invalid or already used code."}, status=400)
+                enrolling = False
+            else:
+                step = mfa.matching_step(mfa.decrypt_secret(device.secret_encrypted), serializer.validated_data["code"])
+                if step is None or step <= device.last_used_step:
+                    return Response({"code": "mfa_invalid", "detail": "Invalid or already used code."}, status=400)
+                enrolling = not device.is_confirmed
+                device.last_used_step = step
+                if enrolling:
+                    device.confirmed_at = timezone.now()
+                device.save()
+            factor = {"mfa_enrolled_now": enrolling, "recovery_code": recovery}
+            if recovery:
+                factor["recovery_codes_remaining"] = mfa.recovery_codes_remaining(user)
             if data["scope"] == "platform":
                 if not user.is_platform_admin:
                     return _challenge_invalid()
-                audit.record(
-                    "platform.login", request=request, actor=user, target=user, tenant_id=None, data={"mfa_enrolled_now": enrolling}
-                )
+                audit.record("platform.login", request=request, actor=user, target=user, tenant_id=None, data=factor)
                 return Response(
                     {**issue_tokens(user, scope="platform", mfa=True), "scope": "platform", "user_id": user.pk, "tenant": None}
                 )
@@ -203,7 +215,7 @@ class MFAVerifyView(APIView):
                     request=request,
                     actor=user,
                     target=user,
-                    data={"app": app.client_id, "app_type": app.app_type, "mfa": True, "mfa_enrolled_now": enrolling},
+                    data={"app": app.client_id, "app_type": app.app_type, "mfa": True, **factor},
                 )
         tokens = issue_tokens(user, scope="tenant", tenant=tenant, app=app, mfa=True)
         return Response(
@@ -313,7 +325,8 @@ class PlatformLoginView(APIView):
 
     permission_classes = [AllowAny]
     authentication_classes = []
-    throttle_classes = [ScopedTenantThrottle]
+    # Per account (cannot be evaded by changing IP) and per client IP.
+    throttle_classes = [PhoneThrottle, IPScopedThrottle]
     throttle_scope = "platform_login"
 
     @extend_schema(request=PlatformLoginSerializer, responses={200: MFAChallengeSerializer}, tags=["auth"])
@@ -372,6 +385,7 @@ class MeView(APIView):
                 "enrolled": bool(device and device.is_confirmed),
                 "session_verified": bool(request.auth and request.auth.get("mfa")),
                 "dev_bypass": bool(request.auth and request.auth.get("mfa_dev") and not request.auth.get("mfa")),
+                "recovery_codes_remaining": mfa.recovery_codes_remaining(request.user) if device and device.is_confirmed else 0,
             },
             "currency_minor_units": tenant.currency_minor_units if tenant else None,
             "tenant": {"tenant_id": tenant.pk, "tenant_name": tenant.name, "roles": roles} if tenant else None,
@@ -391,3 +405,61 @@ class MeView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(self._payload(request))
+
+
+class RecoveryCodesView(APIView):
+    """Administrator MFA recovery codes: status (GET) and regeneration (POST).
+
+    Only sessions that passed the real second factor (`mfa` claim, not the development bypass) may manage
+    codes, and regeneration additionally requires a fresh authenticator code. Regenerating invalidates every
+    previous code. Codes are returned once; only keyed hashes are stored.
+    """
+
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [IPScopedThrottle]
+    throttle_scope = "mfa"
+
+    def _guard(self, request):
+        if not (request.auth and request.auth.get("mfa")):
+            raise PermissionDenied("Recovery codes require a session verified with your authenticator.")
+        device = MFADevice.objects.filter(user=request.user).first()
+        if device is None or not device.is_confirmed:
+            raise PermissionDenied("Set up an authenticator first.")
+        return device
+
+    def _status(self, user):
+        from .models import MFARecoveryCode
+
+        first = MFARecoveryCode.objects.filter(user=user).order_by("created_at").first()
+        return {
+            "remaining": mfa.recovery_codes_remaining(user),
+            "total": MFARecoveryCode.objects.filter(user=user).count(),
+            "generated_at": first.created_at if first else None,
+        }
+
+    @extend_schema(responses=RecoveryCodesStatusSerializer, tags=["auth"])
+    def get(self, request):
+        self._guard(request)
+        return Response(self._status(request.user))
+
+    @extend_schema(request=RecoveryCodesRegenerateSerializer, responses={201: RecoveryCodesSerializer}, tags=["auth"])
+    def post(self, request):
+        serializer = RecoveryCodesRegenerateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        with transaction.atomic():
+            device = MFADevice.objects.select_for_update().get(pk=self._guard(request).pk)
+            step = mfa.matching_step(mfa.decrypt_secret(device.secret_encrypted), serializer.validated_data["code"])
+            if step is None or step <= device.last_used_step:
+                return Response({"code": "mfa_invalid", "detail": "Invalid or already used code."}, status=400)
+            device.last_used_step = step
+            device.save(update_fields=["last_used_step", "updated_at"])
+            codes = mfa.generate_recovery_codes(request.user)
+            audit.record(
+                "auth.mfa_recovery_codes_generated",
+                request=request,
+                actor=request.user,
+                target=request.user,
+                tenant_id=getattr(getattr(request, "tenant", None), "pk", None),
+                data={"count": len(codes)},
+            )
+        return Response({**self._status(request.user), "codes": codes}, status=status.HTTP_201_CREATED)

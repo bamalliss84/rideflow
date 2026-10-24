@@ -27,6 +27,7 @@ REST_FRAMEWORK = {
         "otp_request_ip": "1000/hour",
         "otp_verify_ip": "1000/hour",
         "platform_login": "1000/hour",
+        "platform_login_ip": "1000/hour",
         "location": "10000/min",
         "mfa_ip": "10000/hour",
     },

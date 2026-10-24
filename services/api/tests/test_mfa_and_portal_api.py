@@ -42,7 +42,7 @@ def test_tenant_admin_enrolment_and_login(ta):
     session = APIClient()
     session.credentials(HTTP_AUTHORIZATION=f"Bearer {r.data['access']}")
     me = session.get("/api/v1/me").data
-    assert me["mfa"] == {"enrolled": True, "session_verified": True, "dev_bypass": False}
+    assert me["mfa"] == {"enrolled": True, "session_verified": True, "dev_bypass": False, "recovery_codes_remaining": 0}
     assert session.get("/api/v1/admin/drivers").status_code == 200
 
     # second sign-in: already enrolled, setup refused, the same code cannot be replayed

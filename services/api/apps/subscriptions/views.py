@@ -186,7 +186,7 @@ class AdminSubscriptionViewSet(viewsets.ReadOnlyModelViewSet):
 
     @schema_safe(DriverSubscription)
     def get_queryset(self):
-        return DriverSubscription.objects.select_related("plan")
+        return DriverSubscription.objects.select_related("plan", "driver__user")
 
 
 @extend_schema(tags=["admin-subscriptions"])
