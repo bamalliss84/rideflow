@@ -2,7 +2,7 @@
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 
 import { useI18n } from "@/components/providers/I18nProvider";
 
@@ -30,6 +30,7 @@ export function DataTable<T>({
   rowHref,
   empty,
   caption,
+  expanded,
 }: {
   columns: Column<T>[];
   rows: T[] | undefined;
@@ -40,16 +41,20 @@ export function DataTable<T>({
   rowHref?: (row: T) => string | undefined;
   empty?: ReactNode;
   caption?: string;
+  /** Optional full-width detail row rendered under a row (e.g. expandable technical details). */
+  expanded?: (row: T) => ReactNode;
 }) {
   const router = useRouter();
   if (error) return <ErrorState error={error} onRetry={onRetry} />;
   const colClass = (c: Column<T>) => `${c.hideBelow ? hide[c.hideBelow] : ""} ${c.align === "end" ? "text-end" : "text-start"} ${c.className ?? ""}`;
   return (
-    <div className="overflow-x-auto">
+    // `relative` keeps absolutely-positioned descendants (e.g. sr-only header labels) inside the scroll box;
+    // without it they escape the clip and widen the whole page in RTL on narrow screens.
+    <div className="scroll-thin relative min-w-0 overflow-x-auto">
       <table className="w-full border-collapse text-sm">
         {caption ? <caption className="sr-only">{caption}</caption> : null}
         <thead>
-          <tr className="border-b border-line bg-surface/70">
+          <tr className="border-b border-line bg-navy-50/60">
             {columns.map((c) => (
               <th key={c.key} scope="col" className={`px-4 py-2.5 text-xs font-semibold whitespace-nowrap text-muted ${colClass(c)}`}>
                 {c.header}
@@ -70,10 +75,11 @@ export function DataTable<T>({
               ))
             : rows?.map((row) => {
                 const href = rowHref?.(row);
+                const detail = expanded?.(row);
                 return (
+                  <Fragment key={rowKey(row)}>
                   <tr
-                    key={rowKey(row)}
-                    className={`border-b border-line last:border-0 ${href ? "cursor-pointer hover:bg-navy-50/60" : ""}`}
+                    className={`border-b border-line transition-colors last:border-0 ${href ? "cursor-pointer hover:bg-teal-50/40" : "hover:bg-navy-50/30"}`}
                     onClick={
                       href
                         ? (e) => {
@@ -89,6 +95,14 @@ export function DataTable<T>({
                       </td>
                     ))}
                   </tr>
+                  {detail ? (
+                    <tr className="border-b border-line bg-surface/60 last:border-0">
+                      <td colSpan={columns.length} className="px-4 py-3">
+                        {detail}
+                      </td>
+                    </tr>
+                  ) : null}
+                  </Fragment>
                 );
               })}
         </tbody>

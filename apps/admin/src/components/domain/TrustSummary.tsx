@@ -44,7 +44,7 @@ export function TrustSummary({ userId, role }: { userId: string; role: "driver" 
           </div>
           <div className="flex justify-between gap-3">
             <span className="text-muted">{t.trust.completionRate}</span>
-            <span className="ltr-nums">{fmt.percent(s.completion_rate)}</span>
+            <bdi>{fmt.percent(s.completion_rate)}</bdi>
           </div>
         </div>
       ) : (

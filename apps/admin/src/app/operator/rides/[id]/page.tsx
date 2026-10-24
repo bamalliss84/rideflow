@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 
 import { GeoPreview, type GeoPoint } from "@/components/charts/GeoPreview";
-import { enumLabel, EnumBadge, humanize, JsonView, Person } from "@/components/domain/Display";
+import { enumLabel, EnumBadge, humanize, JsonView, MetaLine, Person } from "@/components/domain/Display";
 import { useI18n } from "@/components/providers/I18nProvider";
 import { useSession } from "@/components/providers/SessionProvider";
 import { Badge } from "@/components/ui/Badge";
@@ -72,7 +72,7 @@ export default function RideDetailPage() {
                   label: r.fare,
                   value:
                     d.agreed_fare_minor !== null ? (
-                      <span className="font-semibold ltr-nums">{fmt.money(d.agreed_fare_minor, d.currency)}</span>
+                      <bdi className="font-semibold">{fmt.money(d.agreed_fare_minor, d.currency)}</bdi>
                     ) : (
                       <span className="ltr-nums">
                         {t.common.estimate}: {fmt.money(d.estimate_min_minor, d.currency)} – {fmt.money(d.estimate_max_minor, d.currency)}
@@ -118,7 +118,7 @@ export default function RideDetailPage() {
               rowKey={(b) => b.id}
               columns={[
                 { key: "driver", header: t.common.driver, cell: (b) => b.driver?.display_name ?? "—" },
-                { key: "amount", header: t.common.amount, cell: (b) => <span className="font-medium ltr-nums">{fmt.money(b.amount_minor, b.currency)}</span> },
+                { key: "amount", header: t.common.amount, cell: (b) => <bdi className="font-medium">{fmt.money(b.amount_minor, b.currency)}</bdi> },
                 { key: "eta", header: r.eta, hideBelow: "sm", cell: (b) => <span className="ltr-nums">{fmt.duration(b.eta_seconds)}</span> },
                 { key: "status", header: t.common.status, cell: (b) => <EnumBadge group="bidStatus" value={b.status} /> },
                 { key: "created", header: t.common.created, hideBelow: "md", cell: (b) => fmt.time(b.created_at) },
@@ -155,9 +155,7 @@ export default function RideDetailPage() {
                     <CircleDot className={`mt-0.5 size-4 shrink-0 ${e.to_status ? "text-teal-700" : "text-navy-300"}`} aria-hidden />
                     <div className="min-w-0">
                       <p className="text-sm font-medium">{(t.enums.rideEvent as Record<string, string>)[e.event_type] ?? humanize(e.event_type)}</p>
-                      <p className="text-xs text-muted">
-                        {fmt.dateTime(e.created_at)} · {enumLabel(t, "actorRole", e.actor_role)}
-                      </p>
+                      <MetaLine parts={[<bdi key="d">{fmt.dateTime(e.created_at)}</bdi>, enumLabel(t, "actorRole", e.actor_role)]} />
                       {e.to_status ? (
                         <p className="mt-1">
                           <EnumBadge group="rideStatus" value={e.to_status} />

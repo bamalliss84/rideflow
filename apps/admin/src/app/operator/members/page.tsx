@@ -1,9 +1,9 @@
 "use client";
 
-import { KeyRound, UserMinus, UserPlus, UserCheck } from "lucide-react";
+import { KeyRound, ShieldCheck, ShieldOff, UserMinus, UserPlus, UserCheck, Users } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
-import { EnumBadge, Person } from "@/components/domain/Display";
+import { EnumBadge, MetaLine, Person } from "@/components/domain/Display";
 import { useI18n } from "@/components/providers/I18nProvider";
 import { useSession } from "@/components/providers/SessionProvider";
 import { Badge } from "@/components/ui/Badge";
@@ -13,7 +13,7 @@ import { DataTable, Pagination } from "@/components/ui/DataTable";
 import { ConfirmDialog, Dialog } from "@/components/ui/Dialog";
 import { Field, Input, Select } from "@/components/ui/Form";
 import { FilterSelect, PageHeader, Tabs, Toolbar } from "@/components/ui/Page";
-import { InlineError } from "@/components/ui/States";
+import { EmptyState, InlineError } from "@/components/ui/States";
 import { ApiError, type Schemas } from "@/lib/api/client";
 import { useAction, useApiPage, useListState } from "@/lib/api/hooks";
 
@@ -73,18 +73,27 @@ export default function MembersPage() {
           error={q.error}
           onRetry={() => void q.refetch()}
           rowKey={(r) => r.id}
+          caption={m.title}
+          empty={<EmptyState filtered={Boolean(filters.role || filters.status)} icon={<Users className="size-6" aria-hidden />} />}
           columns={[
             { key: "person", header: t.common.name, cell: (r) => <Person name={r.full_name} phone={r.phone} /> },
-            { key: "role", header: t.common.role, cell: (r) => <Badge tone="info" dot={false}>{roleLabel(r.role)}</Badge> },
-            { key: "status", header: t.common.status, cell: (r) => <EnumBadge group="membershipStatus" value={r.status} /> },
+            { key: "role", header: t.common.role, cell: (r) => <Badge tone={(STAFF as readonly string[]).includes(r.role) ? "info" : "neutral"} dot={false}>{roleLabel(r.role)}</Badge> },
+            { key: "status", header: m.accountStatus, cell: (r) => <EnumBadge group="membershipStatus" value={r.status} /> },
             {
               key: "mfa",
               header: m.mfa,
               hideBelow: "md",
               cell: (r) =>
-                (STAFF as readonly string[]).includes(r.role) ? <Badge tone={r.mfa_enrolled ? "success" : "warning"}>{r.mfa_enrolled ? m.mfaOn : m.mfaOff}</Badge> : <span className="text-subtle">—</span>,
+                (STAFF as readonly string[]).includes(r.role) ? (
+                  <span className={`inline-flex items-center gap-1.5 text-xs font-medium whitespace-nowrap ${r.mfa_enrolled ? "text-teal-700" : "text-amber-700"}`}>
+                    {r.mfa_enrolled ? <ShieldCheck className="size-4" aria-hidden /> : <ShieldOff className="size-4" aria-hidden />}
+                    {r.mfa_enrolled ? m.mfaOn : m.mfaOff}
+                  </span>
+                ) : (
+                  <span className="text-xs text-subtle">{m.mfaNotRequired}</span>
+                ),
             },
-            { key: "created", header: t.common.created, hideBelow: "lg", cell: (r) => fmt.date(r.created_at) },
+            { key: "created", header: t.common.created, hideBelow: "lg", className: "whitespace-nowrap", cell: (r) => <bdi className="text-muted">{fmt.date(r.created_at)}</bdi> },
             {
               key: "actions",
               header: <span className="sr-only">{t.common.actions}</span>,
@@ -121,7 +130,16 @@ export default function MembersPage() {
         open={target !== null}
         onClose={() => setTarget(null)}
         title={target ? { suspend: m.suspend, reactivate: m.reactivate, "reset-mfa": m.resetMfa }[target.op] : ""}
-        message={target ? `${{ suspend: m.suspendConfirm, reactivate: m.reactivateConfirm, "reset-mfa": m.resetConfirm }[target.op]} (${target.member.full_name || target.member.phone} · ${roleLabel(target.member.role)})` : ""}
+        message={
+          target ? (
+            <span className="block space-y-2">
+              <span className="block">{{ suspend: m.suspendConfirm, reactivate: m.reactivateConfirm, "reset-mfa": m.resetConfirm }[target.op]}</span>
+              <MetaLine className="text-sm font-medium text-ink" parts={[target.member.full_name || <span key="p" className="ltr-nums">{target.member.phone}</span>, roleLabel(target.member.role)]} />
+            </span>
+          ) : (
+            ""
+          )
+        }
         confirmLabel={target ? { suspend: m.suspend, reactivate: m.reactivate, "reset-mfa": m.resetMfa }[target.op] : ""}
         tone={target?.op === "reactivate" ? "accent" : "danger"}
         onConfirm={() => action.mutateAsync({ id: target!.member.id, op: target!.op })}

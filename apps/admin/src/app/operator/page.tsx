@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
-import { BarChart, RateBar } from "@/components/charts/BarChart";
+import { BarChart, fillDays, RateBar } from "@/components/charts/BarChart";
 import { useI18n } from "@/components/providers/I18nProvider";
 import { useSession } from "@/components/providers/SessionProvider";
 import { Card, CardHeader, StatCard } from "@/components/ui/Card";
@@ -25,7 +25,9 @@ interface Dashboard {
   queues: Record<string, number>;
 }
 interface Daily {
-  rows: { day: string; requested: number; completed: number }[];
+  time_zone: string;
+  range: { from: string; to: string };
+  rows: { day: string; requested: number; matched: number; completed: number }[];
 }
 
 function QueueLink({ href, label, count, icon, urgent }: { href: string; label: string; count: number; icon: ReactNode; urgent?: boolean }) {
@@ -73,11 +75,11 @@ export default function OperatorDashboard() {
           </span>
           {ds.live}
         </h2>
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard label={ds.openRequests} value={fmt.number(d.live.requests_open)} icon={<Radio className="size-4" />} tone="accent" />
-          <StatCard label={ds.awaitingConfirmation} value={fmt.number(d.live.awaiting_driver_confirmation)} icon={<Clock3 className="size-4" />} tone="warning" />
-          <StatCard label={ds.onTrip} value={fmt.number(d.live.on_trip)} icon={<Route className="size-4" />} tone="accent" />
-          <StatCard label={ds.openBids} value={fmt.number(d.live.open_bids)} icon={<Wallet className="size-4" />} />
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+          <StatCard label={ds.openRequests} value={fmt.number(d.live.requests_open)} icon={<Radio className="size-5" />} tone="accent" />
+          <StatCard label={ds.awaitingConfirmation} value={fmt.number(d.live.awaiting_driver_confirmation)} icon={<Clock3 className="size-5" />} tone="warning" />
+          <StatCard label={ds.onTrip} value={fmt.number(d.live.on_trip)} icon={<Route className="size-5" />} tone="accent" />
+          <StatCard label={ds.openBids} value={fmt.number(d.live.open_bids)} icon={<Wallet className="size-5" />} />
         </div>
       </section>
 
@@ -93,14 +95,16 @@ export default function OperatorDashboard() {
                 [ds.cancelled, d.rides.cancelled],
                 [ds.noShow, d.rides.no_show],
               ].map(([label, value]) => (
-                <div key={String(label)} className="bg-white px-4 py-3">
+                <div key={String(label)} className="min-w-0 bg-white px-4 py-3">
                   <p className="text-xs text-muted">{label}</p>
                   <p className="mt-1 text-xl font-semibold ltr-nums">{fmt.number(Number(value ?? 0))}</p>
                 </div>
               ))}
-              <div className="bg-white px-4 py-3">
+              <div className="min-w-0 bg-white px-4 py-3">
                 <p className="text-xs text-muted">{ds.fareTotal}</p>
-                <p className="mt-1 text-xl font-semibold ltr-nums">{fmt.money(d.rides.fare_total_minor ?? 0, d.currency)}</p>
+                <p className="mt-1 truncate text-xl font-semibold">
+                  <bdi>{fmt.money(d.rides.fare_total_minor ?? 0, d.currency)}</bdi>
+                </p>
               </div>
             </div>
             <div className="border-t border-line p-5">
@@ -109,9 +113,15 @@ export default function OperatorDashboard() {
                 <ErrorState error={daily.error} compact />
               ) : (
                 <BarChart
-                  data={(daily.data?.rows ?? []).map((r) => ({ label: fmt.day(r.day), value: r.requested, secondary: r.completed }))}
-                  primaryLabel={ds.requested}
-                  secondaryLabel={ds.completed}
+                  data={(daily.data ? fillDays(daily.data.rows, daily.data.range.from, daily.data.range.to, daily.data.time_zone, (day) => ({ day, requested: 0, matched: 0, completed: 0 })) : []).map((r) => ({
+                    label: fmt.shortDay(r.day),
+                    values: { requested: r.requested, matched: r.matched, completed: r.completed },
+                  }))}
+                  series={[
+                    { key: "requested", label: ds.requested, tone: "requested" },
+                    { key: "matched", label: ds.matched, tone: "matched" },
+                    { key: "completed", label: ds.completed, tone: "completed" },
+                  ]}
                   format={(v) => fmt.number(v)}
                 />
               )}

@@ -93,7 +93,7 @@ function RidesList() {
               align: "end",
               cell: (r) =>
                 r.agreed_fare_minor !== null ? (
-                  <span className="font-medium ltr-nums">{fmt.money(r.agreed_fare_minor, r.currency)}</span>
+                  <bdi className="font-medium">{fmt.money(r.agreed_fare_minor, r.currency)}</bdi>
                 ) : (
                   <span className="text-xs text-muted ltr-nums" title={t.common.estimate}>
                     {fmt.money(r.estimate_min_minor, r.currency)} – {fmt.money(r.estimate_max_minor, r.currency)}

@@ -2973,11 +2973,15 @@ export interface components {
             mfa_token: string;
             code: string;
         };
+        /** @description Mark everything up to a cursor (`up_to`) or exactly one notification (`cursor`). */
         MarkRead: {
-            up_to: number;
+            up_to?: number;
+            cursor?: number;
         };
+        /** @description Mark everything up to a cursor (`up_to`) or exactly one notification (`cursor`). */
         MarkReadRequest: {
-            up_to: number;
+            up_to?: number;
+            cursor?: number;
         };
         Me: {
             user: components["schemas"]["User"];
@@ -3066,6 +3070,7 @@ export interface components {
             };
             /** Format: date-time */
             created_at: string;
+            read: boolean;
         };
         NotificationPage: {
             items: components["schemas"]["NotificationItem"][];
@@ -7038,7 +7043,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody: {
+        requestBody?: {
             content: {
                 "application/json": components["schemas"]["MarkReadRequest"];
                 "application/x-www-form-urlencoded": components["schemas"]["MarkReadRequest"];

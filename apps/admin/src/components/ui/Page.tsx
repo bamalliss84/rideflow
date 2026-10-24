@@ -61,7 +61,7 @@ export function Tabs<V extends string>({ value, onChange, items, label }: {
   label: string;
 }) {
   return (
-    <div role="tablist" aria-label={label} className="flex gap-1 overflow-x-auto border-b border-line px-3">
+    <div role="tablist" aria-label={label} className="scroll-thin flex gap-1 overflow-x-auto overflow-y-hidden border-b border-line px-3">
       {items.map((item) => {
         const active = item.value === value;
         return (
@@ -71,8 +71,8 @@ export function Tabs<V extends string>({ value, onChange, items, label }: {
             type="button"
             aria-selected={active}
             onClick={() => onChange(item.value)}
-            className={`-mb-px flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-colors ${
-              active ? "border-teal-600 text-ink" : "border-transparent text-muted hover:text-ink"
+            className={`flex shrink-0 items-center gap-1.5 px-3 py-3 text-sm font-medium whitespace-nowrap transition-colors ${
+              active ? "text-ink shadow-[inset_0_-2px_0_var(--color-teal-600)]" : "text-muted hover:text-ink"
             }`}
           >
             {item.label}
@@ -111,14 +111,14 @@ export function SearchInput({ value, onChange, placeholder }: { value: string; o
         onChange={(e) => setText(e.target.value)}
         placeholder={placeholder ?? t.common.search}
         aria-label={placeholder ?? t.common.search}
-        className="h-9 w-full rounded-md border border-line-strong bg-white ps-9 pe-3 text-sm placeholder:text-subtle focus:border-teal-600 focus:ring-2 focus:ring-teal-600/30 focus:outline-none"
+        className="h-9 w-full rounded-lg border border-line-strong bg-white ps-9 pe-3 text-sm placeholder:text-subtle focus:border-teal-600 focus:ring-2 focus:ring-teal-600/30 focus:outline-none"
       />
     </div>
   );
 }
 
 export function Toolbar({ children }: { children: ReactNode }) {
-  return <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3">{children}</div>;
+  return <div className="flex flex-wrap items-end gap-x-3 gap-y-2.5 border-b border-line px-4 py-3">{children}</div>;
 }
 
 export function FilterSelect<V extends string>({ value, onChange, options, label, allowAll = true }: {
@@ -130,12 +130,13 @@ export function FilterSelect<V extends string>({ value, onChange, options, label
 }) {
   const { t } = useI18n();
   return (
-    <label className="flex items-center gap-2 text-xs text-muted">
+    <label className="flex min-w-36 flex-col gap-1 text-xs font-medium text-muted">
       <span className="whitespace-nowrap">{label}</span>
       <select
         value={value}
+        aria-label={label}
         onChange={(e) => onChange(e.target.value as V | "")}
-        className="h-9 rounded-md border border-line-strong bg-white px-2 pe-7 text-sm text-ink focus:border-teal-600 focus:ring-2 focus:ring-teal-600/30 focus:outline-none"
+        className="h-9 rounded-lg border border-line-strong bg-white ps-2.5 pe-8 text-sm text-ink focus:border-teal-600 focus:ring-2 focus:ring-teal-600/30 focus:outline-none"
       >
         {allowAll ? <option value="">{t.common.all}</option> : null}
         {options.map((o) => (
@@ -166,7 +167,7 @@ export function RangePicker({ value, onChange }: { value: RangePreset; onChange:
     { value: "90", label: t.common.last90 },
   ];
   return (
-    <div role="radiogroup" aria-label={t.dashboard.period} className="inline-flex rounded-md border border-line-strong bg-white p-0.5">
+    <div role="radiogroup" aria-label={t.dashboard.period} className="scroll-thin inline-flex max-w-full overflow-x-auto rounded-lg border border-line-strong bg-white p-0.5">
       {options.map((o) => (
         <button
           key={o.value}
@@ -174,7 +175,7 @@ export function RangePicker({ value, onChange }: { value: RangePreset; onChange:
           role="radio"
           aria-checked={value === o.value}
           onClick={() => onChange(o.value)}
-          className={`h-8 rounded px-3 text-[0.8125rem] font-medium transition-colors ${value === o.value ? "bg-navy-900 text-white" : "text-muted hover:text-ink"}`}
+          className={`h-8 shrink-0 rounded-md px-3 text-[0.8125rem] font-medium whitespace-nowrap transition-colors ${value === o.value ? "bg-navy-900 text-white" : "text-muted hover:text-ink"}`}
         >
           {o.label}
         </button>

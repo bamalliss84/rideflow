@@ -83,7 +83,7 @@ export default function LedgerPage() {
               ),
             },
             { key: "type", header: s.entry, cell: (e) => enumLabel(t, "ledgerType", e.entry_type) },
-            { key: "amount", header: t.common.amount, align: "end", cell: (e) => <span className="ltr-nums">{e.amount_minor ? fmt.money(e.amount_minor, e.currency) : "—"}</span> },
+            { key: "amount", header: t.common.amount, align: "end", cell: (e) => <bdi>{e.amount_minor ? fmt.money(e.amount_minor, e.currency) : "—"}</bdi> },
             { key: "days", header: s.days, align: "end", hideBelow: "sm", cell: (e) => (e.days ? fmt.number(e.days) : "—") },
             { key: "ref", header: s.reference, hideBelow: "md", cell: (e) => <span className="ltr-nums">{e.reference || "—"}</span> },
             { key: "by", header: s.by, hideBelow: "lg", cell: (e) => e.created_by_name || "—" },

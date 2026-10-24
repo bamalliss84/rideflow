@@ -25,7 +25,7 @@ export default function PlatformOverviewPage() {
   if (q.error) return <ErrorState error={q.error} onRetry={() => void q.refetch()} />;
   const o = q.data;
   const p = t.platform;
-  const months = o.tenants_created_by_month.map((m) => ({ label: String(m.month).slice(0, 7), value: Number(m.count) }));
+  const months = o.tenants_created_by_month.map((m) => ({ label: String(m.month).slice(0, 7), values: { count: Number(m.count) } }));
 
   return (
     <>
@@ -66,7 +66,7 @@ export default function PlatformOverviewPage() {
         <Card padded={false}>
           <CardHeader title={p.growth} />
           <div className="p-5">
-            <BarChart data={months} primaryLabel={p.tenantsTotal} format={(v) => fmt.number(v)} />
+            <BarChart data={months} series={[{ key: "count", label: p.tenantsTotal, tone: "neutral" }]} format={(v) => fmt.number(v)} />
           </div>
         </Card>
       </div>

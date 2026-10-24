@@ -66,7 +66,30 @@ OpenAPI validates with `--fail-on-warn`. A live HTTP smoke test (including cross
 
 `DEV_ADMIN_MFA_BYPASS` lets admin logins skip TOTP in the local Docker stack only. OTP and password are still required, and production MFA is unchanged.
 
-**Pending local action:** sync the Windows clock (Docker's npm fetch currently fails TLS with `CERT_NOT_YET_VALID`), then run `docker compose up -d --build` to apply it. Commit: `89fe588`.
+**Applied:** the local stack was rebuilt on 2026-10-24 after the system clock was corrected; the dev bypass is active in Docker. Commit: `89fe588`.
+
+## Dashboard final review (2026-10-24)
+
+Refinement of the existing platform and operator portals to the approved visual direction. See `docs/reports/PHASE_02_DASHBOARD_FINAL_REVIEW.md`.
+
+**Fixed:**
+- tab-strip scroll arrows;
+- phone-width page overflow from escaping hidden table labels;
+- grid blow-out;
+- bidi-broken mixed strings and scrambled Arabic dates and amounts.
+
+**Pages:**
+- localized audit log;
+- notifications with read/unread;
+- sectioned policy editor with validation and unsaved-changes guard;
+- honest zero-filled report chart;
+- ratings filters;
+- dispute decision layout;
+- organization grid.
+
+**Backend:** notification feed `read` flag plus single-item mark-read; contract regenerated.
+
+**Tests:** full backend suite 126 passed; tsc and eslint clean; production build ok; browser smoke on every operator route at 375px and on selected routes at 768/1280/1440px.
 
 ## Test evidence, Phase 2 (2026-10-22)
 
@@ -103,5 +126,6 @@ Do not change approved policy. Owner approval of the PROPOSED/PROVISIONAL policy
 | 2026-10-21 | Phase 1 backend | main / `0da382308386677be1ddc490314cbd18b5a06656` | repo foundation + services/api + tests + docs | 103 passed; lint/format/migrations/OpenAPI ok; live smoke ok | pending | fixed during session: FOR UPDATE on outer join, django-filter class-level queryset vs fail-closed manager, OTP per-IP limit too strict | D020–D028 | Phase 2 (MFA, CI green, Next.js scaffold) |
 | 2026-10-22 | Phase 2 admin portal | main / `daefc54c93fb7eb915dd752bb1f130351a4371bb` | apps/admin (new), backend MFA + portal endpoints, compose/CI/docs | 113 backend passed; tsc/eslint/build ok; browser walkthrough ok | pending | fixed: refresh-token rotation race (single-flight refresh), django-filter + fail-closed manager, React hook state anti-patterns | D029–D032 | Phase 3 |
 | 2026-10-22 | Dev-only admin MFA bypass (D033) | main / `89fe588` | accounts auth/mfa/views, settings, compose, BFF auth route, login screens, tests, docs | focused 47 passed; full 125 passed; tsc/eslint/build ok; live API check on :8011 ok | pending | admin image rebuild blocked by system clock (TLS CERT_NOT_YET_VALID) | D033 | sync clock, rebuild |
+| 2026-10-24 | Phase 2 dashboard final review and UI/UX refinement | main / `<FINAL_REVIEW_SHA>` | admin shared UI (shell, tables, tabs, cards, chart, bidi helpers, audit labels), 9 refined pages and bidi fixes across others, notifications API read state, contract, tests, docs | backend 126 passed; tsc/eslint 0; docker prod build ok; browser smoke at 375 on all operator routes plus selected 768/1280/1440 | ok | none | — | owner visual review |
 
 Template: Date/time | Task ID | Branch/commit | Files changed | Tests and outputs | Accepted? | Bugs | Decisions | Next task.

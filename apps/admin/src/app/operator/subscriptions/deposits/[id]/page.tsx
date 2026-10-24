@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 
-import { EnumBadge, Person } from "@/components/domain/Display";
+import { EnumBadge, MetaLine, Person } from "@/components/domain/Display";
 import { FilePreviewButton } from "@/components/domain/FilePreview";
 import { useI18n } from "@/components/providers/I18nProvider";
 import { useSession } from "@/components/providers/SessionProvider";
@@ -79,15 +79,15 @@ export default function DepositDetailPage() {
                   </Link>
                 ),
               },
-              { label: s.plan, value: `${c.plan.name} · ${tpl(s.planDays, { n: fmt.number(c.plan.duration_days) })}` },
-              { label: t.common.amount, value: <span className="text-lg font-semibold ltr-nums">{fmt.money(c.amount_minor, c.currency)}</span> },
-              { label: s.expected, value: <span className="ltr-nums">{fmt.money(c.expected_amount_minor, c.currency)}</span> },
+              { label: s.plan, value: <MetaLine className="text-sm text-ink" parts={[c.plan.name, tpl(s.planDays, { n: fmt.number(c.plan.duration_days) })]} /> },
+              { label: t.common.amount, value: <bdi className="text-lg font-semibold">{fmt.money(c.amount_minor, c.currency)}</bdi> },
+              { label: s.expected, value: <bdi>{fmt.money(c.expected_amount_minor, c.currency)}</bdi> },
               { label: s.discount, value: c.discount_pct ? `${c.discount_pct}%` : "—" },
               { label: s.account, value: c.deposit_account_label ?? "—" },
               { label: s.depositedOn, value: fmt.day(c.deposited_on) },
               { label: t.common.created, value: fmt.dateTime(c.created_at) },
-              { label: s.firstApproval, value: c.first_approved_at ? `${c.first_approved_by_name ?? "—"} · ${fmt.dateTime(c.first_approved_at)}` : "—" },
-              { label: s.decision, value: c.decided_at ? `${c.decided_by_name ?? "—"} · ${fmt.dateTime(c.decided_at)}` : "—" },
+              { label: s.firstApproval, value: c.first_approved_at ? <MetaLine className="text-sm text-ink" parts={[c.first_approved_by_name ?? "—", <bdi key="d" className="text-muted">{fmt.dateTime(c.first_approved_at)}</bdi>]} /> : "—" },
+              { label: s.decision, value: c.decided_at ? <MetaLine className="text-sm text-ink" parts={[c.decided_by_name ?? "—", <bdi key="d" className="text-muted">{fmt.dateTime(c.decided_at)}</bdi>]} /> : "—" },
               { label: t.common.note, value: c.decision_note || "—" },
             ]}
           />

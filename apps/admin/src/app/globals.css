@@ -64,7 +64,7 @@
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
 
-  --shadow-card: 0 1px 2px rgb(16 36 58 / 0.04), 0 1px 1px rgb(16 36 58 / 0.03);
+  --shadow-card: 0 1px 3px rgb(16 36 58 / 0.05), 0 1px 2px rgb(16 36 58 / 0.03);
   --shadow-pop: 0 10px 30px -10px rgb(16 36 58 / 0.25), 0 4px 10px -6px rgb(16 36 58 / 0.12);
 }
 
@@ -88,6 +88,15 @@
   }
   dialog::backdrop {
     background: rgb(10 24 40 / 0.45);
+  }
+  /* Thin, unobtrusive scrollbars for the few regions that genuinely scroll (sidebar, wide tables, tab strips). */
+  .scroll-thin {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(156 176 200 / 0.6) transparent;
+  }
+  .scroll-thin-dark {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(255 255 255 / 0.18) transparent;
   }
   /* Numbers/phones/codes always read left-to-right, even inside RTL text. */
   .ltr-nums {

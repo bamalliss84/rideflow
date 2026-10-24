@@ -71,7 +71,7 @@ export default function RiderDetailPage() {
                 { key: "created", header: t.common.date, cell: (x) => fmt.dateTime(x.created_at) },
                 { key: "driver", header: t.common.driver, cell: (x) => x.driver_name || "—" },
                 { key: "status", header: t.common.status, cell: (x) => <EnumBadge group="rideStatus" value={x.status} /> },
-                { key: "fare", header: t.rides.fare, align: "end", cell: (x) => <span className="ltr-nums">{fmt.money(x.agreed_fare_minor, x.currency)}</span> },
+                { key: "fare", header: t.rides.fare, align: "end", cell: (x) => <bdi>{fmt.money(x.agreed_fare_minor, x.currency)}</bdi> },
               ]}
             />
           </Card>

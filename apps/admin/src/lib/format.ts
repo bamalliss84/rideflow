@@ -53,6 +53,13 @@ export function createFormatters(ctx: FormatContext) {
       const [y, m, d] = v.split("-").map(Number);
       return new Intl.DateTimeFormat(tag, { dateStyle: "medium", timeZone: "UTC" }).format(new Date(Date.UTC(y ?? 0, (m ?? 1) - 1, d ?? 1)));
     },
+    /** Compact calendar-day label for chart axes, e.g. "22/10" — not shifted by time zone. */
+    shortDay: (v: string | null | undefined) => {
+      if (!v) return "—";
+      // Plain "DD/MM" (Latin digits, no bidi marks) so axis labels never reorder inside the LTR chart.
+      const [, m, d] = v.split("-");
+      return `${d}/${m}`;
+    },
     relative: (v: string | Date | null | undefined) => {
       const d = parse(v);
       if (!d) return "—";
@@ -76,6 +83,12 @@ export function createFormatters(ctx: FormatContext) {
         () => new Intl.NumberFormat(tag, { style: "currency", currency: cur, minimumFractionDigits: 0, maximumFractionDigits: units }).format(value),
         `${numberFmt.format(value)} ${cur}`,
       );
+    },
+    /** Plain decimal amount for CSV exports (no grouping, no symbol): spreadsheet-friendly and exact. */
+    amount: (minor: number | null | undefined) => {
+      if (minor === null || minor === undefined) return "";
+      const units = ctx.minorUnits ?? 2;
+      return (minor / 10 ** units).toFixed(units);
     },
     duration: (seconds: number | null | undefined) => {
       if (seconds === null || seconds === undefined) return "—";

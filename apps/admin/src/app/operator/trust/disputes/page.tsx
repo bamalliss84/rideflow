@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 
-import { EnumBadge, enumLabel, SafetyFlag } from "@/components/domain/Display";
+import { EnumBadge, enumLabel, PersonRole, SafetyFlag } from "@/components/domain/Display";
 import { useI18n } from "@/components/providers/I18nProvider";
 import { useSession } from "@/components/providers/SessionProvider";
 import { Card } from "@/components/ui/Card";
@@ -60,8 +60,8 @@ function DisputesList() {
                 </Link>
               ),
             },
-            { key: "opened", header: tr.openedBy, cell: (d) => `${d.opened_by_name || "—"} · ${enumLabel(t, "actorRole", d.opened_by_role)}` },
-            { key: "against", header: tr.against, hideBelow: "md", cell: (d) => (d.against_name ? `${d.against_name} · ${enumLabel(t, "actorRole", d.against_role)}` : "—") },
+            { key: "opened", header: tr.openedBy, cell: (d) => <PersonRole name={d.opened_by_name} role={d.opened_by_role} /> },
+            { key: "against", header: tr.against, hideBelow: "md", cell: (d) => (d.against_name ? <PersonRole name={d.against_name} role={d.against_role} /> : "—") },
             { key: "description", header: tr.description, hideBelow: "lg", cell: (d) => <span className="line-clamp-2 max-w-72 text-xs text-muted">{d.description}</span> },
             { key: "created", header: t.common.created, hideBelow: "sm", cell: (d) => fmt.relative(d.created_at) },
             { key: "status", header: t.common.status, cell: (d) => <EnumBadge group="disputeStatus" value={d.status} /> },

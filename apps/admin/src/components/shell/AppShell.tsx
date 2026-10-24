@@ -13,7 +13,7 @@ import { filterNav, type NavGroup } from "@/lib/nav";
 function NavLinks({ groups, onNavigate }: { groups: NavGroup[]; onNavigate?: () => void }) {
   const pathname = usePathname();
   return (
-    <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4" aria-label="primary">
+    <nav className="scroll-thin-dark min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-3 py-4" aria-label="primary">
       {groups.map((group, gi) => (
         <div key={gi}>
           {group.title ? <p className="mb-1.5 px-3 text-[0.68rem] font-semibold tracking-wide text-navy-300 uppercase">{group.title}</p> : null}
@@ -27,13 +27,12 @@ function NavLinks({ groups, onNavigate }: { groups: NavGroup[]; onNavigate?: () 
                     href={item.href}
                     onClick={onNavigate}
                     aria-current={active ? "page" : undefined}
-                    className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-[0.84rem] font-medium transition-colors ${
-                      active ? "bg-white/10 text-white" : "text-navy-200 hover:bg-white/5 hover:text-white"
+                    className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[0.84rem] font-medium transition-colors ${
+                      active ? "bg-teal-600 text-white shadow-sm" : "text-navy-200 hover:bg-white/5 hover:text-white"
                     }`}
                   >
-                    <Icon className={`size-4 shrink-0 ${active ? "text-teal-300" : "text-navy-300"}`} aria-hidden />
+                    <Icon className={`size-4 shrink-0 ${active ? "text-white" : "text-navy-300"}`} aria-hidden />
                     <span className="truncate">{item.label}</span>
-                    {active ? <span className="ms-auto h-4 w-0.5 rounded-full bg-teal-400" aria-hidden /> : null}
                   </Link>
                 </li>
               );
@@ -69,9 +68,9 @@ function UserMenu({ accountHref }: { accountHref: string }) {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-haspopup="menu"
-        className="flex items-center gap-2 rounded-md px-2 py-1.5 text-start hover:bg-navy-50"
+        className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-start hover:bg-navy-50"
       >
-        <span className="flex size-8 items-center justify-center rounded-full bg-navy-900 text-xs font-semibold text-white">{name.slice(0, 1).toUpperCase()}</span>
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-navy-900 text-xs font-semibold text-white">{name.slice(0, 1).toUpperCase()}</span>
         <span className="hidden min-w-0 flex-col sm:flex">
           <span className="max-w-40 truncate text-sm font-medium text-ink">{name}</span>
           <span className="max-w-40 truncate text-[0.7rem] text-muted">{roles.join("، ")}</span>
@@ -139,17 +138,17 @@ export function AppShell({ nav, portalLabel, contextLabel, accountHref, notifica
 
   const sidebar = (onNavigate?: () => void) => (
     <div className="flex h-full flex-col bg-navy-900">
-      <div className="flex h-16 items-center border-b border-white/10 px-5">
+      <div className="flex h-16 shrink-0 items-center border-b border-white/10 px-5">
         <Wordmark inverted subtitle={portalLabel} />
       </div>
       {contextLabel ? (
-        <div className="border-b border-white/10 px-5 py-3">
+        <div className="mx-3 mt-3 shrink-0 rounded-lg bg-white/5 px-3 py-2.5">
           <p className="text-[0.68rem] text-navy-300">{portalLabel}</p>
           <p className="truncate text-sm font-semibold text-white">{contextLabel}</p>
         </div>
       ) : null}
       <NavLinks groups={groups} onNavigate={onNavigate} />
-      <p className="border-t border-white/10 px-5 py-3 text-[0.68rem] text-navy-300">{t.meta.tagline}</p>
+      <p className="shrink-0 border-t border-white/10 px-5 py-3 text-[0.68rem] text-navy-300">{t.meta.tagline}</p>
     </div>
   );
 
@@ -170,23 +169,29 @@ export function AppShell({ nav, portalLabel, contextLabel, accountHref, notifica
           </div>
         </div>
       ) : null}
-      <div className="lg:ps-64">
-        <header className="sticky top-0 z-20 flex h-16 items-center gap-2 border-b border-line bg-white/90 px-4 backdrop-blur sm:px-6">
+      <div className="min-w-0 lg:ps-64">
+        <header className="sticky top-0 z-20 flex h-16 items-center gap-2 border-b border-line bg-white/95 px-4 backdrop-blur sm:px-6 lg:px-8">
           <button type="button" className="rounded-md p-2 text-navy-700 hover:bg-navy-50 lg:hidden" onClick={() => setDrawer(true)} aria-label={t.common.menu}>
             <Menu className="size-5" aria-hidden />
           </button>
-          <p className="truncate text-sm font-medium text-muted lg:hidden">{contextLabel ?? portalLabel}</p>
-          <div className="ms-auto flex items-center gap-1">
+          <p className="min-w-0 truncate text-sm font-medium text-muted">{contextLabel ?? portalLabel}</p>
+          <div className="ms-auto flex shrink-0 items-center gap-1">
             <LanguageSwitch />
             {notificationsHref ? (
-              <Link href={notificationsHref} className="rounded-md p-2 text-navy-700 hover:bg-navy-50" aria-label={t.nav.notifications} title={t.nav.notifications}>
+              <Link
+                href={notificationsHref}
+                className={`rounded-lg p-2 hover:bg-navy-50 ${pathname === notificationsHref ? "bg-teal-50 text-teal-700" : "text-navy-700"}`}
+                aria-label={t.nav.notifications}
+                aria-current={pathname === notificationsHref ? "page" : undefined}
+                title={t.nav.notifications}
+              >
                 <Bell className="size-5" aria-hidden />
               </Link>
             ) : null}
             <UserMenu accountHref={accountHref} />
           </div>
         </header>
-        <main id="main" className="mx-auto w-full max-w-[1400px] px-4 py-6 sm:px-6 lg:px-8">
+        <main id="main" className="mx-auto w-full max-w-[1440px] min-w-0 px-4 py-6 sm:px-6 lg:px-8">
           {children}
         </main>
       </div>

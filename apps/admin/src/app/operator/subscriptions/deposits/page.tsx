@@ -52,7 +52,7 @@ export default function DepositsPage() {
             },
             { key: "driver", header: t.common.driver, cell: (r) => <Person name={r.driver_name} phone={r.driver_phone} /> },
             { key: "plan", header: s.plan, hideBelow: "md", cell: (r) => r.plan.name },
-            { key: "amount", header: t.common.amount, align: "end", cell: (r) => <span className="font-medium ltr-nums">{fmt.money(r.amount_minor, r.currency)}</span> },
+            { key: "amount", header: t.common.amount, align: "end", cell: (r) => <bdi className="font-medium">{fmt.money(r.amount_minor, r.currency)}</bdi> },
             { key: "deposited", header: s.depositedOn, hideBelow: "lg", cell: (r) => fmt.day(r.deposited_on) },
             { key: "submitted", header: t.common.created, hideBelow: "sm", cell: (r) => fmt.relative(r.created_at) },
             { key: "status", header: t.common.status, cell: (r) => <EnumBadge group="claimStatus" value={r.status} /> },

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 
-import { EnumBadge, Person } from "@/components/domain/Display";
+import { EnumBadge, MetaLine, Person } from "@/components/domain/Display";
 import { useI18n } from "@/components/providers/I18nProvider";
 import { useSession } from "@/components/providers/SessionProvider";
 import { Badge } from "@/components/ui/Badge";
@@ -77,9 +77,7 @@ export default function DriversPage() {
                 const v = r.vehicles[0];
                 return v ? (
                   <span className="flex flex-col">
-                    <span>
-                      {v.make} {v.model} · {v.color}
-                    </span>
+                    <MetaLine className="text-sm text-ink" parts={[`${v.make} ${v.model}`, v.color]} />
                     <span className="text-xs text-muted ltr-nums">{v.plate_number}</span>
                   </span>
                 ) : (

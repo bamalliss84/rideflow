@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, Copy, ShieldAlert, Star } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { Fragment, useState, type ReactNode } from "react";
 
 import { useI18n } from "@/components/providers/I18nProvider";
 import { Badge, type Tone } from "@/components/ui/Badge";
@@ -81,16 +81,50 @@ export function Person({ name, phone, sub }: { name?: string | null; phone?: str
   );
 }
 
+/**
+ * Heterogeneous values (a person's name, a role, a timestamp…) shown on one line. Each part is its own
+ * bidi-isolated element, so a Latin name or a date never reorders the Arabic around it.
+ */
+export function MetaLine({ parts, className = "text-xs text-muted" }: { parts: (ReactNode | null | undefined | false)[]; className?: string }) {
+  const shown = parts.filter((p) => p !== null && p !== undefined && p !== false && p !== "");
+  return (
+    <span className={`inline-flex flex-wrap items-center gap-x-1.5 gap-y-0.5 ${className}`}>
+      {shown.map((p, i) => (
+        <Fragment key={i}>
+          {i ? <span aria-hidden className="text-subtle">·</span> : null}
+          {/* Text parts (names…) take their own direction; element parts stay isolated but follow the page direction. */}
+          {typeof p === "string" ? <bdi>{p}</bdi> : <span className="[unicode-bidi:isolate]">{p}</span>}
+        </Fragment>
+      ))}
+    </span>
+  );
+}
+
+/** A person with their role, as two isolated elements (never a concatenated "name · role" string). */
+export function PersonRole({ name, role, sub }: { name?: string | null; role?: string | null; sub?: ReactNode }) {
+  const { t } = useI18n();
+  return (
+    <span className="flex min-w-0 flex-col">
+      <bdi className="max-w-full self-start truncate font-medium text-ink">{name || "—"}</bdi>
+      {role || sub ? <MetaLine parts={[role ? enumLabel(t, "actorRole", role) : null, sub]} /> : null}
+    </span>
+  );
+}
+
 export function Phone({ value }: { value?: string | null }) {
   return value ? <span className="ltr-nums">{value}</span> : <span className="text-subtle">—</span>;
 }
 
-export function Stars({ value }: { value: number }) {
+export function Stars({ value, showValue = false }: { value: number; showValue?: boolean }) {
   return (
-    <span className="inline-flex items-center gap-0.5" aria-label={`${value}/5`}>
-      {[1, 2, 3, 4, 5].map((i) => (
-        <Star key={i} className={`size-3.5 ${i <= value ? "fill-amber-400 text-amber-500" : "text-navy-200"}`} aria-hidden />
-      ))}
+    <span className="inline-flex items-center gap-1.5" role="img" aria-label={`${value}/5`}>
+      {/* Stars fill in reading direction (right-to-left in Arabic) like any rating scale. */}
+      <span className="inline-flex items-center gap-0.5">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <Star key={i} className={`size-3.5 ${i <= value ? "fill-amber-400 text-amber-500" : "fill-navy-100 text-navy-200"}`} aria-hidden />
+        ))}
+      </span>
+      {showValue ? <span className="text-xs font-semibold text-ink ltr-nums">{value}/5</span> : null}
     </span>
   );
 }

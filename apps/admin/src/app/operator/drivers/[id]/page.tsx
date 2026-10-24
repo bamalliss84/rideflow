@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState, type ReactNode } from "react";
 
-import { EnumBadge, Phone } from "@/components/domain/Display";
+import { EnumBadge, MetaLine, Phone } from "@/components/domain/Display";
 import { FilePreviewButton } from "@/components/domain/FilePreview";
 import { ReviewActions } from "@/components/domain/ReviewActions";
 import { SubscriptionState } from "@/components/domain/SubscriptionState";
@@ -97,7 +97,7 @@ export default function DriverDetailPage() {
                 { label: dr.submitted, value: fmt.dateTime(d.submitted_at) },
                 { label: dr.reviewed, value: fmt.dateTime(d.reviewed_at) },
                 { label: t.common.created, value: fmt.dateTime(d.created_at) },
-                { label: dr.availability, value: d.online_since ? `${t.common.online} · ${fmt.relative(d.online_since)}` : t.common.offline },
+                { label: dr.availability, value: d.online_since ? <MetaLine className="text-sm text-ink" parts={[t.common.online, fmt.relative(d.online_since)]} /> : t.common.offline },
                 { label: dr.reviewNote, value: d.review_note || "—" },
               ]}
             />
@@ -116,10 +116,10 @@ export default function DriverDetailPage() {
                   header: dr.expires,
                   cell: (r) =>
                     r.expires_at ? (
-                      <span className={r.expires_at < today ? "font-medium text-coral-700" : ""}>
-                        {fmt.day(r.expires_at)}
-                        {r.expires_at < today ? ` · ${dr.expired}` : ""}
-                      </span>
+                      <MetaLine
+                        className={`text-sm ${r.expires_at < today ? "font-medium text-coral-700" : ""}`}
+                        parts={[<bdi key="d">{fmt.day(r.expires_at)}</bdi>, r.expires_at < today ? dr.expired : null]}
+                      />
                     ) : (
                       "—"
                     ),
@@ -148,7 +148,7 @@ export default function DriverDetailPage() {
               rows={d.vehicles}
               rowKey={(r) => r.id}
               columns={[
-                { key: "vehicle", header: dr.vehicle, cell: (r) => <span className="font-medium">{r.make} {r.model} · {r.color}</span> },
+                { key: "vehicle", header: dr.vehicle, cell: (r) => <MetaLine className="text-sm font-medium text-ink" parts={[`${r.make} ${r.model}`, r.color]} /> },
                 { key: "plate", header: dr.plate, cell: (r) => <span className="ltr-nums">{r.plate_number}</span> },
                 { key: "year", header: dr.year, hideBelow: "md", cell: (r) => <span className="ltr-nums">{r.year ?? "—"}</span> },
                 { key: "status", header: t.common.status, cell: (r) => <EnumBadge group="reviewStatus" value={r.status} /> },
@@ -178,7 +178,7 @@ export default function DriverDetailPage() {
                   { key: "created", header: t.common.date, cell: (r) => fmt.dateTime(r.created_at) },
                   { key: "rider", header: t.common.rider, cell: (r) => r.rider_name || r.rider_phone },
                   { key: "status", header: t.common.status, cell: (r) => <EnumBadge group="rideStatus" value={r.status} /> },
-                  { key: "fare", header: t.rides.fare, align: "end", cell: (r) => <span className="ltr-nums">{fmt.money(r.agreed_fare_minor, r.currency)}</span> },
+                  { key: "fare", header: t.rides.fare, align: "end", cell: (r) => <bdi>{fmt.money(r.agreed_fare_minor, r.currency)}</bdi> },
                 ]}
               />
             </Card>

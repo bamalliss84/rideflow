@@ -308,3 +308,31 @@ def test_settings_refuse_bypass_outside_local(monkeypatch):
     monkeypatch.setenv("RIDEFLOW_ENV", "local")
     monkeypatch.setenv("DEV_ADMIN_MFA_BYPASS", "0")
     importlib.reload(base)
+
+
+# ---- Notifications read state (dashboard final review 2026-10-24)
+
+
+def test_notifications_report_read_state_and_mark_single_or_all(ta, tb):
+    staff = make_member(ta, "reviewer")
+    other = make_member(tb, "reviewer")
+    with tenant_context(ta.tenant):
+        n1 = Notification.objects.create(tenant=ta.tenant, user=staff, kind="staff.dispute_opened", payload={})
+        n2 = Notification.objects.create(tenant=ta.tenant, user=staff, kind="staff.appeal_filed", payload={})
+    with tenant_context(tb.tenant):
+        foreign = Notification.objects.create(tenant=tb.tenant, user=other, kind="staff.appeal_filed", payload={})
+    api = api_for(ta, staff)
+    items = api.get("/api/v1/notifications").data["items"]
+    assert [i["read"] for i in items] == [False, False]
+    # exactly one of up_to / cursor
+    assert api.post("/api/v1/notifications/read", {}).status_code == 400
+    assert api.post("/api/v1/notifications/read", {"up_to": n2.pk, "cursor": n1.pk}).status_code == 400
+    assert api.post("/api/v1/notifications/read", {"cursor": n1.pk}).status_code == 200
+    assert {i["cursor"]: i["read"] for i in api.get("/api/v1/notifications").data["items"]} == {n1.pk: True, n2.pk: False}
+    # another tenant's notification cannot be marked from this tenant
+    api.post("/api/v1/notifications/read", {"cursor": foreign.pk})
+    with tenant_context(tb.tenant):
+        foreign.refresh_from_db()
+        assert foreign.read_at is None
+    assert api.post("/api/v1/notifications/read", {"up_to": n2.pk}).status_code == 200
+    assert all(i["read"] for i in api.get("/api/v1/notifications").data["items"])

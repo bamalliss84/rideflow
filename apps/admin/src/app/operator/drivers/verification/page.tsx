@@ -3,7 +3,7 @@
 import { CarFront, FileText, UserCheck } from "lucide-react";
 import Link from "next/link";
 
-import { EnumBadge, Person } from "@/components/domain/Display";
+import { EnumBadge, MetaLine, Person } from "@/components/domain/Display";
 import { FilePreviewButton } from "@/components/domain/FilePreview";
 import { ReviewActions } from "@/components/domain/ReviewActions";
 import { useI18n } from "@/components/providers/I18nProvider";
@@ -47,7 +47,7 @@ export default function VerificationQueuePage() {
             empty={nothing}
             columns={[
               { key: "name", header: t.common.driver, cell: (r) => <Person name={r.full_name} phone={r.phone} /> },
-              { key: "submitted", header: dr.submitted, cell: (r) => `${fmt.dateTime(r.submitted_at)} · ${fmt.relative(r.submitted_at)}` },
+              { key: "submitted", header: dr.submitted, cell: (r) => <MetaLine className="text-sm text-ink" parts={[<bdi key="d">{fmt.dateTime(r.submitted_at)}</bdi>, <span key="r" className="text-muted">{fmt.relative(r.submitted_at)}</span>]} /> },
               {
                 key: "docs",
                 header: dr.documents,
@@ -123,7 +123,7 @@ export default function VerificationQueuePage() {
             empty={nothing}
             columns={[
               { key: "driver", header: t.common.driver, cell: (r) => <span className="font-medium">{r.driver_name || "—"}</span> },
-              { key: "vehicle", header: dr.vehicle, cell: (r) => `${r.make} ${r.model} · ${r.color}` },
+              { key: "vehicle", header: dr.vehicle, cell: (r) => <MetaLine className="text-sm text-ink" parts={[`${r.make} ${r.model}`, r.color]} /> },
               { key: "plate", header: dr.plate, cell: (r) => <span className="ltr-nums">{r.plate_number}</span> },
               { key: "status", header: t.common.status, hideBelow: "md", cell: (r) => <EnumBadge group="reviewStatus" value={r.status} /> },
               {

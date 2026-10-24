@@ -1,11 +1,11 @@
 "use client";
 
-import { Gavel, MessageSquare, Route } from "lucide-react";
+import { CalendarClock, FileText, Gavel, MessageSquare, Route, Scale, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
-import { EnumBadge, enumLabel, SafetyFlag } from "@/components/domain/Display";
+import { EnumBadge, enumLabel, MetaLine, PersonRole, SafetyFlag } from "@/components/domain/Display";
 import { useI18n } from "@/components/providers/I18nProvider";
 import { useSession } from "@/components/providers/SessionProvider";
 import { Button } from "@/components/ui/Button";
@@ -66,54 +66,81 @@ export default function DisputeDetailPage() {
           ) : null
         }
       />
-      <div className="grid gap-6 xl:grid-cols-3">
-        <div className="space-y-6 xl:col-span-2">
-          <Card>
-            <KeyValues
-              columns={2}
-              items={[
-                { label: tr.openedBy, value: `${d.opened_by_name || "—"} · ${enumLabel(t, "actorRole", d.opened_by_role)}` },
-                { label: tr.against, value: d.against_name ? `${d.against_name} · ${enumLabel(t, "actorRole", d.against_role)}` : "—" },
-                { label: t.common.created, value: fmt.dateTime(d.created_at) },
-                {
-                  label: t.nav.rides,
-                  value: can("rides.view") ? (
-                    <Link href={`/operator/rides/${d.ride}`} className="inline-flex items-center gap-1 font-medium text-teal-700 hover:underline">
-                      <Route className="size-4" aria-hidden />
-                      {t.common.open}
-                    </Link>
-                  ) : (
-                    "—"
-                  ),
-                },
-              ]}
-            />
-            <h3 className="mt-5 mb-1.5 text-xs font-medium text-muted">{tr.description}</h3>
-            <p className="rounded-md bg-surface px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap">{d.description}</p>
-            {!open ? (
-              <>
-                <h3 className="mt-5 mb-1.5 text-xs font-medium text-muted">{tr.resolution}</h3>
-                <p className="text-sm">
-                  {d.resolution_note} <span className="text-muted">· {d.resolved_by_name ?? "—"} · {fmt.dateTime(d.resolved_at)}</span>
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="min-w-0 space-y-6 lg:col-span-2">
+          {!open ? (
+            <Card padded={false}>
+              <CardHeader title={tr.resolution} icon={<Scale className="size-4" />} actions={<EnumBadge group="disputeStatus" value={d.status} />} />
+              <div className="space-y-4 p-5">
+                <p className="rounded-lg border border-line bg-surface px-4 py-3 text-sm leading-relaxed break-words whitespace-pre-wrap">
+                  <bdi>{d.resolution_note || "—"}</bdi>
                 </p>
-              </>
-            ) : null}
+                <KeyValues
+                  columns={2}
+                  items={[
+                    { label: tr.decidedBy, value: <bdi className="font-medium">{d.resolved_by_name || "—"}</bdi> },
+                    { label: tr.decidedAt, value: <bdi>{fmt.dateTime(d.resolved_at)}</bdi> },
+                  ]}
+                />
+              </div>
+            </Card>
+          ) : null}
+          <Card padded={false}>
+            <CardHeader title={tr.caseDetails} icon={<FileText className="size-4" />} />
+            <div className="space-y-5 p-5">
+              <KeyValues
+                columns={3}
+                items={[
+                  { label: tr.openedBy, value: <PersonRole name={d.opened_by_name} role={d.opened_by_role} /> },
+                  { label: tr.against, value: d.against_name || d.against_role ? <PersonRole name={d.against_name} role={d.against_role} /> : "—" },
+                  { label: t.common.status, value: <EnumBadge group="disputeStatus" value={d.status} /> },
+                  { label: t.common.created, value: <bdi>{fmt.dateTime(d.created_at)}</bdi> },
+                  { label: tr.category, value: enumLabel(t, "disputeCategory", d.category) },
+                  {
+                    label: tr.relatedRide,
+                    value: can("rides.view") ? (
+                      <Link href={`/operator/rides/${d.ride}`} className="inline-flex items-center gap-1 font-medium text-teal-700 hover:underline">
+                        <Route className="size-4" aria-hidden />
+                        {tr.viewRide}
+                      </Link>
+                    ) : (
+                      "—"
+                    ),
+                  },
+                ]}
+              />
+              <div>
+                <h3 className="mb-1.5 text-xs font-medium text-muted">{tr.description}</h3>
+                <p className="rounded-lg bg-surface px-4 py-3 text-sm leading-relaxed break-words whitespace-pre-wrap">
+                  <bdi>{d.description}</bdi>
+                </p>
+              </div>
+            </div>
           </Card>
         </div>
-        <Card padded={false}>
-          <CardHeader title={tr.notes} icon={<MessageSquare className="size-4" />} />
+        <Card padded={false} className="self-start">
+          <CardHeader title={tr.notes} subtitle={d.notes.length ? String(d.notes.length) : undefined} icon={<MessageSquare className="size-4" />} />
           <ol className="space-y-3 px-5 py-4">
             {d.notes.length ? (
               d.notes.map((n) => (
-                <li key={n.id} className="rounded-md border border-line px-3 py-2">
-                  <p className="text-xs text-muted">
-                    {n.author_name || "—"} · {enumLabel(t, "actorRole", n.author_role)} · {fmt.dateTime(n.created_at)}
+                <li key={n.id} className="rounded-lg border border-line px-3 py-2.5">
+                  <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                    <span className="inline-flex min-w-0 items-center gap-1.5 text-xs">
+                      <UserRound className="size-3.5 shrink-0 text-subtle" aria-hidden />
+                      <MetaLine className="text-xs text-ink" parts={[<span key="n" className="font-medium">{n.author_name || "—"}</span>, <span key="r" className="text-muted">{enumLabel(t, "actorRole", n.author_role)}</span>]} />
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-[0.7rem] text-muted">
+                      <CalendarClock className="size-3.5" aria-hidden />
+                      <bdi>{fmt.dateTime(n.created_at)}</bdi>
+                    </span>
+                  </div>
+                  <p className="mt-1.5 text-sm leading-relaxed break-words whitespace-pre-wrap">
+                    <bdi>{n.note}</bdi>
                   </p>
-                  <p className="mt-1 text-sm whitespace-pre-wrap">{n.note}</p>
                 </li>
               ))
             ) : (
-              <li className="text-center text-sm text-muted">{t.common.emptyTitle}</li>
+              <li className="py-4 text-center text-sm text-muted">{tr.noNotes}</li>
             )}
           </ol>
           {open && can("disputes.review") ? (

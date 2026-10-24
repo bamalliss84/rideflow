@@ -3739,7 +3739,6 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/MarkReadRequest'
-        required: true
       security:
       - BearerJWT: []
       responses:
@@ -7050,20 +7049,26 @@ components:
       - mfa_token
     MarkRead:
       type: object
+      description: Mark everything up to a cursor (`up_to`) or exactly one notification
+        (`cursor`).
       properties:
         up_to:
           type: integer
           minimum: 0
-      required:
-      - up_to
+        cursor:
+          type: integer
+          minimum: 1
     MarkReadRequest:
       type: object
+      description: Mark everything up to a cursor (`up_to`) or exactly one notification
+        (`cursor`).
       properties:
         up_to:
           type: integer
           minimum: 0
-      required:
-      - up_to
+        cursor:
+          type: integer
+          minimum: 1
     Me:
       type: object
       properties:
@@ -7269,11 +7274,14 @@ components:
         created_at:
           type: string
           format: date-time
+        read:
+          type: boolean
       required:
       - created_at
       - cursor
       - kind
       - payload
+      - read
     NotificationPage:
       type: object
       properties:

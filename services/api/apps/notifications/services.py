@@ -28,6 +28,7 @@ def serialize(notification):
         "kind": notification.kind,
         "payload": notification.payload,
         "created_at": notification.created_at.isoformat(),
+        "read": notification.read_at is not None,
     }
 
 

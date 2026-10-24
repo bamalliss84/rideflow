@@ -20,6 +20,7 @@ class NotificationItemSerializer(serializers.Serializer):
     kind = serializers.CharField()
     payload = serializers.DictField()
     created_at = serializers.DateTimeField()
+    read = serializers.BooleanField()
 
 
 class NotificationPageSerializer(serializers.Serializer):
@@ -29,7 +30,15 @@ class NotificationPageSerializer(serializers.Serializer):
 
 
 class MarkReadSerializer(serializers.Serializer):
-    up_to = serializers.IntegerField(min_value=0)
+    """Mark everything up to a cursor (`up_to`) or exactly one notification (`cursor`)."""
+
+    up_to = serializers.IntegerField(min_value=0, required=False)
+    cursor = serializers.IntegerField(min_value=1, required=False)
+
+    def validate(self, attrs):
+        if ("up_to" in attrs) == ("cursor" in attrs):
+            raise serializers.ValidationError("Provide exactly one of up_to or cursor.")
+        return attrs
 
 
 @extend_schema(tags=["realtime"])
@@ -63,7 +72,8 @@ class NotificationMarkReadView(APIView):
     def post(self, request):
         serializer = MarkReadSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        Notification.objects.filter(user=request.user, id__lte=serializer.validated_data["up_to"], read_at__isnull=True).update(
-            read_at=timezone.now()
-        )
+        data = serializer.validated_data
+        rows = Notification.objects.filter(user=request.user, read_at__isnull=True)
+        rows = rows.filter(id=data["cursor"]) if "cursor" in data else rows.filter(id__lte=data["up_to"])
+        rows.update(read_at=timezone.now())
         return Response(serializer.validated_data)

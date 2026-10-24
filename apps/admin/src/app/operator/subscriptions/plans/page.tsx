@@ -49,7 +49,7 @@ export default function PlansPage() {
           columns={[
             { key: "name", header: t.common.name, cell: (p) => <span className="font-medium">{p.name}</span> },
             { key: "code", header: s.code, hideBelow: "sm", cell: (p) => <span className="text-muted ltr-nums">{p.code}</span> },
-            { key: "price", header: s.price, align: "end", cell: (p) => <span className="font-medium ltr-nums">{fmt.money(p.price_minor)}</span> },
+            { key: "price", header: s.price, align: "end", cell: (p) => <bdi className="font-medium">{fmt.money(p.price_minor)}</bdi> },
             { key: "duration", header: s.duration, align: "end", cell: (p) => fmt.number(p.duration_days) },
             { key: "trial", header: s.trial, hideBelow: "md", cell: (p) => (p.is_trial ? <Badge tone="info">{s.trial}</Badge> : "—") },
             { key: "active", header: t.common.status, cell: (p) => <Badge tone={p.is_active ? "success" : "neutral"}>{p.is_active ? t.common.active : t.common.inactive}</Badge> },

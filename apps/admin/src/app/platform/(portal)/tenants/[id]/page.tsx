@@ -4,7 +4,7 @@ import { AppWindow, KeyRound, Pencil, Plus, ShieldCheck, UserPlus } from "lucide
 import { useParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
-import { CopyText, EnumBadge, Phone } from "@/components/domain/Display";
+import { CopyText, EnumBadge, MetaLine, Phone } from "@/components/domain/Display";
 import { TenantForm } from "@/components/domain/TenantForm";
 import { useI18n } from "@/components/providers/I18nProvider";
 import { useSession } from "@/components/providers/SessionProvider";
@@ -71,7 +71,7 @@ export default function TenantDetailPage() {
             columns={1}
             items={[
               { label: p.slug, value: <span className="ltr-nums">{d.slug}</span> },
-              { label: p.currency, value: <span className="ltr-nums">{d.currency} · {d.currency_minor_units}</span> },
+              { label: p.currency, value: <MetaLine className="text-sm text-ink" parts={[<span key="c" className="ltr-nums">{d.currency}</span>, <span key="u" className="ltr-nums">{d.currency_minor_units}</span>]} /> },
               { label: p.timeZone, value: <span className="ltr-nums">{d.time_zone}</span> },
               { label: p.locale, value: d.locale === "ar" ? "العربية" : "English" },
               { label: t.common.created, value: fmt.dateTime(d.created_at) },
