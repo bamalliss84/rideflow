@@ -57,7 +57,7 @@ OpenAPI validates with `--fail-on-warn`. A live HTTP smoke test (including cross
 - **Still open:** D009, D010, D011, D013 (legal, release blocker), D014, D015, OD-02 confirmation, and OD-05 to OD-09.
 
 ## Current blockers
-- 2026-10-25: host drive C: is full (26 MB free). Docker Desktop's engine stopped during the Phase 3 final rebuild. Free space (do not purge Docker data), start Docker Desktop, run `docker compose up -d --build`, then `cd apps/admin && npx playwright test`.
+- (Resolved 2026-10-27) Docker restored; Phase 3 final build and full E2E run passed (25/25).
 
 - Legal and transport approval (G0) is not verified.
 - Admin MFA and the production adapters (SMS, push, upload scanning) are missing before any shared environment.
@@ -93,7 +93,7 @@ Reports: `docs/reports/PHASE_03_QA_REPORT.md`, `PHASE_03_DEFECT_REGISTER.md`, `P
 - tsc/eslint: clean.
 - E2E: 24/25 full run, and the remaining failure (per-phone OTP limit, fixed in the harness) passed on re-run (8/8 auth).
 
-**BLOCKED:** the final rebuild and E2E re-run. Drive C: filled up and Docker Desktop stopped. Free disk space on C:, start Docker Desktop, then run `docker compose up -d --build`. Also listed in Current blockers.
+**Final verification (2026-10-27):** production build and full E2E run 25/25 passed; CI success on `1cbc333`.
 
 **Release blockers** (production server, SMS, malware scanning, maps, legal, owner policy approval, proxy config) are listed in the release-readiness report.
 

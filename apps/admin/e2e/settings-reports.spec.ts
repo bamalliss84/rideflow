@@ -106,7 +106,8 @@ test.describe("loading, error, empty and recovery states (owner)", () => {
     await page.route("**/api/proxy/admin/drivers?**", async (route) => {
       if (fail) return route.fulfill({ status: 500, contentType: "application/json", body: '{"code":"server_error"}' });
       await new Promise((r) => setTimeout(r, 800));
-      return route.continue();
+      // A refetch may already have been answered while delayed; that is not an app failure.
+      return route.continue().catch(() => undefined);
     });
     await page.goto("/operator/drivers");
     await expect(page.getByRole("main").getByRole("alert").filter({ hasText: "Something went wrong" })).toBeVisible();

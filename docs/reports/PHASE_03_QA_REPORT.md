@@ -228,6 +228,19 @@ After that, still to run:
 
 See [PHASE_03_RELEASE_READINESS.md](PHASE_03_RELEASE_READINESS.md).
 
+## 9a. Final verification after Docker was restored (2026-10-27)
+
+| Check | Result |
+|---|---|
+| Free space on C: | 7–10 GB; Docker Desktop running |
+| `docker compose up -d --build admin` | PASSED: final production build of the committed code |
+| `npx playwright test` (full suite) | **25/25 PASSED** (2.0 min) |
+| GitHub Actions on `1cbc333` (run 40137259234) | **success** (verified via the GitHub API) |
+
+**Test-harness race fixed during this run.** A delayed `route.continue()` in the error/loading test fired after the request had been answered (`Route is already handled`). It is now tolerated. This was test code only.
+
+The BLOCKED items in §4.3 and §9 are now resolved.
+
 ## 11. Decision
 
 **CONDITIONAL PASS.**
@@ -240,8 +253,8 @@ See [PHASE_03_RELEASE_READINESS.md](PHASE_03_RELEASE_READINESS.md).
 - MFA recovery is implemented without weakening the first factor.
 
 **Conditions:**
-1. Re-run the full E2E suite and production build once Docker is restored (blocked by host disk space).
-2. Confirm CI is green for the Phase 3 commit.
-3. Address the release blockers before any production or pilot launch: production ASGI server, malware scanning, SMS provider, real maps, legal approvals, owner-approved policy values, trusted-proxy configuration.
+- ~~Re-run the full E2E suite and production build once Docker is restored.~~ Done: 25/25 passed (§9a).
+- ~~Confirm CI is green for the Phase 3 commit.~~ Done: CI success.
+- The remaining condition: address the release blockers before any production or pilot launch: production ASGI server, malware scanning, SMS provider, real maps, legal approvals, owner-approved policy values, trusted-proxy configuration.
 
 The baseline is ready for the separate Phase 4 Flutter driver-app work, which talks only to the tested API.
