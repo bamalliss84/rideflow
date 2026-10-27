@@ -1,0 +1,38 @@
+name: rideflow_driver
+description: RideFlow driver app (Android). Talks only to the RideFlow API; the backend decides every permission and state.
+publish_to: "none"
+version: 0.4.0+1
+
+environment:
+  sdk: ">=3.5.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  intl: 0.19.0
+  dio: 5.7.0
+  flutter_riverpod: 2.6.1
+  go_router: 14.6.2
+  flutter_secure_storage: 9.2.2
+  web_socket_channel: 3.0.1
+  geolocator: 13.0.2
+  image_picker: 1.1.2
+  uuid: 4.5.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  flutter_lints: 4.0.0
+
+flutter:
+  uses-material-design: true
+  generate: true
+
+# geolocator_android 4.6.2 needs the Flutter >= 3.27 Gradle plugin (flutter.compileSdkVersion in plugin
+# projects); this machine uses Flutter 3.24.5. 4.6.1 is the same API with a fixed compileSdk.
+dependency_overrides:
+  geolocator_android: 4.6.1

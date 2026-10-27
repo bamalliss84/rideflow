@@ -101,12 +101,21 @@ class DriverProfileSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class PresenceSerializer(serializers.Serializer):
+    has_location = serializers.BooleanField()
+    fresh = serializers.BooleanField()
+    server_ts = serializers.DateTimeField(allow_null=True)
+    accuracy_m = serializers.FloatField(allow_null=True)
+    stale_after_seconds = serializers.IntegerField()
+
+
 class EligibilitySerializer(serializers.Serializer):
     eligible = serializers.BooleanField()
     reasons = serializers.ListField(child=serializers.CharField())
     subscription_active = serializers.BooleanField()
     status = serializers.CharField()
     is_online = serializers.BooleanField()
+    presence = PresenceSerializer()
 
 
 class AvailabilitySerializer(serializers.Serializer):

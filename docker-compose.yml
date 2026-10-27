@@ -3,7 +3,8 @@ name: rideflow
 x-api-env: &api-env
   DJANGO_DEBUG: ${DJANGO_DEBUG:-1}
   DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-dev-only-insecure-secret-key-change-me-0123456789}
-  DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,api}
+  # 10.0.2.2 = the Android emulator's alias for this machine's loopback (the port stays bound to 127.0.0.1).
+  DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,api,10.0.2.2}
   DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-http://localhost:8010}
   DB_HOST: ${DB_HOST:-db}
   DB_PORT: ${DB_PORT:-5432}

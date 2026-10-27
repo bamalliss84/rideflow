@@ -98,7 +98,8 @@ def read_challenge(token):
         raise ChallengeInvalid("MFA challenge is invalid or expired.") from exc
 
 
-LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1", "[::1]", "api"}
+# 10.0.2.2: Android emulator alias of the host loopback (only reachable from an emulator on this machine).
+LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1", "[::1]", "api", "10.0.2.2"}
 
 
 def dev_bypass_active():

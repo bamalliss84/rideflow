@@ -50,8 +50,14 @@ def test_driver_onboarding_review_and_go_online(ta):
     r = driver_api.post("/api/v1/driver/availability", {"online": True})
     assert r.status_code == 403 and "subscription_inactive" in r.data["detail"]["reasons"]
     assert driver_api.post("/api/v1/driver/subscription/trial").status_code == 201
+    # Eligible, but no location yet: going online is refused (the driver would be invisible to dispatch).
+    r = driver_api.post("/api/v1/driver/availability", {"online": True})
+    assert r.status_code == 403 and r.data["detail"]["reasons"] == ["location_required"]
+    lng, lat = ta.center
+    assert driver_api.post("/api/v1/driver/location", {"lat": lat, "lng": lng, "accuracy_m": 10}).data["applied"] is True
     r = driver_api.post("/api/v1/driver/availability", {"online": True})
     assert r.status_code == 200 and r.data["eligible"] is True and r.data["is_online"] is True
+    assert r.data["presence"]["fresh"] is True and r.data["presence"]["has_location"] is True
 
 
 def test_upload_rejects_disguised_or_oversized_files(ta, settings):

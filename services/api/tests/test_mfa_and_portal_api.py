@@ -336,3 +336,16 @@ def test_notifications_report_read_state_and_mark_single_or_all(ta, tb):
         assert foreign.read_at is None
     assert api.post("/api/v1/notifications/read", {"up_to": n2.pk}).status_code == 200
     assert all(i["read"] for i in api.get("/api/v1/notifications").data["items"])
+
+
+def test_dev_bypass_treats_only_the_emulator_loopback_alias_as_local(settings):
+    """Phase 4: the Android emulator reaches the dev API as 10.0.2.2; other private addresses stay non-local."""
+    settings.DEBUG = True
+    settings.RIDEFLOW_ENV = "local"
+    settings.DEV_ADMIN_MFA_BYPASS = True
+    settings.ALLOWED_HOSTS = ["localhost", "127.0.0.1", "api", "10.0.2.2"]
+    assert mfa.dev_bypass_active() is True
+    settings.ALLOWED_HOSTS = ["localhost", "10.0.2.3"]
+    assert mfa.dev_bypass_active() is False
+    settings.ALLOWED_HOSTS = ["localhost", "192.168.1.20"]
+    assert mfa.dev_bypass_active() is False

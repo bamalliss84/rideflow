@@ -1,0 +1,310 @@
+{
+  "@@locale": "ar",
+  "appTitle": "RideFlow للسائق",
+  "retry": "إعادة المحاولة",
+  "cancel": "إلغاء",
+  "confirm": "تأكيد",
+  "save": "حفظ",
+  "close": "إغلاق",
+  "loading": "جارٍ التحميل…",
+  "errorTitle": "تعذّر إكمال الطلب",
+  "errorNetwork": "لا يوجد اتصال بالخادم. تحقق من الإنترنت.",
+  "errorServer": "حدث خطأ في الخادم. حاول لاحقًا.",
+  "errorUnavailable": "الخدمة غير متاحة مؤقتًا. حاول بعد لحظات.",
+  "errorForbidden": "لا تملك صلاحية هذا الإجراء.",
+  "errorThrottled": "محاولات كثيرة. انتظر قليلًا ثم حاول.",
+  "errorConflict": "تغيّرت الحالة. حدّث الصفحة وحاول مجددًا.",
+  "errorValidation": "تحقق من البيانات المدخلة.",
+  "errorSessionExpired": "انتهت الجلسة. سجّل الدخول مجددًا.",
+  "emptyTitle": "لا يوجد شيء هنا بعد",
+  "offlineBanner": "غير متصل بالخادم — جارٍ إعادة الاتصال",
+  "signInTitle": "تسجيل دخول السائق",
+  "signInSubtitle": "أدخل رقم جوالك وسنرسل لك رمز تحقق.",
+  "phoneLabel": "رقم الجوال",
+  "phoneHint": "بالصيغة الدولية، مثل +967700000000",
+  "sendCode": "إرسال الرمز",
+  "codeLabel": "رمز التحقق",
+  "codeSentTo": "أرسلنا رمز التحقق إلى {phone}",
+  "@codeSentTo": {
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "verify": "تحقق ودخول",
+  "changeNumber": "تغيير الرقم",
+  "invalidPhone": "أدخل رقمًا بالصيغة الدولية يبدأ بـ +",
+  "invalidCode": "رمز غير صحيح أو منتهٍ.",
+  "operatorLabel": "المشغّل: {name}",
+  "@operatorLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "logout": "تسجيل الخروج",
+  "navHome": "الرئيسية",
+  "navRides": "رحلاتي",
+  "navEarnings": "الأرباح",
+  "navAccount": "حسابي",
+  "statusOnline": "متصل — تستقبل الطلبات",
+  "statusOffline": "غير متصل",
+  "goOnline": "ابدأ استقبال الطلبات",
+  "goOffline": "إيقاف استقبال الطلبات",
+  "notEligibleTitle": "لا يمكنك الاتصال الآن",
+  "offersTitle": "طلبات قريبة",
+  "offersEmpty": "لا توجد طلبات قريبة الآن. ستظهر هنا فور وصولها.",
+  "offersOfflineHint": "اتصل لاستقبال الطلبات القريبة.",
+  "activeRide": "رحلتك الحالية",
+  "openRide": "فتح",
+  "completeOnboarding": "أكمل طلب الانضمام",
+  "manageSubscription": "الاشتراك",
+  "reason_driver_pending_documents": "الوثائق ناقصة — أكمل طلب الانضمام.",
+  "reason_driver_under_review": "طلبك قيد المراجعة.",
+  "reason_driver_rejected": "رُفض طلبك. راجع الملاحظات وأعد التقديم.",
+  "reason_driver_suspended": "حسابك موقوف. تواصل مع المشغّل.",
+  "reason_documents_missing_or_expired": "وثائق مطلوبة ناقصة أو منتهية.",
+  "reason_no_approved_vehicle": "لا توجد مركبة معتمدة.",
+  "reason_subscription_inactive": "لا يوجد اشتراك ساري.",
+  "reason_restricted_until": "حسابك مقيد مؤقتًا حتى {until}.",
+  "@reason_restricted_until": {
+    "placeholders": {
+      "until": {
+        "type": "String"
+      }
+    }
+  },
+  "reason_tenant_suspended": "المشغّل موقوف حاليًا.",
+  "reason_other": "غير مؤهل حاليًا ({code}).",
+  "@reason_other": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "locationNeeded": "يلزم الوصول للموقع لاستقبال الطلبات وإثبات الوصول.",
+  "locationDeniedForever": "تم رفض إذن الموقع. فعّله من إعدادات التطبيق.",
+  "locationServiceOff": "خدمة الموقع متوقفة في الجهاز. فعّلها ثم حاول.",
+  "openSettings": "فتح الإعدادات",
+  "noLocationFix": "تعذّر تحديد موقعك. فعّل GPS وانتظر قليلًا ثم حاول.",
+  "statusOnlineNoLocation": "متصل — لكن موقعك لا يُحدَّث، لن تصلك طلبات",
+  "locationLastSent": "آخر تحديث للموقع: {time}",
+  "@locationLastSent": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "sendLocationNow": "إرسال موقعي الآن",
+  "reason_location_required": "يلزم إرسال موقع حديث قبل الاتصال.",
+  "onboardingTitle": "طلب الانضمام",
+  "applicationStatus": "حالة الطلب",
+  "status_pending_documents": "بانتظار الوثائق",
+  "status_under_review": "قيد المراجعة",
+  "status_approved": "معتمد",
+  "status_rejected": "مرفوض",
+  "status_suspended": "موقوف",
+  "status_pending": "قيد المراجعة",
+  "reviewNote": "ملاحظة المراجع: {note}",
+  "@reviewNote": {
+    "placeholders": {
+      "note": {
+        "type": "String"
+      }
+    }
+  },
+  "fullName": "الاسم الكامل",
+  "vehiclesTitle": "المركبة",
+  "addVehicle": "إضافة مركبة",
+  "plate": "رقم اللوحة",
+  "make": "الشركة المصنعة",
+  "model": "الطراز",
+  "color": "اللون",
+  "year": "سنة الصنع",
+  "documentsTitle": "الوثائق",
+  "uploadDocument": "رفع وثيقة",
+  "replaceDocument": "رفع نسخة جديدة",
+  "docNumber": "رقم الوثيقة",
+  "docExpiry": "تاريخ الانتهاء",
+  "pickImage": "اختيار صورة",
+  "takePhoto": "التقاط صورة",
+  "imageSelected": "تم اختيار الصورة",
+  "doc_national_id": "الهوية الوطنية",
+  "doc_driving_license": "رخصة القيادة",
+  "doc_vehicle_registration": "استمارة المركبة",
+  "doc_vehicle_photo": "صورة المركبة",
+  "doc_driver_photo": "صورة السائق",
+  "doc_insurance": "التأمين",
+  "docMissing": "لم تُرفع",
+  "needsVehicleFirst": "أضف المركبة أولًا لرفع استمارتها.",
+  "submitApplication": "إرسال الطلب للمراجعة",
+  "submitted": "أُرسل طلبك للمراجعة.",
+  "required": "مطلوب",
+  "subscriptionTitle": "الاشتراك",
+  "subscriptionActive": "اشتراك ساري حتى {date}",
+  "@subscriptionActive": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "subscriptionInactive": "لا يوجد اشتراك ساري. لا يمكنك استقبال الطلبات بدونه.",
+  "plansTitle": "الباقات",
+  "planDays": "{days} يومًا",
+  "@planDays": {
+    "placeholders": {
+      "days": {
+        "type": "String"
+      }
+    }
+  },
+  "startTrial": "بدء التجربة المجانية",
+  "trialStarted": "بدأت التجربة.",
+  "depositTitle": "دفع عبر إيداع بنكي",
+  "depositAccounts": "حسابات الإيداع",
+  "depositIntro": "أودع مبلغ الباقة في أحد الحسابات ثم أرسل الإيصال. يعتمده فريق المشغّل.",
+  "plan": "الباقة",
+  "account": "الحساب",
+  "amount": "المبلغ",
+  "reference": "رقم المرجع / العملية",
+  "depositedOn": "تاريخ الإيداع",
+  "receipt": "صورة الإيصال",
+  "submitDeposit": "إرسال الإيصال",
+  "depositSubmitted": "أُرسل الإيصال وهو بانتظار الاعتماد.",
+  "claimsTitle": "إيصالاتي",
+  "claim_submitted": "بانتظار الاعتماد",
+  "claim_first_approved": "اعتماد أول",
+  "claim_approved": "معتمد",
+  "claim_rejected": "مرفوض",
+  "bidTitle": "قدّم عرضك",
+  "yourFare": "أجرتك ({currency})",
+  "@yourFare": {
+    "placeholders": {
+      "currency": {
+        "type": "String"
+      }
+    }
+  },
+  "etaMinutes": "الوصول خلال (دقائق)",
+  "sendOffer": "إرسال العرض",
+  "offerSent": "أُرسل عرضك. ستُبلَّغ إذا اختاره الراكب.",
+  "withdrawOffer": "سحب العرض",
+  "estimate": "التقدير: {range}",
+  "@estimate": {
+    "placeholders": {
+      "range": {
+        "type": "String"
+      }
+    }
+  },
+  "estimateNote": "تقدير إرشادي غير ملزم.",
+  "pickup": "الانطلاق",
+  "dropoff": "الوجهة",
+  "distance": "المسافة التقريبية",
+  "myOffer": "عرضك: {amount}",
+  "@myOffer": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "bid_active": "قيد الانتظار",
+  "bid_selected": "اختارك الراكب",
+  "bid_withdrawn": "مسحوب",
+  "bid_expired": "منتهي",
+  "bid_lost": "اختار الراكب غيرك",
+  "bid_accepted": "مقبول",
+  "rideTitle": "الرحلة",
+  "ride_requested": "طلب جديد",
+  "ride_bidding": "استقبال العروض",
+  "ride_match_pending": "بانتظار تأكيدك",
+  "ride_assigned": "مُسندة إليك",
+  "ride_en_route": "في الطريق للراكب",
+  "ride_arrived": "وصلت لموقع الانطلاق",
+  "ride_in_progress": "الرحلة جارية",
+  "ride_completed": "مكتملة",
+  "ride_cancelled": "ملغاة",
+  "ride_no_show": "عدم حضور الراكب",
+  "ride_disputed": "عليها نزاع",
+  "action_confirm": "تأكيد الرحلة",
+  "action_decline": "اعتذار",
+  "action_en_route": "انطلقت إلى الراكب",
+  "action_arrive": "وصلت",
+  "action_start": "بدء الرحلة",
+  "action_complete": "إنهاء الرحلة",
+  "action_driver_cancel": "إلغاء الرحلة",
+  "action_no_show": "تسجيل عدم حضور",
+  "confirmDeadline": "أكّد قبل {time}",
+  "@confirmDeadline": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "cancelReason": "سبب الإلغاء",
+  "declineReason": "سبب الاعتذار (اختياري)",
+  "logContact": "تسجيل محاولة تواصل",
+  "contactLogged": "سُجّلت محاولة التواصل.",
+  "rider": "الراكب",
+  "riderPhone": "جوال الراكب: {phone}",
+  "@riderPhone": {
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "agreedFare": "الأجرة المتفق عليها",
+  "cashTitle": "الدفع نقدًا",
+  "cashInstruction": "استلم {amount} نقدًا من الراكب ثم أكّد الاستلام.",
+  "@cashInstruction": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "confirmCash": "تأكيد استلام النقد",
+  "cashConfirmed": "أكّدت استلام النقد",
+  "rateRider": "قيّم الراكب",
+  "rated": "شكرًا، تم التقييم.",
+  "noShowNote": "يُقبل فقط بعد مدة الانتظار ومحاولة التواصل داخل نطاق الوصول.",
+  "historyEmpty": "لا توجد رحلات بعد.",
+  "earningsTitle": "ملخص الأجرة النقدية",
+  "earningsNote": "مجموع الأجرة المتفق عليها في رحلاتك المكتملة كما سجلها التطبيق. تُدفع نقدًا لك مباشرة، وليست إيرادًا للمنصة.",
+  "periodToday": "اليوم",
+  "period7": "آخر 7 أيام",
+  "period30": "آخر 30 يومًا",
+  "completedRides": "رحلات مكتملة",
+  "totalFares": "إجمالي الأجرة",
+  "notificationsTitle": "الإشعارات",
+  "markAllRead": "تعليم الكل كمقروء",
+  "notificationsEmpty": "لا توجد إشعارات.",
+  "notificationGeneric": "تحديث على رحلة",
+  "trustTitle": "التقييم والثقة",
+  "ratingAvg": "متوسط التقييم",
+  "ratingCount": "عدد التقييمات",
+  "completionRate": "نسبة الإكمال",
+  "tier": "المستوى",
+  "violationsTitle": "المخالفات",
+  "violationsEmpty": "لا توجد مخالفات.",
+  "language": "اللغة",
+  "switchLanguage": "English",
+  "profileTitle": "الملف الشخصي",
+  "nameSaved": "تم حفظ الاسم.",
+  "serverLabel": "الخادم: {url}",
+  "@serverLabel": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  }
+}

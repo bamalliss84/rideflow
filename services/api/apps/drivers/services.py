@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.db import transaction
 from django.utils import timezone
 
@@ -56,6 +58,25 @@ def eligibility(driver, policy=None):
         "subscription_active": entitled,
         "status": driver.status,
         "is_online": driver.is_online,
+        "presence": presence(driver, policy),
+    }
+
+
+def presence(driver, policy=None):
+    """Location freshness. A driver is only dispatchable with a fix newer than `presence.stale_seconds`
+    (the same rule dispatch and the operator's live map use), so the app can show "ready" truthfully."""
+    from apps.geo.models import DriverLocation
+
+    policy = policy or current_policy()
+    stale_seconds = policy["presence.stale_seconds"]
+    location = DriverLocation.objects.filter(driver=driver).only("server_ts", "accuracy_m").first()
+    fresh = bool(location and location.server_ts >= timezone.now() - timedelta(seconds=stale_seconds))
+    return {
+        "has_location": location is not None,
+        "fresh": fresh,
+        "server_ts": location.server_ts if location else None,
+        "accuracy_m": location.accuracy_m if location else None,
+        "stale_after_seconds": stale_seconds,
     }
 
 
@@ -93,6 +114,9 @@ def set_availability(driver, online, request=None):
         driver = DriverProfile.objects.select_for_update().get(pk=driver.pk)
         if online:
             assert_eligible(driver)
+            # Going online without a fresh position would make the driver "online" but invisible to dispatch.
+            if not presence(driver)["fresh"]:
+                raise NotEligible(detail={"detail": "Send a current location before going online.", "reasons": ["location_required"]})
             if not driver.is_online:
                 driver.is_online = True
                 driver.online_since = timezone.now()

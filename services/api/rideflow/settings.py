@@ -135,10 +135,25 @@ CACHES = {
     }
 }
 
+# channels_redis waits for messages with a blocking BRPOP of 5 s (RedisChannelLayer.brpop_timeout). redis-py 8
+# defaults socket_timeout to 5 s, so an idle WebSocket's receive loop hit "Timeout reading from redis" at that
+# boundary and the connection dropped every ~5 s. The read timeout must exceed the BRPOP wait.
+CHANNEL_REDIS_SOCKET_TIMEOUT = float(env("CHANNEL_REDIS_SOCKET_TIMEOUT", "15"))
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {"hosts": [REDIS_URL], "prefix": "rideflow:ws"},
+        "CONFIG": {
+            "hosts": [
+                {
+                    "address": REDIS_URL,
+                    "socket_timeout": CHANNEL_REDIS_SOCKET_TIMEOUT,
+                    "socket_connect_timeout": 5,
+                    "socket_keepalive": True,
+                    "health_check_interval": 30,
+                }
+            ],
+            "prefix": "rideflow:ws",
+        },
     }
 }
 

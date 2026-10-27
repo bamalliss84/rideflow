@@ -2847,6 +2847,7 @@ export interface components {
             subscription_active: boolean;
             status: string;
             is_online: boolean;
+            presence: components["schemas"]["Presence"];
         };
         Enforcement: {
             readonly subject_name: string | null;
@@ -3603,6 +3604,15 @@ export interface components {
             max: number | null;
             status: string;
             source: string;
+        };
+        Presence: {
+            has_location: boolean;
+            fresh: boolean;
+            /** Format: date-time */
+            server_ts: string | null;
+            /** Format: double */
+            accuracy_m: number | null;
+            stale_after_seconds: number;
         };
         Rating: {
             readonly rater_name: string | null;

@@ -6670,9 +6670,12 @@ components:
           type: string
         is_online:
           type: boolean
+        presence:
+          $ref: '#/components/schemas/Presence'
       required:
       - eligible
       - is_online
+      - presence
       - reasons
       - status
       - subscription_active
@@ -8239,6 +8242,29 @@ components:
       - source
       - status
       - type
+    Presence:
+      type: object
+      properties:
+        has_location:
+          type: boolean
+        fresh:
+          type: boolean
+        server_ts:
+          type: string
+          format: date-time
+          nullable: true
+        accuracy_m:
+          type: number
+          format: double
+          nullable: true
+        stale_after_seconds:
+          type: integer
+      required:
+      - accuracy_m
+      - fresh
+      - has_location
+      - server_ts
+      - stale_after_seconds
     Rating:
       type: object
       properties:
