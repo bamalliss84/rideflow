@@ -7,6 +7,10 @@ RUN npm ci --no-audit --no-fund
 FROM node:24-alpine AS build
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
+# Optional map provider (public values, inlined at build time): XYZ tile template and its attribution.
+ARG NEXT_PUBLIC_MAP_TILE_URL=""
+ARG NEXT_PUBLIC_MAP_ATTRIBUTION=""
+ENV NEXT_PUBLIC_MAP_TILE_URL=$NEXT_PUBLIC_MAP_TILE_URL     NEXT_PUBLIC_MAP_ATTRIBUTION=$NEXT_PUBLIC_MAP_ATTRIBUTION
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build

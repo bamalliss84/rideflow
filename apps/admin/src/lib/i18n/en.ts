@@ -461,6 +461,9 @@ const en = {
     radius: "Radius",
     lastSeen: "Last update",
     none: "No online drivers with a fresh location in this area.",
+    mapNotConfigured: "Street map not configured: this is a schematic of positions. Set a tile provider (NEXT_PUBLIC_MAP_TILE_URL) to enable it.",
+    online: "Online now",
+    freshness: "Location freshness",
   },
   geo: {
     title: "Cities & coverage zones",

@@ -2,12 +2,21 @@ import type { NextConfig } from "next";
 
 const isProd = process.env.NODE_ENV === "production";
 
+// Map tiles (optional, see components/map/MapView): the only third-party origin, and only when configured.
+const tileOrigin = (() => {
+  try {
+    return new URL((process.env.NEXT_PUBLIC_MAP_TILE_URL ?? "").replace(/\{[a-z]\}/g, "0")).origin;
+  } catch {
+    return "";
+  }
+})();
+
 // Strict, same-origin policy: the browser only ever talks to this Next.js server (BFF).
 const csp = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
+  `img-src 'self' data: blob:${tileOrigin ? ` ${tileOrigin}` : ""}`,
   "font-src 'self'",
   "connect-src 'self'",
   "frame-src 'self' blob:",

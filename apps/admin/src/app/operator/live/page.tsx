@@ -4,7 +4,7 @@ import { RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
-import { GeoPreview } from "@/components/charts/GeoPreview";
+import { MapView } from "@/components/map/MapView";
 import { useI18n } from "@/components/providers/I18nProvider";
 import { useSession } from "@/components/providers/SessionProvider";
 import { Button } from "@/components/ui/Button";
@@ -56,9 +56,16 @@ export default function LiveDriversPage() {
         {city ? (
           <div className="grid gap-0 lg:grid-cols-5">
             <div className="border-b border-line p-4 lg:col-span-2 lg:border-e lg:border-b-0">
-              <GeoPreview
-                height={340}
+              <div className="mb-3 flex items-baseline justify-between">
+                <span className="text-sm text-muted">{t.live.online}</span>
+                <span className="ltr-nums text-2xl font-bold" data-testid="live-count">
+                  {q.data?.length ?? "—"}
+                </span>
+              </div>
+              <MapView
+                height={380}
                 label={t.live.title}
+                notConfiguredHint={t.live.mapNotConfigured}
                 points={[
                   { lat: city.center.lat, lng: city.center.lng, tone: "center", label: city.name },
                   ...(q.data ?? []).map((d) => ({ lat: d.location.lat, lng: d.location.lng, tone: "driver" as const, label: d.full_name })),

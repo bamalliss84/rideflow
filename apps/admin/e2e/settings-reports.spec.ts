@@ -147,3 +147,18 @@ test.describe("mutation failure handling (reviewer two)", () => {
   });
 
 });
+
+test.describe("live drivers map (owner)", () => {
+  test.use({ storageState: statePath("owner") });
+
+  test("online count from the API; without a configured tile provider the page says so instead of faking a map", async ({ page, context }) => {
+    await useEnglish(context);
+    const nearby = page.waitForResponse((r) => r.url().includes("admin/drivers-nearby") && r.ok());
+    await page.goto("/operator/live");
+    const rows = (await (await nearby).json()) as unknown[];
+    await expect(page.getByTestId("live-count")).toHaveText(String(rows.length));
+    if (!process.env.NEXT_PUBLIC_MAP_TILE_URL) {
+      await expect(page.getByTestId("map-not-configured")).toContainText("Street map not configured");
+    }
+  });
+});
