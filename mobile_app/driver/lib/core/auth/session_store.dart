@@ -46,12 +46,28 @@ class SessionStore {
 
   Tokens? _cache;
 
+  /// An unreadable store (Keystore key invalidated after a restore/reinstall, or a write interrupted by the OS
+  /// killing the app) means "signed out", not a dead-end error screen: the stale entries are dropped and the
+  /// driver signs in again.
   Future<Tokens?> read() async {
     if (_cache != null) return _cache;
-    final access = await _kv.read(_access);
-    final refresh = await _kv.read(_refresh);
-    if (access == null || refresh == null) return null;
-    return _cache = Tokens(access, refresh);
+    try {
+      final access = await _kv.read(_access);
+      final refresh = await _kv.read(_refresh);
+      if (access == null || refresh == null) return null;
+      return _cache = Tokens(access, refresh);
+    } catch (_) {
+      await _dropUnreadable();
+      return null;
+    }
+  }
+
+  Future<void> _dropUnreadable() async {
+    for (final key in [_access, _refresh, _cursor]) {
+      try {
+        await _kv.delete(key);
+      } catch (_) {}
+    }
   }
 
   Future<void> save(Tokens tokens) async {
@@ -68,6 +84,12 @@ class SessionStore {
   }
 
   /// Last realtime cursor seen, so a reconnect resumes (replays) instead of missing hints.
-  Future<int> readCursor() async => int.tryParse(await _kv.read(_cursor) ?? '') ?? 0;
+  Future<int> readCursor() async {
+    try {
+      return int.tryParse(await _kv.read(_cursor) ?? '') ?? 0;
+    } catch (_) {
+      return 0; // resume from the start: the server replays, the client dedupes
+    }
+  }
   Future<void> saveCursor(int cursor) => _kv.write(_cursor, '$cursor');
 }

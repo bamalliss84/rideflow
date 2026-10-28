@@ -13,6 +13,12 @@ import 'package:rideflow_driver/shared/labels.dart';
 
 import 'support/fake_backend.dart';
 
+/// Secure storage whose reads fail (invalidated Keystore key / interrupted write).
+class BrokenKV extends MemoryKV {
+  @override
+  Future<String?> read(String key) async => throw StateError('BAD_DECRYPT');
+}
+
 Future<(ApiClient, FakeBackend, SessionStore)> clientWith(Map<String, Handler> routes, {Tokens? tokens}) async {
   final backend = FakeBackend(routes);
   final store = SessionStore(MemoryKV());
@@ -98,6 +104,16 @@ void main() {
       expect(socket.lastCursor, 8);
       expect(await store.readCursor(), 8);
       await sub.cancel();
+    });
+  });
+
+  group('SessionStore', () {
+    test('unreadable secure storage means signed out (sign-in screen), not a dead-end error', () async {
+      final kv = BrokenKV()..values.addAll({'rf_access': 'x', 'rf_refresh': 'y'});
+      final store = SessionStore(kv);
+      expect(await store.read(), isNull);
+      expect(kv.values, isEmpty); // stale entries dropped so the next sign-in starts clean
+      expect(await store.readCursor(), 0);
     });
   });
 

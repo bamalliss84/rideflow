@@ -210,6 +210,7 @@ class Ride {
         myBid = json['my_bid'] is Map ? Bid(_map(json['my_bid'])) : null,
         rider = json['rider'] is Map ? Party(_map(json['rider'])) : null,
         createdAt = _date(_map(json['timestamps'])['created_at']),
+        selectedAt = _date(_map(json['timestamps'])['selected_at']),
         completedAt = _date(_map(json['timestamps'])['completed_at']),
         cancellation = json['cancellation'] is Map ? _map(json['cancellation']) : null,
         cash = json['cash'] is Map ? _map(json['cash']) : null;
@@ -220,7 +221,7 @@ class Ride {
   final Set<String> allowedActions;
   final LatLng? pickup, dropoff;
   final int? estimateMin, estimateMax, distanceM, agreedFareMinor;
-  final DateTime? matchDeadline, createdAt, completedAt;
+  final DateTime? matchDeadline, createdAt, completedAt, selectedAt;
   final Bid? myBid;
   final Party? rider;
   final Json? cancellation, cash;

@@ -121,6 +121,55 @@ final eventsSocketProvider = Provider<EventsSocket>((ref) {
 
 final socketStateProvider = StreamProvider<SocketState>((ref) => ref.watch(eventsSocketProvider).states);
 
+// ---------------------------------------------------------------- selected-driver confirmation
+
+/// The ride waiting for THIS driver's confirmation (rider selected their bid: status `match_pending`, viewer
+/// `driver`, server allows `confirm`). Fed by the `ride.selected` hint AND reconciled from the server (start,
+/// resume, reconnect, every 15 s), so a missed or late event can never leave the driver without the prompt.
+class PendingMatchController extends AsyncNotifier<Ride?> {
+  @override
+  Future<Ride?> build() => _fetch();
+
+  Future<Ride?> _fetch() async {
+    if (ref.read(authProvider).valueOrNull == null) return null;
+    final rides = await ref.read(driverApiProvider).rides(status: 'match_pending');
+    for (final r in rides) {
+      if (_isMine(r)) return r;
+    }
+    return null;
+  }
+
+  static bool _isMine(Ride r) => r.status == 'match_pending' && r.viewerRole == 'driver' && r.allowedActions.contains('confirm');
+
+  /// Server reconciliation. Keeps the previous value while refreshing; errors keep the last known state.
+  Future<void> reconcile() async {
+    try {
+      state = AsyncData(await _fetch());
+    } catch (e, st) {
+      if (!state.hasValue) state = AsyncError(e, st);
+    }
+  }
+
+  Future<void> onHint(String kind, String? rideId) async {
+    if (kind == 'ride.selected' && rideId != null) {
+      try {
+        final ride = await ref.read(driverApiProvider).ride(rideId);
+        if (_isMine(ride)) {
+          state = AsyncData(ride);
+          return;
+        }
+      } catch (_) {
+        // fall through to a full reconciliation
+      }
+    }
+    if (const {'ride.selected', 'ride.match_expired', 'ride.match_released', 'ride.cancelled', 'ride.assigned', 'ride.match_confirmed'}.contains(kind)) {
+      await reconcile();
+    }
+  }
+}
+
+final pendingMatchProvider = AsyncNotifierProvider<PendingMatchController, Ride?>(PendingMatchController.new);
+
 /// Maps hints to the server state they invalidate; screens then re-read the REST API (source of truth).
 final realtimeBridgeProvider = Provider<void>((ref) {
   final socket = ref.watch(eventsSocketProvider);
@@ -132,6 +181,7 @@ final realtimeBridgeProvider = Provider<void>((ref) {
       ref.invalidate(ridesProvider);
       final rideId = hint.payload['ride_id'];
       if (rideId is String) ref.invalidate(rideProvider(rideId));
+      ref.read(pendingMatchProvider.notifier).onHint(kind, rideId is String ? rideId : null);
     }
     if (kind.startsWith('driver.') || kind.startsWith('subscription.')) {
       ref.invalidate(profileProvider);
@@ -139,7 +189,18 @@ final realtimeBridgeProvider = Provider<void>((ref) {
       ref.invalidate(subscriptionProvider);
     }
   });
-  ref.onDispose(sub.cancel);
+  // After a (re)connect the server replays missed hints, but state is reconciled anyway: events are hints only.
+  final states = socket.states.listen((s) {
+    if (s == SocketState.connected) {
+      ref.read(pendingMatchProvider.notifier).reconcile();
+      ref.invalidate(offersProvider);
+      ref.invalidate(ridesProvider);
+    }
+  });
+  ref.onDispose(() {
+    sub.cancel();
+    states.cancel();
+  });
 });
 
 // ---------------------------------------------------------------- availability + location
@@ -244,6 +305,20 @@ class OnlineController extends Notifier<OnlineState> {
     } finally {
       ref.invalidate(eligibilityProvider);
       ref.invalidate(offersProvider);
+    }
+  }
+
+  /// App returned to the foreground: re-check permission/service (the driver may have changed them in
+  /// settings) and resume or flag the updater accordingly. Never prompts.
+  Future<void> recheckAccess() async {
+    if (!state.online) return;
+    final location = ref.read(locationServiceProvider);
+    final access = await location.access(request: false);
+    state = state.copy(locationAccess: access, noFix: access != LocationAccess.granted ? state.noFix : false);
+    if (access == LocationAccess.granted && !location.running) {
+      _startStream();
+    } else if (access != LocationAccess.granted) {
+      location.stop();
     }
   }
 

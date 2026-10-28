@@ -98,8 +98,8 @@ class DriverApi {
 
   // ---- rides
   Future<List<Ride>> offers() async => results(await client.get('driver/ride-offers')).map(Ride.new).toList();
-  Future<List<Ride>> rides({int page = 1}) async =>
-      results(await client.get('rides', query: {'page': page, 'page_size': 50})).map(Ride.new).toList();
+  Future<List<Ride>> rides({int page = 1, String? status}) async =>
+      results(await client.get('rides', query: {'page': page, 'page_size': 50, if (status != null) 'status': status})).map(Ride.new).toList();
   Future<Ride> ride(String id) async => Ride(((await client.get('rides/$id')) as Map).cast<String, dynamic>());
   Future<Bid> placeBid(String rideId, {required int amountMinor, required int etaSeconds, required String actionKey}) async =>
       Bid(((await client.post('rides/$rideId/bids', data: {'amount_minor': amountMinor, 'eta_seconds': etaSeconds}, actionKey: actionKey)) as Map)

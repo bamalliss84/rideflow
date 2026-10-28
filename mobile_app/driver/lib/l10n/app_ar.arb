@@ -306,5 +306,145 @@
         "type": "String"
       }
     }
-  }
+  },
+  "greeting": "أهلًا، {name}",
+  "@greeting": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "youAreOnline": "أنت متصل",
+  "youAreOffline": "أنت غير متصل",
+  "onlineSubtitle": "تصلك الطلبات القريبة الآن",
+  "offlineSubtitle": "اتصل لتبدأ باستقبال الطلبات القريبة",
+  "degradedSubtitle": "موقعك لا يُحدَّث — لن تصلك طلبات",
+  "locationFreshAgo": "الموقع محدث منذ {s} ث",
+  "@locationFreshAgo": {
+    "placeholders": {
+      "s": {
+        "type": "String"
+      }
+    }
+  },
+  "locationUnknown": "لم يُرسل الموقع بعد",
+  "realtimeLive": "اتصال لحظي",
+  "realtimeReconnecting": "جارٍ إعادة الاتصال",
+  "todaySummary": "نشاط اليوم",
+  "todayRides": "رحلات مكتملة",
+  "todayFares": "أجرة نقدية",
+  "makeOffer": "قدّم عرضك",
+  "viewOffer": "عرضك",
+  "estimateLabel": "التقدير",
+  "distanceLabel": "المسافة",
+  "etaLabel": "وقت الوصول للراكب",
+  "minutesShort": "{n} د",
+  "@minutesShort": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "fareLabel": "أجرتك",
+  "bidSheetSubtitle": "الأجرة نقدًا ويتفق عليها مع الراكب. التقدير إرشادي.",
+  "offerExpires": "ينتهي العرض {time}",
+  "@offerExpires": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "secondsUnit": "ث",
+  "confirmTitle": "اختارك الراكب!",
+  "confirmSubtitle": "أكّد الآن لتصبح الرحلة لك قبل انتهاء المهلة.",
+  "confirmButton": "تأكيد الرحلة",
+  "declineButton": "اعتذار عن الرحلة",
+  "confirmExpiredTitle": "انتهت مهلة التأكيد",
+  "confirmExpiredBody": "لم يتم التأكيد في الوقت المحدد، وعاد الطلب لاستقبال العروض.",
+  "confirmGoneTitle": "لم يعد الطلب بانتظارك",
+  "confirmGoneBody": "ربما ألغاه الراكب أو اختار عرضًا آخر.",
+  "backHome": "العودة للرئيسية",
+  "rideConfirmed": "تم تأكيد الرحلة — توجّه للراكب",
+  "pendingBannerTitle": "راكب بانتظار تأكيدك",
+  "pendingBannerAction": "عرض والتأكيد",
+  "riderRating": "تقييم الراكب {r}",
+  "@riderRating": {
+    "placeholders": {
+      "r": {
+        "type": "String"
+      }
+    }
+  },
+  "newRider": "راكب جديد",
+  "stageConfirmed": "مؤكدة",
+  "stageToPickup": "إلى الراكب",
+  "stageArrived": "وصلت",
+  "stageInTrip": "في الرحلة",
+  "stageDone": "اكتملت",
+  "nextStepTitle": "الخطوة التالية",
+  "noActions": "لا يوجد إجراء مطلوب منك الآن.",
+  "callPhone": "جوال الراكب",
+  "locationWhyTitle": "نحتاج موقعك أثناء الاتصال",
+  "locationWhyBody": "يُستخدم موقعك فقط عندما تكون متصلًا أو في رحلة: لتصلك الطلبات القريبة ولإثبات الوصول للراكب. لا يوجد تتبع في الخلفية.",
+  "allowLocation": "السماح بالوصول للموقع",
+  "notNow": "ليس الآن",
+  "turnOnLocation": "تشغيل خدمة الموقع",
+  "locationDeniedTitle": "الوصول للموقع مرفوض",
+  "next": "التالي",
+  "back": "السابق",
+  "stepPersonal": "بياناتك",
+  "stepVehicle": "المركبة",
+  "stepDocuments": "الوثائق",
+  "stepSubmit": "الإرسال",
+  "draftNote": "تُحفظ الوثائق في طلبك كمسودة، ولا تصل للمراجعة إلا عند الضغط على «إرسال الطلب للمراجعة».",
+  "plateHint": "كما هو مكتوب على لوحة المركبة",
+  "docNumberHint": "الرقم المطبوع على الوثيقة (وليس رقم اللوحة)",
+  "expiryOptional": "تاريخ الانتهاء (إن وُجد)",
+  "requiredBadge": "مطلوب",
+  "optionalBadge": "اختياري",
+  "uploading": "جارٍ الرفع…",
+  "uploaded": "تم رفع الوثيقة.",
+  "readyToSubmit": "كل الوثائق المطلوبة مرفوعة. أرسل طلبك للمراجعة.",
+  "missingToSubmit": "ناقص: {list}",
+  "@missingToSubmit": {
+    "placeholders": {
+      "list": {
+        "type": "String"
+      }
+    }
+  },
+  "underReviewNote": "طلبك قيد المراجعة. سنبلغك فور اتخاذ القرار.",
+  "approvedNote": "حسابك معتمد. يمكنك تحديث الوثائق عند تجديدها.",
+  "changePhoto": "تغيير الصورة",
+  "photoRequired": "أضف صورة واضحة للوثيقة.",
+  "daysRemaining": "متبقٍ {n} يومًا",
+  "@daysRemaining": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "trialBadge": "تجربة",
+  "currentPlan": "اشتراكك الحالي",
+  "renew": "تجديد",
+  "payWithDeposit": "الدفع بإيداع بنكي",
+  "pendingReceipt": "لديك إيصال قيد المراجعة",
+  "rejectedReceipt": "رُفض إيصالك: {note}",
+  "@rejectedReceipt": {
+    "placeholders": {
+      "note": {
+        "type": "String"
+      }
+    }
+  },
+  "copy": "نسخ",
+  "copied": "تم النسخ",
+  "chooseFromGallery": "من المعرض",
+  "useCamera": "الكاميرا",
+  "selectPlan": "اختر الباقة",
+  "operator": "المشغّل"
 }
