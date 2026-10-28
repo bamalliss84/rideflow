@@ -5,9 +5,10 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
-import '../../app/theme.dart';
 import '../../core/config.dart';
-import '../../shared/widgets.dart';
+import '../../design/components.dart';
+import '../../design/tokens.dart';
+import '../../shared/widgets.dart' show errorMessage;
 
 final _appContextProvider = FutureProvider.autoDispose((ref) => ref.watch(driverApiProvider).appContext());
 
@@ -64,7 +65,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final t = AppLocalizations.of(context);
     final operator = ref.watch(_appContextProvider).valueOrNull?['tenant_name'] as String?;
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: RfColors.surface,
       body: SafeArea(
         child: ListView(padding: const EdgeInsets.all(24), children: [
           Align(
@@ -79,19 +80,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          Container(
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: Container(
             width: 64,
             height: 64,
-            decoration: BoxDecoration(color: Brand.navy, borderRadius: BorderRadius.circular(18)),
-            child: const Icon(Icons.local_taxi_rounded, color: Colors.white, size: 34),
+            decoration: BoxDecoration(color: RfColors.ink, borderRadius: BorderRadius.circular(RfRadius.lg), boxShadow: RfShadow.card),
+            child: const Icon(Icons.local_taxi_rounded, color: RfColors.teal, size: 34),
+          ),
           ),
           const SizedBox(height: 20),
-          Text(t.signInTitle, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700, color: Brand.navy)),
+          Text(t.signInTitle, style: RfType.display),
           const SizedBox(height: 6),
-          Text(t.signInSubtitle, style: const TextStyle(color: Brand.muted)),
+          Text(t.signInSubtitle, style: RfType.body.copyWith(color: RfColors.textMuted)),
           if (operator != null) ...[
             const SizedBox(height: 12),
-            Align(alignment: AlignmentDirectional.centerStart, child: StatusChip(t.operatorLabel(operator), tone: Tone.info)),
+            Align(alignment: AlignmentDirectional.centerStart, child: StatusPill(t.operatorLabel(operator), tone: Tone.info, icon: Icons.apartment_rounded)),
           ],
           const SizedBox(height: 28),
           if (!_codeSent) ...[
@@ -106,9 +110,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               onSubmitted: (_) => _sendCode(),
             ),
             const SizedBox(height: 20),
-            FilledButton(key: const Key('sendCode'), onPressed: _busy ? null : _sendCode, child: _busy ? const _Spinner() : Text(t.sendCode)),
+            RfButton(key: const Key('sendCode'), label: t.sendCode, large: true, loading: _busy, onPressed: _sendCode),
           ] else ...[
-            Text(t.codeSentTo(_normalizedPhone), style: const TextStyle(color: Brand.muted)),
+            Text(t.codeSentTo(_normalizedPhone), style: RfType.body.copyWith(color: RfColors.textMuted)),
             const SizedBox(height: 12),
             TextField(
               key: const Key('code'),
@@ -119,12 +123,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               maxLength: 8,
               autofillHints: const [AutofillHints.oneTimeCode],
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              style: const TextStyle(fontSize: 22, letterSpacing: 8),
+              style: RfType.h1.copyWith(letterSpacing: 8),
               decoration: InputDecoration(labelText: t.codeLabel, counterText: ''),
               onSubmitted: (_) => _verify(),
             ),
             const SizedBox(height: 16),
-            FilledButton(key: const Key('verify'), onPressed: _busy ? null : _verify, child: _busy ? const _Spinner() : Text(t.verify)),
+            RfButton(key: const Key('verify'), label: t.verify, large: true, loading: _busy, onPressed: _verify),
             TextButton(
               onPressed: _busy
                   ? null
@@ -138,25 +142,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ],
           if (_error != null) ...[
             const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: Brand.coralSoft, borderRadius: BorderRadius.circular(12)),
-              child: Text(_error is String ? _error as String : errorMessage(context, _error!), style: const TextStyle(color: Brand.coral)),
-            ),
+            Banner2(text: _error is String ? _error as String : errorMessage(context, _error!), tone: Tone.danger, icon: Icons.error_outline_rounded),
           ],
           if (kDebugMode) ...[
             const SizedBox(height: 32),
             Text(t.serverLabel('${AppConfig.environmentLabel} · ${AppConfig.apiBaseUrl}'),
-                textAlign: TextAlign.center, style: const TextStyle(color: Brand.muted, fontSize: 11)),
+                textAlign: TextAlign.center, style: RfType.caption.copyWith(fontSize: 11)),
           ],
         ]),
       ),
     );
   }
-}
-
-class _Spinner extends StatelessWidget {
-  const _Spinner();
-  @override
-  Widget build(BuildContext context) => const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white));
 }
