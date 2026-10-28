@@ -64,6 +64,8 @@ export default function DriverDetailPage() {
     reinstate: { label: dr.reinstateDriver, confirm: dr.reinstateConfirm, tone: "accent", icon: <RotateCcw className="size-4" aria-hidden /> },
   };
   const invalidate = [base, "admin/driver-documents", "admin/vehicles"];
+  // Draft uploads are not reviewable until the driver submits the application (backend: application_not_submitted).
+  const submitted = d.status === "under_review" || d.status === "approved" || d.status === "suspended";
 
   return (
     <>
@@ -132,7 +134,7 @@ export default function DriverDetailPage() {
                   cell: (r) => (
                     <span className="inline-flex flex-wrap justify-end gap-1.5">
                       <FilePreviewButton path={`admin/driver-documents/${r.id}/file`} contentType={r.content_type} title={t.enums.docType[r.doc_type as keyof typeof t.enums.docType] ?? r.doc_type} />
-                      {reviewer && r.status === "pending" ? (
+                      {reviewer && submitted && r.status === "pending" ? (
                         <ReviewActions base={`admin/driver-documents/${r.id}`} approveLabel={dr.approveDocument} rejectLabel={dr.rejectDocument} invalidate={invalidate} />
                       ) : null}
                     </span>
@@ -157,7 +159,7 @@ export default function DriverDetailPage() {
                   header: <span className="sr-only">{t.common.actions}</span>,
                   align: "end",
                   cell: (r) =>
-                    reviewer && r.status === "pending" ? (
+                    reviewer && submitted && r.status === "pending" ? (
                       <ReviewActions base={`admin/vehicles/${r.id}`} approveLabel={dr.approveVehicle} rejectLabel={dr.rejectVehicle} invalidate={invalidate} />
                     ) : null,
                 },

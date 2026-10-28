@@ -4789,6 +4789,7 @@ export interface operations {
                 /** @description عدد النتائج التي يجب إرجاعها في كل صفحة. */
                 page_size?: number;
                 status?: string;
+                submitted?: boolean;
             };
             header?: never;
             path?: never;
@@ -6022,6 +6023,7 @@ export interface operations {
                  *     * `rejected` - Rejected
                  */
                 status?: "approved" | "pending" | "rejected";
+                submitted?: boolean;
             };
             header?: never;
             path?: never;

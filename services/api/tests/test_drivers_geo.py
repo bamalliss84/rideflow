@@ -73,9 +73,31 @@ def test_document_rejection_requires_reason(ta):
     driver = make_driver(ta, approved=False)
     reviewer_api = api_for(ta, make_member(ta, "reviewer"))
     with tenant_context(ta.tenant):
+        DriverProfile.objects.filter(pk=driver.pk).update(status="under_review")  # submitted application
         doc = DriverDocument.objects.filter(driver=driver).first()
     r = reviewer_api.post(f"/api/v1/admin/driver-documents/{doc.pk}/reject", {})
     assert r.status_code == 422 and r.data["code"] == "reason_required"
+
+
+def test_draft_application_is_not_reviewable_until_submitted(ta):
+    """Uploads stay a draft: reviewers can neither see them in the queue nor decide them before submission."""
+    driver = make_driver(ta, approved=False)
+    reviewer_api = api_for(ta, make_member(ta, "reviewer"))
+    with tenant_context(ta.tenant):
+        DriverProfile.objects.filter(pk=driver.pk).update(status="pending_documents")
+        doc = DriverDocument.objects.filter(driver=driver).first()
+        vehicle = driver.vehicles.first()
+    queue = reviewer_api.get("/api/v1/admin/driver-documents", {"status": doc.status, "submitted": "true"}).data["results"]
+    assert str(doc.pk) not in [d["id"] for d in queue]
+    r = reviewer_api.post(f"/api/v1/admin/driver-documents/{doc.pk}/approve", {"note": ""})
+    assert r.status_code == 409 and r.data["code"] == "application_not_submitted"
+    if vehicle is not None:
+        assert reviewer_api.post(f"/api/v1/admin/vehicles/{vehicle.pk}/approve", {"note": ""}).status_code == 409
+    with tenant_context(ta.tenant):
+        DriverProfile.objects.filter(pk=driver.pk).update(status="under_review")
+    queue = reviewer_api.get("/api/v1/admin/driver-documents", {"status": doc.status, "submitted": "true"}).data["results"]
+    assert str(doc.pk) in [d["id"] for d in queue]
+    assert reviewer_api.post(f"/api/v1/admin/driver-documents/{doc.pk}/approve", {"note": ""}).status_code == 200
 
 
 def test_document_expiry_mid_shift_blocks_bidding_and_confirmation(ta):

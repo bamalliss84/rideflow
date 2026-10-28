@@ -937,6 +937,10 @@ paths:
         name: status
         schema:
           type: string
+      - in: query
+        name: submitted
+        schema:
+          type: boolean
       tags:
       - admin-drivers
       security:
@@ -2567,6 +2571,10 @@ paths:
           * `pending` - Pending
           * `approved` - Approved
           * `rejected` - Rejected
+      - in: query
+        name: submitted
+        schema:
+          type: boolean
       tags:
       - admin-drivers
       security:

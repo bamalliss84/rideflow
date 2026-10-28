@@ -155,10 +155,32 @@ class AdminDriverViewSet(viewsets.ReadOnlyModelViewSet):
 
 class ReviewQueueFilter(TenantFilterSet):
     status = filters.CharFilter()
+    # submitted=true: only applications the driver has sent for review (drafts are not reviewable).
+    submitted = filters.BooleanFilter(method="filter_submitted")
 
     class Meta:
         model = DriverDocument
         fields = ["status", "doc_type", "driver"]
+
+    def filter_submitted(self, queryset, name, value):
+        from .services import REVIEWABLE_DRIVER_STATUSES
+
+        lookup = {"driver__status__in": REVIEWABLE_DRIVER_STATUSES}
+        return queryset.filter(**lookup) if value else queryset.exclude(**lookup)
+
+
+class VehicleQueueFilter(TenantFilterSet):
+    submitted = filters.BooleanFilter(method="filter_submitted")
+
+    class Meta:
+        model = Vehicle
+        fields = ["status", "driver"]
+
+    def filter_submitted(self, queryset, name, value):
+        from .services import REVIEWABLE_DRIVER_STATUSES
+
+        lookup = {"driver__status__in": REVIEWABLE_DRIVER_STATUSES}
+        return queryset.filter(**lookup) if value else queryset.exclude(**lookup)
 
 
 @extend_schema(tags=["admin-drivers"])
@@ -200,7 +222,7 @@ class AdminVehicleViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = VehicleSerializer
     permission_classes = [TenantPermission]
     required_permissions = {"*": "drivers.view", "approve": "drivers.review", "reject": "drivers.review"}
-    filterset_fields = ["status", "driver"]
+    filterset_class = VehicleQueueFilter
     ordering = ["-created_at"]
 
     @schema_safe(Vehicle)

@@ -134,9 +134,20 @@ def _notify_driver(driver, kind, payload):
     notify(driver.user, kind, payload)
 
 
+# The application is a draft until the driver explicitly submits it (pending_documents / rejected -> under_review).
+# Draft uploads are not reviewable; documents of approved/suspended drivers stay reviewable (renewals).
+REVIEWABLE_DRIVER_STATUSES = (DriverStatus.UNDER_REVIEW, DriverStatus.APPROVED, DriverStatus.SUSPENDED)
+
+
+def _assert_submitted(driver):
+    if driver.status not in REVIEWABLE_DRIVER_STATUSES:
+        raise Conflict("The driver has not submitted this application for review yet.", code="application_not_submitted")
+
+
 def review_document(document, approve, reviewer, note="", request=None):
     with transaction.atomic():
-        document = DriverDocument.objects.select_for_update().get(pk=document.pk)
+        document = DriverDocument.objects.select_for_update().select_related("driver").get(pk=document.pk)
+        _assert_submitted(document.driver)
         if not approve and not note:
             raise BusinessRuleViolation("A rejection reason is required.", code="reason_required")
         document.status = ReviewStatus.APPROVED if approve else ReviewStatus.REJECTED
@@ -153,7 +164,8 @@ def review_document(document, approve, reviewer, note="", request=None):
 
 def review_vehicle(vehicle, approve, reviewer, note="", request=None):
     with transaction.atomic():
-        vehicle = Vehicle.objects.select_for_update().get(pk=vehicle.pk)
+        vehicle = Vehicle.objects.select_for_update().select_related("driver").get(pk=vehicle.pk)
+        _assert_submitted(vehicle.driver)
         if not approve and not note:
             raise BusinessRuleViolation("A rejection reason is required.", code="reason_required")
         vehicle.status = ReviewStatus.APPROVED if approve else ReviewStatus.REJECTED

@@ -26,8 +26,8 @@ export default function VerificationQueuePage() {
   const dr = t.drivers;
   const reviewer = can("drivers.review");
   const apps = useApi<Page<Driver>>("admin/drivers", { status: "under_review", ordering: "submitted_at", page_size: 50 });
-  const docs = useApi<Page<Doc>>("admin/driver-documents", { status: "pending", page_size: 100 });
-  const vehicles = useApi<Page<Vehicle>>("admin/vehicles", { status: "pending", page_size: 100 });
+  const docs = useApi<Page<Doc>>("admin/driver-documents", { status: "pending", submitted: "true", page_size: 100 });
+  const vehicles = useApi<Page<Vehicle>>("admin/vehicles", { status: "pending", submitted: "true", page_size: 100 });
   const invalidate = ["admin/driver-documents", "admin/vehicles", "admin/drivers"];
   const today = new Date().toISOString().slice(0, 10);
   const nothing = <EmptyState title={dr.noPending} hint="" />;
