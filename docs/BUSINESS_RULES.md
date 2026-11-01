@@ -11,9 +11,12 @@ Version 0.1 | 2026-10-21 | Tags: **[APPROVED Dxxx]** or **[PROPOSED Dxxx]**. Pro
 States: REQUESTED → BIDDING → MATCH_PENDING → ASSIGNED → EN_ROUTE → ARRIVED → IN_PROGRESS → COMPLETED; terminal/branch: CANCELLED, NO_SHOW, DISPUTED. Only listed transitions by authorized actor; server timestamps authoritative.
 - Indicative range is informational, labeled "estimate, not guaranteed".
 - Request sent in staged waves to eligible available drivers of the same tenant and city [PROPOSED 5–10 per wave].
+- Rider may propose an optional price. It must not be below a percentage of the start of the indicative range, set by each operator (default 100%, shown rounded to a whole unit); it has no maximum and cannot be changed after the request is sent (cancel and request again). It is not shown to the rider as guaranteed until a driver accepts. Without one, drivers see the indicative range; with one, they see it clearly beside the range. A driver may offer their own price, not limited by the rider's price or the range; no price is final until the rider selects and the driver confirms [D035, owner review pending, not implemented].
 - Driver bid = binding amount for stated route, with expiry. Rider selects; driver reconfirmation [OPEN D012].
+- Confirming a ride withdraws the driver's open offers on other rides [D037].
 - One active match per request; one active trip per driver; price locked at match; amendment only with bilateral acceptance and audit.
 - No penalty for not bidding or for rider declining all bids.
+- A driver may hide a request from their own list, with no penalty and no effect on anyone else; saved on the server [D035, not implemented].
 
 ## 3. Cancellation and no-show [APPROVED principle D006; values PROPOSED D010]
 - Before match: free. First 2 minutes after match: free (abuse exceptions).

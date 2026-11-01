@@ -66,4 +66,45 @@ D034 ENGINEERING (Claude, 2026-10-25, Phase 3; needs owner review, security-only
 
 Linked: `docs/reports/PHASE_03_QA_REPORT.md`, `PHASE_03_DEFECT_REGISTER.md`.
 
+D035 APPROVED by owner 2026-11-01: Optional rider price and the driver app's new design. Approved as design and policy direction; **not implemented yet**.
+
+**Optional rider price (rule text from the owner, 2026-11-01; written for owner review before any code).**
+1. The system always calculates the indicative range automatically.
+2. The rider may enter a proposed price. It is optional.
+3. A proposed price must not be below the start of the range, or below a percentage of that start set by each operator.
+4. Until a driver accepts, the rider must not be shown the proposed price as guaranteed.
+5. Without a proposed price, the driver sees the system's indicative range.
+6. With a proposed price, the driver sees it clearly beside the system's indicative range.
+7. A driver may offer their own price. No price becomes the final fare until the rider selects and the driver confirms (D027).
+
+**Clarifications approved by the owner, 2026-11-01.**
+- Minimum: a percentage of the start of the range, set by each operator, default 100%. The minimum shown to the rider is rounded to a whole currency unit.
+- No maximum on the proposed price.
+- The rider cannot change the proposed price after sending the request; to change it, the rider cancels and requests again.
+- The driver's own price is not limited by the rider's price or by the range.
+
+**Hide request (approved by the owner, 2026-11-01).** A driver may hide a request from their own list. It affects only that driver, carries no penalty, and is saved on the server so it survives an app restart or a new phone. It does not touch the rider or other drivers. After hiding, the driver can undo, and an empty list offers to show hidden requests again.
+
+**Requests screen approved by the owner, 2026-11-01** (canvas artboard `Requests-Final`): tabs for all, rider price and my offers, with the additions above.
+
+**Offer screen approved by the owner, 2026-11-01** (canvas artboard `Offer-Options`, option 1): one bottom sheet for accepting the rider's price or sending the driver's own price.
+
+**Driver app design** (canvas artboard `Rider-Price`): the "Souq" concept in its dark palette, Tajawal, connected-route icons for from/to, and compact request cards that reveal their actions on tap.
+
+Impact: API and rider app need a rider price field; driver app needs the new cards. The rule in `docs/BUSINESS_RULES.md` section 2 is updated. Linked task: none yet; code waits for the owner's review of this text.
+
+D036 APPROVED by owner 2026-11-01: Keep the current fare estimate for now: (base + per km x straight-line distance) +/- range percent, set per operator.
+- Rationale: pricing should not hold up the next step.
+- Proposed by Claude and deferred, not approved: minimum fare, road factor and rounding unit. Per-minute pricing, map-based distance and dynamic pricing also stay out.
+- Impact: no backend change. The values remain provisional and each operator must set them before launch. Estimates can still show decimals, such as 735.12.
+- Linked task: none.
+
+D037 APPROVED by owner 2026-11-01: One active trip per driver stays, and a confirmed trip closes the driver's other offers.
+- A driver may hold several open offers but runs one trip at a time. A "next trip" feature, starting only after the current trip ends, is a later option and not approved for now.
+- When a driver confirms a ride, their open offers on other rides are withdrawn automatically, and those riders are notified. Declining keeps them open. Implemented in `apps/rides/services.py` `confirm_match`.
+- After sending an offer: the request moves to "My offers" and a fixed status bar shows the time left (canvas artboard `After-Send`, model 3). Sending errors stay in the offer sheet (artboard `Offer-Errors`). Retrying a send must reuse the same idempotency key.
+- Rationale: an offer the driver can no longer honour wastes the rider's time.
+- Impact: backend behaviour for the withdrawal; the driver app design is not implemented yet.
+- Linked tests: `tests/test_concurrency.py`.
+
 Rule: New decisions get sequential ID, date, approver, rationale, impact and linked task. Never silently reinterpret proposals as approved.
