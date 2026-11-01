@@ -397,12 +397,16 @@ def confirm_match(ride_id, driver, expected_version, request=None):
         bid.save(update_fields=["status", "updated_at"])
         losers = list(Bid.objects.filter(ride=ride, status=BidStatus.OPEN).select_related("driver__user"))
         Bid.objects.filter(ride=ride, status=BidStatus.OPEN).update(status=BidStatus.LOST)
+        # One active trip per driver: their offers on other rides can no longer be honoured (D037). Only bid rows
+        # change here, so no second ride is locked and two concurrent confirms cannot deadlock.
+        withdrawn = list(Bid.objects.filter(driver=driver, status=BidStatus.OPEN).exclude(ride=ride).select_related("ride__rider"))
+        Bid.objects.filter(pk__in=[w.pk for w in withdrawn], status=BidStatus.OPEN).update(status=BidStatus.WITHDRAWN)
         _transition(
             ride,
             "confirm",
             actor=driver.user,
             role=sm.DRIVER,
-            data={"agreed_fare_minor": bid.amount_minor},
+            data={"agreed_fare_minor": bid.amount_minor, "withdrawn_bids": [str(w.pk) for w in withdrawn]},
             agreed_fare_minor=bid.amount_minor,
             price_locked_at=now,
             assigned_at=now,
@@ -411,6 +415,8 @@ def confirm_match(ride_id, driver, expected_version, request=None):
         _hint(ride.rider, "ride.assigned", ride)
         for lost in losers:
             _hint(lost.driver.user, "ride.bid_lost", ride, bid_id=str(lost.pk))
+        for other in withdrawn:
+            _hint(other.ride.rider, "ride.bid_withdrawn", other.ride, bid_id=str(other.pk))
         audit.record("ride.match_confirmed", request=request, target=ride, data={"fare": bid.amount_minor})
     return ride
 

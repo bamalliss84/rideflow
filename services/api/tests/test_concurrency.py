@@ -7,7 +7,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
 
 from apps.core.context import tenant_context
-from apps.rides.models import Ride
+from apps.rides.models import Bid, BidStatus, Ride
 from apps.subscriptions.models import DriverSubscription
 
 from .factories import PNG, api_for, make_driver, make_member, make_tenant, ride_payload
@@ -129,3 +129,37 @@ def test_parallel_driver_confirmations_single_assignment():
         ride_obj = Ride.objects.get(pk=ride["id"])
         assert ride_obj.status == "assigned"
         assert ride_obj.events.filter(event_type="confirm").count() == 1
+
+
+def _bid_on_two_rides(slug):
+    t = make_tenant(slug)
+    driver = make_driver(t)
+    driver_api = api_for(t, driver.user)
+    riders = [api_for(t, make_member(t, "rider")) for _ in range(2)]
+    rides = [r.post("/api/v1/rides", ride_payload(t)).data for r in riders]
+    bids = [driver_api.post(f"/api/v1/rides/{ride['id']}/bids", {"amount_minor": 1000, "eta_seconds": 60}).data for ride in rides]
+    selected = riders[0].post(
+        f"/api/v1/rides/{rides[0]['id']}/select", {"bid_id": bids[0]["id"], "expected_version": rides[0]["version"]}
+    )
+    assert selected.status_code == 200, selected.data
+    return t, driver_api, riders, rides, bids, selected.data
+
+
+def test_confirming_a_ride_withdraws_the_drivers_offers_on_other_rides():
+    t, driver_api, riders, rides, bids, selected = _bid_on_two_rides("conc-withdraw")
+    confirmed = driver_api.post(f"/api/v1/rides/{rides[0]['id']}/confirm", {"expected_version": selected["version"]})
+    assert confirmed.status_code == 200, confirmed.data
+    with tenant_context(t.tenant):
+        assert Bid.objects.get(pk=bids[1]["id"]).status == BidStatus.WITHDRAWN
+        assert Bid.objects.get(pk=bids[0]["id"]).status == BidStatus.ACCEPTED
+    late = riders[1].post(f"/api/v1/rides/{rides[1]['id']}/select", {"bid_id": bids[1]["id"], "expected_version": rides[1]["version"]})
+    assert late.status_code == 409
+    assert late.data["code"] == "bid_not_open"
+
+
+def test_declining_a_ride_keeps_the_drivers_offers_on_other_rides():
+    t, driver_api, _riders, rides, bids, selected = _bid_on_two_rides("conc-keep")
+    declined = driver_api.post(f"/api/v1/rides/{rides[0]['id']}/decline", {"expected_version": selected["version"]})
+    assert declined.status_code == 200, declined.data
+    with tenant_context(t.tenant):
+        assert Bid.objects.get(pk=bids[1]["id"]).status == BidStatus.OPEN
