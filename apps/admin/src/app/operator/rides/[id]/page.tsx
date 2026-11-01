@@ -69,6 +69,10 @@ export default function RideDetailPage() {
                 { label: t.common.driver, value: d.driver_name ? <Person name={d.driver_name} phone={d.driver_phone} /> : "—" },
                 { label: t.common.city, value: d.city_name },
                 {
+                  label: r.riderPrice,
+                  value: d.rider_price_minor !== null ? <bdi>{fmt.money(d.rider_price_minor, d.currency)}</bdi> : "—",
+                },
+                {
                   label: r.fare,
                   value:
                     d.agreed_fare_minor !== null ? (
