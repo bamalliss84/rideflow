@@ -107,4 +107,11 @@ D037 APPROVED by owner 2026-11-01: One active trip per driver stays, and a confi
 - Impact: backend behaviour for the withdrawal; the driver app design is not implemented yet.
 - Linked tests: `tests/test_concurrency.py`.
 
+D038 APPROVED by owner 2026-11-01: Rating placement, confirmation screen and the start of implementation.
+- Ratings show before the offer: request card and offer sheet for the driver, offers list for the rider, both sides after confirmation. Below `trust.min_sample` ratings, "new" replaces the number.
+- Confirmation screen: canvas artboard `Confirm-Options`, model 1, with `Confirm-States`.
+- Estimate rounding is approved and overrides the deferral in D036 (`fare.round_unit_minor`). `fare.bid_step_minor` sets the driver app's price step. Minimum fare and road factor stay deferred.
+- Not implemented yet: retaliation detection, delayed rating updates, a required reason for low ratings, rating reminders.
+- Linked tests: `tests/test_rider_price_and_hide.py`, `mobile_app/driver/test/requests_test.dart`.
+
 Rule: New decisions get sequential ID, date, approver, rationale, impact and linked task. Never silently reinterpret proposals as approved.
