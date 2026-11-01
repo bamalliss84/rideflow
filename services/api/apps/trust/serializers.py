@@ -25,6 +25,7 @@ ALLOWED_TAGS = [
     "price_dispute",
     "wrong_location",
     "great_service",
+    "paid_smoothly",
 ]
 
 

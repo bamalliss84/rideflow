@@ -20,15 +20,28 @@ def haversine_m(a, b):
     return 2 * EARTH_RADIUS_M * math.asin(math.sqrt(h))
 
 
+def _round_to_unit(amount_minor, unit):
+    return (amount_minor + unit // 2) // unit * unit
+
+
+def rider_price_minimum(estimate_min_minor, policy):
+    """Lowest price a rider may propose (D035), rounded up so it never falls below the operator's percentage."""
+    unit = policy["fare.round_unit_minor"]
+    return math.ceil(estimate_min_minor * policy["fare.rider_min_pct"] / 100 / unit) * unit
+
+
 def fare_estimate(pickup, dropoff, policy):
     """Indicative range only (D004): 'estimate, not guaranteed'. Integer minor units, no floats stored."""
     distance_m = haversine_m(pickup, dropoff)
     mid = policy["fare.base_minor"] + int(round(policy["fare.per_km_minor"] * distance_m / 1000))
     spread = int(round(mid * policy["fare.range_pct"] / 100))
+    unit = policy["fare.round_unit_minor"]
+    min_minor = max(0, _round_to_unit(mid - spread, unit))
     return {
         "distance_m": int(round(distance_m)),
-        "min_minor": max(0, mid - spread),
-        "max_minor": mid + spread,
+        "min_minor": min_minor,
+        "max_minor": _round_to_unit(mid + spread, unit),
+        "rider_price_min_minor": rider_price_minimum(min_minor, policy),
         "is_estimate": True,
         "label": "estimate, not guaranteed",
         "config_version": policy.version,

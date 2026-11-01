@@ -3357,6 +3357,62 @@ paths:
                 items:
                   $ref: '#/components/schemas/Ride'
           description: ''
+  /api/v1/driver/ride-offers/{ride_id}/hide:
+    post:
+      operationId: driver_ride_offers_hide_create
+      parameters:
+      - in: path
+        name: ride_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - driver
+      security:
+      - BearerJWT: []
+      responses:
+        '204':
+          description: No response body
+    delete:
+      operationId: driver_ride_offers_hide_destroy
+      parameters:
+      - in: path
+        name: ride_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - driver
+      security:
+      - BearerJWT: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/driver/ride-offers/hidden:
+    get:
+      operationId: driver_ride_offers_hidden_retrieve
+      tags:
+      - driver
+      security:
+      - BearerJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HiddenOffers'
+          description: ''
+    delete:
+      operationId: driver_ride_offers_hidden_destroy
+      tags:
+      - driver
+      security:
+      - BearerJWT: []
+      responses:
+        '204':
+          description: No response body
   /api/v1/driver/submit:
     post:
       operationId: driver_submit_create
@@ -5369,6 +5425,9 @@ components:
           readOnly: true
         estimated_distance_m:
           type: integer
+        rider_price_minor:
+          type: integer
+          nullable: true
         cash_driver_confirmed_at:
           type: string
           format: date-time
@@ -5477,6 +5536,7 @@ components:
       - rider_id
       - rider_name
       - rider_phone
+      - rider_price_minor
       - started_at
       - status
       - version
@@ -6680,9 +6740,12 @@ components:
           type: boolean
         presence:
           $ref: '#/components/schemas/Presence'
+        max_open_bids:
+          type: integer
       required:
       - eligible
       - is_online
+      - max_open_bids
       - presence
       - reasons
       - status
@@ -6800,7 +6863,10 @@ components:
           type: integer
         label:
           type: string
+        bid_step_minor:
+          type: integer
       required:
+      - bid_step_minor
       - distance_m
       - label
       - max_minor
@@ -6813,6 +6879,8 @@ components:
         min_minor:
           type: integer
         max_minor:
+          type: integer
+        rider_price_min_minor:
           type: integer
         currency:
           type: string
@@ -6834,6 +6902,7 @@ components:
       - label
       - max_minor
       - min_minor
+      - rider_price_min_minor
     FareEstimateRequestRequest:
       type: object
       properties:
@@ -6848,6 +6917,13 @@ components:
       required:
       - dropoff
       - pickup
+    HiddenOffers:
+      type: object
+      properties:
+        count:
+          type: integer
+      required:
+      - count
     LatLng:
       type: object
       properties:
@@ -7279,6 +7355,18 @@ components:
         * `call` - call
         * `sms` - sms
         * `in_app` - in_app
+    MyRating:
+      type: object
+      properties:
+        stars:
+          type: integer
+        tags:
+          type: array
+          items:
+            type: string
+      required:
+      - stars
+      - tags
     NearbyAdminItem:
       type: object
       properties:
@@ -8461,6 +8549,13 @@ components:
           type: string
         estimate:
           $ref: '#/components/schemas/Estimate'
+        rider_price_minor:
+          type: integer
+          nullable: true
+        my_rating:
+          allOf:
+          - $ref: '#/components/schemas/MyRating'
+          nullable: true
         agreed_fare_minor:
           type: integer
           nullable: true
@@ -8524,12 +8619,14 @@ components:
       - id
       - match_deadline
       - my_bid
+      - my_rating
       - open_bid_count
       - pickup
       - pickup_landmark
       - price_locked_at
       - rider
       - rider_note
+      - rider_price_minor
       - status
       - timestamps
       - version
@@ -8557,6 +8654,10 @@ components:
           type: string
           default: ''
           maxLength: 300
+        rider_price_minor:
+          type: integer
+          minimum: 1
+          nullable: true
       required:
       - dropoff
       - dropoff_landmark
@@ -8880,6 +8981,7 @@ components:
       - price_dispute
       - wrong_location
       - great_service
+      - paid_smoothly
       type: string
       description: |-
         * `punctual` - punctual
@@ -8892,6 +8994,7 @@ components:
         * `price_dispute` - price_dispute
         * `wrong_location` - wrong_location
         * `great_service` - great_service
+        * `paid_smoothly` - paid_smoothly
     Tenant:
       type: object
       properties:
@@ -9076,11 +9179,14 @@ components:
           nullable: true
         tier:
           type: string
+        rating_provisional:
+          type: boolean
       required:
       - completed_rides
       - completion_rate
       - rating_avg
       - rating_count
+      - rating_provisional
       - tier
     TrustSnapshot:
       type: object

@@ -116,6 +116,7 @@ class EligibilitySerializer(serializers.Serializer):
     status = serializers.CharField()
     is_online = serializers.BooleanField()
     presence = PresenceSerializer()
+    max_open_bids = serializers.IntegerField()
 
 
 class AvailabilitySerializer(serializers.Serializer):

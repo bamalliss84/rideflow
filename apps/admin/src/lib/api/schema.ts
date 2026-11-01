@@ -1453,6 +1453,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/driver/ride-offers/{ride_id}/hide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["driver_ride_offers_hide_create"];
+        delete: operations["driver_ride_offers_hide_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/driver/ride-offers/hidden": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["driver_ride_offers_hidden_retrieve"];
+        put?: never;
+        post?: never;
+        delete: operations["driver_ride_offers_hidden_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/driver/submit": {
         parameters: {
             query?: never;
@@ -2351,6 +2383,7 @@ export interface components {
             readonly driver_phone: string | null;
             readonly city_name: string;
             estimated_distance_m: number;
+            rider_price_minor: number | null;
             /** Format: date-time */
             cash_driver_confirmed_at: string | null;
             /** Format: date-time */
@@ -2848,6 +2881,7 @@ export interface components {
             status: string;
             is_online: boolean;
             presence: components["schemas"]["Presence"];
+            max_open_bids: number;
         };
         Enforcement: {
             readonly subject_name: string | null;
@@ -2894,11 +2928,13 @@ export interface components {
             max_minor: number;
             distance_m: number;
             label: string;
+            bid_step_minor: number;
         };
         FareEstimate: {
             distance_m: number;
             min_minor: number;
             max_minor: number;
+            rider_price_min_minor: number;
             currency: string;
             is_estimate: boolean;
             label: string;
@@ -2911,6 +2947,9 @@ export interface components {
             city_id?: string | null;
             pickup: components["schemas"]["LatLngRequest"];
             dropoff: components["schemas"]["LatLngRequest"];
+        };
+        HiddenOffers: {
+            count: number;
         };
         LatLng: {
             /** Format: double */
@@ -3074,6 +3113,10 @@ export interface components {
          * @enum {string}
          */
         MethodEnum: "call" | "sms" | "in_app";
+        MyRating: {
+            stars: number;
+            tags: string[];
+        };
         NearbyAdminItem: {
             /** Format: uuid */
             driver_id: string;
@@ -3690,6 +3733,8 @@ export interface components {
             rider_note: string;
             currency: string;
             estimate: components["schemas"]["Estimate"];
+            rider_price_minor: number | null;
+            my_rating: components["schemas"]["MyRating"] | null;
             agreed_fare_minor: number | null;
             /** Format: date-time */
             price_locked_at: string | null;
@@ -3722,6 +3767,7 @@ export interface components {
             dropoff_landmark: string;
             /** @default  */
             rider_note: string;
+            rider_price_minor?: number | null;
         };
         RideEvent: {
             readonly seq: number;
@@ -3860,9 +3906,10 @@ export interface components {
          *     * `price_dispute` - price_dispute
          *     * `wrong_location` - wrong_location
          *     * `great_service` - great_service
+         *     * `paid_smoothly` - paid_smoothly
          * @enum {string}
          */
-        TagsEnum: "punctual" | "polite" | "clean_vehicle" | "safe_driving" | "late" | "rude" | "unsafe" | "price_dispute" | "wrong_location" | "great_service";
+        TagsEnum: "punctual" | "polite" | "clean_vehicle" | "safe_driving" | "late" | "rude" | "unsafe" | "price_dispute" | "wrong_location" | "great_service" | "paid_smoothly";
         Tenant: {
             /** Format: uuid */
             readonly id: string;
@@ -3933,6 +3980,7 @@ export interface components {
             /** Format: double */
             completion_rate: number | null;
             tier: string;
+            rating_provisional: boolean;
         };
         TrustSnapshot: {
             readonly user_name: string | null;
@@ -6743,6 +6791,83 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Ride"][];
                 };
+            };
+        };
+    };
+    driver_ride_offers_hide_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ride_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    driver_ride_offers_hide_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ride_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    driver_ride_offers_hidden_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HiddenOffers"];
+                };
+            };
+        };
+    };
+    driver_ride_offers_hidden_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

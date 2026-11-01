@@ -30,6 +30,9 @@ PARAMS = {
     "fare.base_minor": Param(50000, int, 0, 10**9, PROVISIONAL, "no fare data yet; tenant must configure"),
     "fare.per_km_minor": Param(20000, int, 0, 10**9, PROVISIONAL, "no fare data yet; tenant must configure"),
     "fare.range_pct": Param(20, int, 0, 100, PROVISIONAL, "spread of indicative range"),
+    "fare.round_unit_minor": Param(100, int, 1, 10**7, PROVISIONAL, "estimates round to this unit; default one whole unit"),
+    "fare.bid_step_minor": Param(5000, int, 1, 10**8, PROVISIONAL, "step of the driver app's price + and - buttons"),
+    "fare.rider_min_pct": Param(100, int, 1, 100, APPROVED, "D035: lowest rider price, as % of the start of the range"),
     # Dispatch waves (BUSINESS_RULES §2: 5–10 per wave)
     "dispatch.wave_size": Param(7, int, 1, 50, PROPOSED, "BUSINESS_RULES §2 (5–10)"),
     "dispatch.initial_radius_m": Param(3000, int, 100, 50000, PROVISIONAL, ""),

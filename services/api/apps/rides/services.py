@@ -23,6 +23,7 @@ from .models import (
     BidStatus,
     DispatchCandidate,
     EvidenceKind,
+    HiddenRideOffer,
     LocationEvidence,
     Ride,
     RideAmendment,
@@ -156,7 +157,9 @@ def process_all_timeouts():
 # ---------------------------------------------------------------- request & dispatch
 
 
-def create_ride(rider, *, pickup, pickup_landmark, dropoff, dropoff_landmark, city_id=None, rider_note="", request=None):
+def create_ride(
+    rider, *, pickup, pickup_landmark, dropoff, dropoff_landmark, city_id=None, rider_note="", rider_price_minor=None, request=None
+):
     from apps.trust.services import active_restriction
 
     tenant = require_tenant()
@@ -168,6 +171,8 @@ def create_ride(rider, *, pickup, pickup_landmark, dropoff, dropoff_landmark, ci
         raise NotEligible(f"Ride requests are restricted until {restriction.ends_at.isoformat()}.", code="restricted")
     city = geo.resolve_city(pickup, city_id)
     estimate = geo.fare_estimate(pickup, dropoff, policy)
+    if rider_price_minor is not None and rider_price_minor < estimate["rider_price_min_minor"]:
+        raise BusinessRuleViolation("The proposed price is below the minimum for this trip.", code="rider_price_too_low")
     try:
         with transaction.atomic():
             ride = Ride.objects.create(
@@ -182,6 +187,7 @@ def create_ride(rider, *, pickup, pickup_landmark, dropoff, dropoff_landmark, ci
                 estimate_min_minor=estimate["min_minor"],
                 estimate_max_minor=estimate["max_minor"],
                 estimated_distance_m=estimate["distance_m"],
+                rider_price_minor=rider_price_minor,
                 config_version=policy.version,
             )
     except IntegrityError:
@@ -192,7 +198,11 @@ def create_ride(rider, *, pickup, pickup_landmark, dropoff, dropoff_landmark, ci
         actor=rider,
         role=sm.RIDER,
         to_status=ride.status,
-        data={"estimate": [estimate["min_minor"], estimate["max_minor"]], "config_version": policy.version},
+        data={
+            "estimate": [estimate["min_minor"], estimate["max_minor"]],
+            "rider_price_minor": rider_price_minor,
+            "config_version": policy.version,
+        },
     )
     _dispatch_wave(ride, policy, actor=rider)
     audit.record("ride.requested", request=request, target=ride)
@@ -253,9 +263,32 @@ def offers_for_driver(driver):
     return (
         Ride.objects.filter(candidates__driver=driver, status=RideStatus.BIDDING)
         .exclude(rider=driver.user)
+        .exclude(hidden_by__driver=driver)
         .distinct()
         .order_by("-created_at")
     )
+
+
+def hide_offer(ride_id, driver):
+    """Remove a request from this driver's list only (D035). An open offer must be withdrawn first."""
+    if not DispatchCandidate.objects.filter(ride_id=ride_id, driver=driver).exists():
+        raise Http404
+    if Bid.objects.filter(ride_id=ride_id, driver=driver, status=BidStatus.OPEN).exists():
+        raise Conflict("Withdraw your open offer before hiding this request.", code="offer_has_open_bid")
+    HiddenRideOffer.objects.get_or_create(ride_id=ride_id, driver=driver)
+
+
+def unhide_offers(driver, ride_id=None):
+    hidden = HiddenRideOffer.objects.filter(driver=driver)
+    if ride_id is not None:
+        hidden = hidden.filter(ride_id=ride_id)
+        if not hidden.exists():
+            raise Http404
+    hidden.delete()
+
+
+def hidden_offer_count(driver):
+    return HiddenRideOffer.objects.filter(driver=driver, ride__status=RideStatus.BIDDING).count()
 
 
 def place_bid(ride_id, driver, *, amount_minor, eta_seconds, request=None):

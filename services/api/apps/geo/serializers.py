@@ -75,6 +75,7 @@ class FareEstimateSerializer(serializers.Serializer):
     distance_m = serializers.IntegerField()
     min_minor = serializers.IntegerField()
     max_minor = serializers.IntegerField()
+    rider_price_min_minor = serializers.IntegerField()
     currency = serializers.CharField()
     is_estimate = serializers.BooleanField()
     label = serializers.CharField()

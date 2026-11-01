@@ -29,7 +29,10 @@ def test_rating_flow_and_bayesian_trust(ride_flow):
     r = f.rider_api.post(f"/api/v1/rides/{ride['id']}/rating", {"stars": 1, "tags": ["late"]})
     assert r.status_code == 201
     assert f.rider_api.post(f"/api/v1/rides/{ride['id']}/rating", {"stars": 5}).status_code == 409
+    assert f.d1_api.get(f"/api/v1/rides/{ride['id']}").data["my_rating"] is None
     assert f.d1_api.post(f"/api/v1/rides/{ride['id']}/rating", {"stars": 4}).status_code == 201
+    assert f.d1_api.get(f"/api/v1/rides/{ride['id']}").data["my_rating"] == {"stars": 4, "tags": []}
+    assert f.rider_api.get(f"/api/v1/rides/{ride['id']}").data["my_rating"] == {"stars": 1, "tags": ["late"]}
     trust = f.d1_api.get("/api/v1/me/trust", {"role": "driver"}).data
     # one 1-star rating is smoothed by the prior (4.5 x 5): (22.5 + 1) / 6
     assert trust["rating_avg"] == pytest.approx(3.92, abs=0.01)

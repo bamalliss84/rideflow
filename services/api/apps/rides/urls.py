@@ -9,5 +9,7 @@ router.register("admin/rides", views.AdminRideViewSet, basename="admin-ride")
 
 urlpatterns = [
     path("driver/ride-offers", views.DriverOffersView.as_view(), name="driver-ride-offers"),
+    path("driver/ride-offers/hidden", views.DriverHiddenOffersView.as_view(), name="driver-hidden-offers"),
+    path("driver/ride-offers/<uuid:ride_id>/hide", views.DriverOfferHideView.as_view(), name="driver-offer-hide"),
     *router.urls,
 ]

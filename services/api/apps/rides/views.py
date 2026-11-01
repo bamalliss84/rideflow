@@ -30,6 +30,7 @@ from .serializers import (
     ContactAttemptSerializer,
     DeclineSerializer,
     EventsQuerySerializer,
+    HiddenOffersSerializer,
     OptionalVersionSerializer,
     RideCreateSerializer,
     RideEventSerializer,
@@ -293,6 +294,35 @@ class DriverOffersView(APIView):
         driver = get_driver_for_user(request.user)
         rides = services.offers_for_driver(driver).select_related("rider")[:50]
         return Response(RideSerializer(rides, many=True, context={"request": request}).data)
+
+
+@extend_schema(tags=["driver"])
+class DriverOfferHideView(APIView):
+    permission_classes = [IsDriver]
+
+    @extend_schema(request=None, responses={204: None})
+    def post(self, request, ride_id):
+        services.hide_offer(ride_id, get_driver_for_user(request.user))
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @extend_schema(request=None, responses={204: None})
+    def delete(self, request, ride_id):
+        services.unhide_offers(get_driver_for_user(request.user), ride_id=ride_id)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@extend_schema(tags=["driver"])
+class DriverHiddenOffersView(APIView):
+    permission_classes = [IsDriver]
+
+    @extend_schema(responses=HiddenOffersSerializer)
+    def get(self, request):
+        return Response({"count": services.hidden_offer_count(get_driver_for_user(request.user))})
+
+    @extend_schema(request=None, responses={204: None})
+    def delete(self, request):
+        services.unhide_offers(get_driver_for_user(request.user))
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 # ----- tenant administration -----

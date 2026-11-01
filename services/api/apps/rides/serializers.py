@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from apps.core.fields import PointField
+from apps.tenancy.policy import current_policy
 
 from . import state_machine as sm
 from .models import ACTIVE_CONTACT_STATUSES, Bid, RideAmendment, RideEvent
@@ -18,6 +19,7 @@ class RideCreateSerializer(serializers.Serializer):
     dropoff = PointField()
     dropoff_landmark = serializers.CharField(max_length=200)
     rider_note = serializers.CharField(max_length=300, required=False, allow_blank=True, default="")
+    rider_price_minor = serializers.IntegerField(min_value=1, required=False, allow_null=True)
 
 
 class VersionSerializer(serializers.Serializer):
@@ -80,6 +82,7 @@ class TrustBriefSerializer(serializers.Serializer):
     completed_rides = serializers.IntegerField()
     completion_rate = serializers.FloatField(allow_null=True)
     tier = serializers.CharField()
+    rating_provisional = serializers.BooleanField()
 
 
 class VehicleBriefSerializer(serializers.Serializer):
@@ -116,6 +119,13 @@ def _vehicle(driver, include_plate):
     }
 
 
+def _public_trust(summary):
+    """Below the minimum sample the average is only the smoothing prior, so apps show "new" instead of a number."""
+    trust = {k: summary[k] for k in ("rating_avg", "rating_count", "completed_rides", "completion_rate", "tier")}
+    trust["rating_provisional"] = summary["rating_count"] < current_policy()["trust.min_sample"]
+    return trust
+
+
 def driver_brief(driver, *, include_contact=False, include_plate=False):
     from apps.trust.services import public_summary
 
@@ -126,7 +136,7 @@ def driver_brief(driver, *, include_contact=False, include_plate=False):
         "display_name": _first_name(driver.user),
         "phone": driver.user.phone if include_contact else None,
         "verified": driver.status == "approved",
-        "trust": {k: summary[k] for k in ("rating_avg", "rating_count", "completed_rides", "completion_rate", "tier")},
+        "trust": _public_trust(summary),
         "vehicle": _vehicle(driver, include_plate),
     }
 
@@ -141,7 +151,7 @@ def rider_brief(user, *, include_contact=False):
         "display_name": _first_name(user),
         "phone": user.phone if include_contact else None,
         "verified": True,
-        "trust": {k: summary[k] for k in ("rating_avg", "rating_count", "completed_rides", "completion_rate", "tier")},
+        "trust": _public_trust(summary),
         "vehicle": None,
     }
 
@@ -176,6 +186,22 @@ class EstimateSerializer(serializers.Serializer):
     max_minor = serializers.IntegerField()
     distance_m = serializers.IntegerField()
     label = serializers.CharField()
+    bid_step_minor = serializers.IntegerField()
+
+
+class MyRatingSerializer(serializers.Serializer):
+    stars = serializers.IntegerField()
+    tags = serializers.ListField(child=serializers.CharField())
+
+
+def _my_rating(ride, user):
+    if ride.completed_at is None:
+        return None
+    return ride.ratings.filter(rater=user).values("stars", "tags").first()
+
+
+class HiddenOffersSerializer(serializers.Serializer):
+    count = serializers.IntegerField()
 
 
 class RideSerializer(serializers.Serializer):
@@ -195,6 +221,8 @@ class RideSerializer(serializers.Serializer):
     rider_note = serializers.CharField()
     currency = serializers.CharField()
     estimate = EstimateSerializer()
+    rider_price_minor = serializers.IntegerField(allow_null=True)
+    my_rating = MyRatingSerializer(allow_null=True)
     agreed_fare_minor = serializers.IntegerField(allow_null=True)
     price_locked_at = serializers.DateTimeField(allow_null=True)
     match_deadline = serializers.DateTimeField(allow_null=True)
@@ -250,7 +278,10 @@ class RideSerializer(serializers.Serializer):
                 "max_minor": ride.estimate_max_minor,
                 "distance_m": ride.estimated_distance_m,
                 "label": "estimate, not guaranteed",
+                "bid_step_minor": current_policy()["fare.bid_step_minor"],
             },
+            "rider_price_minor": ride.rider_price_minor,
+            "my_rating": _my_rating(ride, user) if viewer != "candidate" else None,
             "agreed_fare_minor": ride.agreed_fare_minor,
             "price_locked_at": ride.price_locked_at,
             "match_deadline": ride.match_deadline,
@@ -343,6 +374,7 @@ class AdminRideSerializer(serializers.Serializer):
     driver_phone = serializers.CharField(source="driver.user.phone", read_only=True, allow_null=True)
     city_name = serializers.CharField(source="city.name", read_only=True)
     estimated_distance_m = serializers.IntegerField()
+    rider_price_minor = serializers.IntegerField(allow_null=True)
     cash_driver_confirmed_at = serializers.DateTimeField(allow_null=True)
     cash_rider_confirmed_at = serializers.DateTimeField(allow_null=True)
     arrived_at = serializers.DateTimeField(allow_null=True)

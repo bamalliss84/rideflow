@@ -59,6 +59,7 @@ def eligibility(driver, policy=None):
         "status": driver.status,
         "is_online": driver.is_online,
         "presence": presence(driver, policy),
+        "max_open_bids": policy["bids.max_open_per_driver"],
     }
 
 

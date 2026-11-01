@@ -64,6 +64,7 @@ class Ride(TenantScopedModel):
     estimate_min_minor = models.BigIntegerField()
     estimate_max_minor = models.BigIntegerField()
     estimated_distance_m = models.PositiveIntegerField()
+    rider_price_minor = models.BigIntegerField(null=True, blank=True)  # optional proposal, never the final fare (D035)
 
     wave_count = models.PositiveSmallIntegerField(default=0)
     dispatch_radius_m = models.PositiveIntegerField(default=0)
@@ -174,6 +175,16 @@ class RideEvent(AppendOnlyMixin, TenantScopedModel):
     class Meta:
         ordering = ["seq"]
         constraints = [models.UniqueConstraint(fields=["ride", "seq"], name="uniq_ride_event_seq")]
+
+
+class HiddenRideOffer(TenantScopedModel):
+    """A request this driver removed from their own list (D035). No effect on the rider or other drivers."""
+
+    ride = models.ForeignKey(Ride, on_delete=models.CASCADE, related_name="hidden_by")
+    driver = models.ForeignKey("drivers.DriverProfile", on_delete=models.CASCADE, related_name="hidden_offers")
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["ride", "driver"], name="uniq_hidden_ride_offer")]
 
 
 class EvidenceKind(models.TextChoices):
