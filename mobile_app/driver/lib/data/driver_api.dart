@@ -98,6 +98,10 @@ class DriverApi {
 
   // ---- rides
   Future<List<Ride>> offers() async => results(await client.get('driver/ride-offers')).map(Ride.new).toList();
+  Future<void> hideOffer(String rideId) => client.post('driver/ride-offers/$rideId/hide');
+  Future<void> unhideOffer(String rideId) => client.delete('driver/ride-offers/$rideId/hide');
+  Future<void> unhideAllOffers() => client.delete('driver/ride-offers/hidden');
+  Future<int> hiddenOfferCount() async => ((await client.get('driver/ride-offers/hidden')) as Map)['count'] as int? ?? 0;
   Future<List<Ride>> rides({int page = 1, String? status}) async =>
       results(await client.get('rides', query: {'page': page, 'page_size': 50, if (status != null) 'status': status})).map(Ride.new).toList();
   Future<Ride> ride(String id) async => Ride(((await client.get('rides/$id')) as Map).cast<String, dynamic>());
@@ -128,8 +132,8 @@ class DriverApi {
   Future<void> contactAttempt(String rideId, String method) => client.post('rides/$rideId/contact-attempts', data: {'method': method});
   Future<Ride> confirmCash(String rideId, {required String actionKey}) async =>
       Ride(((await client.post('rides/$rideId/cash-confirm', actionKey: actionKey)) as Map).cast<String, dynamic>());
-  Future<void> rate(String rideId, int stars, {String comment = '', String? actionKey}) =>
-      client.post('rides/$rideId/rating', data: {'stars': stars, if (comment.isNotEmpty) 'comment': comment}, actionKey: actionKey);
+  Future<void> rate(String rideId, int stars, {List<String> tags = const [], String comment = '', String? actionKey}) =>
+      client.post('rides/$rideId/rating', data: {'stars': stars, if (tags.isNotEmpty) 'tags': tags, if (comment.isNotEmpty) 'comment': comment}, actionKey: actionKey);
 
   // ---- notifications, trust
   Future<({List<NotificationItem> items, int nextCursor, bool hasMore})> notifications({int after = 0}) async {

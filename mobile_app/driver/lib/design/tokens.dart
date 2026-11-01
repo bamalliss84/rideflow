@@ -2,36 +2,38 @@ import 'package:flutter/material.dart';
 
 /// RideFlow design tokens (driver app). One source for colour, type, spacing, radius and elevation.
 ///
-/// Identity: deep "night" ink for focus surfaces, a confident teal for go/online, warm amber for things
-/// waiting on the driver, coral for danger. Light, airy surfaces for everything else.
+/// Identity (D035, "Souq" dark): deep green surfaces, gold for prices and the main action, a live green for
+/// online and progress, a soft coral for danger. Token names predate the palette: `ink` is the ground colour.
 abstract final class RfColors {
   // ink / surfaces
-  static const ink = Color(0xFF0B1B2B); // primary text, night surfaces
-  static const ink2 = Color(0xFF16293D);
-  static const ink3 = Color(0xFF243B55);
-  static const text = Color(0xFF0B1B2B);
-  static const textMuted = Color(0xFF5B6B7F);
-  static const textSubtle = Color(0xFF8A98AA);
-  static const onInk = Color(0xFFFFFFFF);
-  static const onInkMuted = Color(0xFFB4C2D3);
-  static const canvas = Color(0xFFF3F5F8);
-  static const surface = Color(0xFFFFFFFF);
-  static const surfaceSunken = Color(0xFFEDF1F5);
-  static const line = Color(0xFFE2E7EE);
-  static const lineStrong = Color(0xFFCBD3DE);
+  static const ink = Color(0xFF0F2419);
+  static const ink2 = Color(0xFF183426);
+  static const ink3 = Color(0xFF27493A);
+  static const text = Color(0xFFF3F6F3);
+  static const textMuted = Color(0xFFB8CABE);
+  static const textSubtle = Color(0xFF94AC9E);
+  static const onInk = Color(0xFFF3F6F3);
+  static const onInkMuted = Color(0xFFB8CABE);
+  static const canvas = Color(0xFF0F2419);
+  static const surface = Color(0xFF183426);
+  static const surfaceSunken = Color(0xFF27493A);
+  static const line = Color(0xFF27493A);
+  static const lineStrong = Color(0xFF4A7361);
+  static const gold = Color(0xFFF5B83D);
+  static const onGold = Color(0xFF18261E);
 
   // brand / states
-  static const teal = Color(0xFF0FA394);
-  static const tealDeep = Color(0xFF0B7C71);
-  static const tealSoft = Color(0xFFE3F7F4);
-  static const amber = Color(0xFFF2A93B);
-  static const amberDeep = Color(0xFF9A5B0B);
-  static const amberSoft = Color(0xFFFFF4E2);
-  static const coral = Color(0xFFE5484D);
-  static const coralDeep = Color(0xFFB4262B);
-  static const coralSoft = Color(0xFFFDECEC);
-  static const blue = Color(0xFF3B82F6);
-  static const blueSoft = Color(0xFFE8F1FE);
+  static const teal = Color(0xFF5FD09A);
+  static const tealDeep = Color(0xFF5FD09A);
+  static const tealSoft = Color(0xFF1F4A38);
+  static const amber = Color(0xFFF5B83D);
+  static const amberDeep = Color(0xFFF5B83D);
+  static const amberSoft = Color(0xFF3A3518);
+  static const coral = Color(0xFFFFA99D);
+  static const coralDeep = Color(0xFFFFA99D);
+  static const coralSoft = Color(0xFF4A2B27);
+  static const blue = Color(0xFF9DC2FF);
+  static const blueSoft = Color(0xFF243B55);
 }
 
 abstract final class RfSpace {

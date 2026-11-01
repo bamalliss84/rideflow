@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -87,14 +89,21 @@ class _ConfirmRideScreenState extends ConsumerState<ConfirmRideScreen> {
 
   Future<void> _decline(Ride ride) async {
     final t = AppLocalizations.of(context);
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (c) => AlertDialog(
-        title: Text(t.declineButton),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(c, false), child: Text(t.cancel)),
-          TextButton(onPressed: () => Navigator.pop(c, true), child: Text(t.confirm, style: const TextStyle(color: RfColors.coral))),
-        ],
+    final ok = await RfSheet.show<bool>(
+      context,
+      RfSheet(
+        title: t.declineTitle,
+        body: [Text(t.declineBody, style: RfType.body)],
+        action: Column(mainAxisSize: MainAxisSize.min, children: [
+          RfButton(label: t.backToConfirm, onPressed: () => Navigator.pop(context, false)),
+          const SizedBox(height: RfSpace.xs),
+          RfButton(
+            key: const Key('declineYes'),
+            label: t.declineYes,
+            kind: RfButtonKind.ghost,
+            onPressed: () => Navigator.pop(context, true),
+          ),
+        ]),
       ),
     );
     if (ok == true) await _act(ride, 'decline', extra: {'reason': ''});
@@ -130,68 +139,58 @@ class _ConfirmRideScreenState extends ConsumerState<ConfirmRideScreen> {
             final deadline = ride.matchDeadline ?? DateTime.now().add(const Duration(seconds: 60));
             final total = ride.selectedAt != null ? deadline.difference(ride.selectedAt!) : const Duration(seconds: 60);
             final fare = ride.agreedFareMinor ?? ride.myBid?.amountMinor;
+            final others = (ref.watch(offersProvider).valueOrNull ?? const <Ride>[])
+                .where((r) => r.id != ride.id && r.myBid?.status == 'open')
+                .length;
+            final rider = ride.rider;
             return Column(children: [
               Expanded(
                 child: ListView(padding: const EdgeInsets.fromLTRB(RfSpace.lg, RfSpace.lg, RfSpace.lg, 0), children: [
-                  Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: StatusPill(t.ride_match_pending, tone: Tone.warning, icon: Icons.notifications_active_rounded),
+                  _ConfirmTimer(
+                    deadline: deadline,
+                    total: total.isNegative || total == Duration.zero ? const Duration(seconds: 60) : total,
+                    onExpired: _refreshOutcome,
                   ),
-                  const SizedBox(height: RfSpace.md),
+                  const SizedBox(height: RfSpace.xl),
                   Text(t.confirmTitle, key: const Key('confirmTitle'), style: RfType.display.copyWith(color: RfColors.onInk)),
-                  const SizedBox(height: 6),
-                  Text(t.confirmSubtitle, style: RfType.body.copyWith(color: RfColors.onInkMuted)),
-                  const SizedBox(height: RfSpace.xl),
-                  Center(
-                    child: CountdownRing(
-                      deadline: deadline,
-                      total: total.isNegative || total == Duration.zero ? const Duration(seconds: 60) : total,
-                      unitLabel: t.secondsUnit,
-                      onExpired: _refreshOutcome,
-                    ),
-                  ),
-                  const SizedBox(height: RfSpace.xl),
-                  Container(
-                    padding: const EdgeInsets.all(RfSpace.md),
-                    decoration: BoxDecoration(color: RfColors.ink2, borderRadius: BorderRadius.circular(RfRadius.lg)),
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                      Text(t.agreedFare, style: RfType.caption.copyWith(color: RfColors.onInkMuted)),
-                      const SizedBox(height: 4),
-                      MoneyText(formatMoney(fare, ride.currency, units), style: RfType.display.copyWith(color: RfColors.onInk, fontSize: 34)),
-                      const SizedBox(height: RfSpace.md),
-                      const Divider(color: RfColors.ink3),
-                      const SizedBox(height: RfSpace.md),
-                      RouteStops(pickupLabel: t.pickup, pickup: ride.pickupLandmark, dropoffLabel: t.dropoff, dropoff: ride.dropoffLandmark, onInk: true),
-                      const SizedBox(height: RfSpace.md),
-                      Row(children: [
-                        Expanded(child: _InkFact(label: t.distanceLabel, value: formatDistance(ride.distanceM))),
-                        Expanded(child: _InkFact(label: t.etaLabel, value: ride.myBid == null ? '—' : t.minutesShort('${(ride.myBid!.etaSeconds / 60).round()}'))),
-                      ]),
-                    ]),
-                  ),
-                  if (ride.rider != null) ...[
-                    const SizedBox(height: RfSpace.sm),
+                  const SizedBox(height: RfSpace.sm),
+                  MoneyText(formatMoney(fare, ride.currency, units), style: RfType.display.copyWith(color: RfColors.gold, fontSize: 56)),
+                  Text('${t.agreedFare} · ${t.cashSuffix}', style: RfType.body.copyWith(color: RfColors.onInkMuted)),
+                  if (rider != null) ...[
+                    const SizedBox(height: RfSpace.lg),
                     Container(
                       padding: const EdgeInsets.all(RfSpace.md),
                       decoration: BoxDecoration(color: RfColors.ink2, borderRadius: BorderRadius.circular(RfRadius.lg)),
                       child: Row(children: [
                         const CircleAvatar(backgroundColor: RfColors.ink3, child: Icon(Icons.person_rounded, color: RfColors.onInk)),
                         const SizedBox(width: RfSpace.sm),
-                        Expanded(
-                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            Text(ride.rider!.displayName.isEmpty ? t.rider : ride.rider!.displayName, style: RfType.bodyStrong.copyWith(color: RfColors.onInk)),
-                            Text(
-                              ride.rider!.ratingAvg == null ? t.newRider : t.riderRating(ride.rider!.ratingAvg!.toStringAsFixed(1)),
-                              style: RfType.caption.copyWith(color: RfColors.onInkMuted),
-                            ),
-                          ]),
-                        ),
+                        Expanded(child: Text(rider.displayName.isEmpty ? t.rider : rider.displayName, style: RfType.bodyStrong.copyWith(color: RfColors.onInk))),
+                        RatingBadge(score: rider.ratingAvg, count: rider.ratingCount, provisional: rider.ratingProvisional, newLabel: t.newUser),
                       ]),
                     ),
                   ],
+                  const SizedBox(height: RfSpace.sm),
+                  Container(
+                    padding: const EdgeInsets.all(RfSpace.md),
+                    decoration: BoxDecoration(color: RfColors.ink2, borderRadius: BorderRadius.circular(RfRadius.lg)),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                      RouteStops(pickupLabel: t.pickup, pickup: ride.pickupLandmark, dropoffLabel: t.dropoff, dropoff: ride.dropoffLandmark, onInk: true, dense: true, showLabels: false),
+                      const SizedBox(height: RfSpace.sm),
+                      const Divider(color: RfColors.ink3),
+                      const SizedBox(height: RfSpace.sm),
+                      Row(children: [
+                        Expanded(child: _InkFact(label: t.distanceLabel, value: formatDistance(ride.distanceM))),
+                        Expanded(child: _InkFact(label: t.etaLabel, value: ride.myBid == null ? '—' : t.minutesShort('${(ride.myBid!.etaSeconds / 60).round()}'))),
+                      ]),
+                    ]),
+                  ),
                   if (ride.riderNote.isNotEmpty) ...[
                     const SizedBox(height: RfSpace.sm),
                     Text(ride.riderNote, style: RfType.body.copyWith(color: RfColors.onInkMuted)),
+                  ],
+                  if (others > 0) ...[
+                    const SizedBox(height: RfSpace.sm),
+                    Text(t.withdrawOthers('$others'), key: const Key('withdrawOthersNote'), style: RfType.caption),
                   ],
                   const SizedBox(height: RfSpace.lg),
                 ]),
@@ -224,6 +223,68 @@ class _ConfirmRideScreenState extends ConsumerState<ConfirmRideScreen> {
         ),
       ),
     );
+  }
+}
+
+/// Time left to confirm, always in sight. The last 10 seconds change colour and wording.
+class _ConfirmTimer extends StatefulWidget {
+  const _ConfirmTimer({required this.deadline, required this.total, required this.onExpired});
+  final DateTime deadline;
+  final Duration total;
+  final VoidCallback onExpired;
+  @override
+  State<_ConfirmTimer> createState() => _ConfirmTimerState();
+}
+
+class _ConfirmTimerState extends State<_ConfirmTimer> {
+  Timer? _timer;
+  bool _fired = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(milliseconds: 500), (_) {
+      if (!mounted) return;
+      setState(() {});
+      if (!_fired && !widget.deadline.isAfter(DateTime.now())) {
+        _fired = true;
+        widget.onExpired();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final left = widget.deadline.difference(DateTime.now());
+    final seconds = left.inSeconds.clamp(0, 99999);
+    final urgent = seconds <= 10;
+    final color = urgent ? RfColors.coral : RfColors.gold;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Row(children: [
+        Expanded(child: Text(urgent ? t.hurryConfirm : t.remainingToConfirm, style: RfType.bodyStrong.copyWith(color: urgent ? RfColors.onInk : RfColors.onInkMuted))),
+        Container(
+          key: const Key('confirmCountdown'),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+          decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(RfRadius.pill)),
+          child: Text(t.secondsShort('$seconds'), style: RfType.h3.copyWith(color: RfColors.onGold)),
+        ),
+      ]),
+      const SizedBox(height: RfSpace.sm),
+      LinearProgressIndicator(
+        value: widget.total.inMilliseconds <= 0 ? 0 : (left.inMilliseconds / widget.total.inMilliseconds).clamp(0.0, 1.0),
+        minHeight: 8,
+        borderRadius: BorderRadius.circular(RfRadius.pill),
+        backgroundColor: RfColors.ink3,
+        color: color,
+      ),
+    ]);
   }
 }
 

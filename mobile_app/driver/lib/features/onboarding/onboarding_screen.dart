@@ -186,7 +186,7 @@ class _VehicleStep extends ConsumerWidget {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(color: RfColors.surfaceSunken, borderRadius: BorderRadius.circular(RfRadius.md)),
-                  child: const Icon(Icons.directions_car_rounded, color: RfColors.ink),
+                  child: const Icon(Icons.directions_car_rounded, color: RfColors.text),
                 ),
                 const SizedBox(width: RfSpace.sm),
                 Expanded(

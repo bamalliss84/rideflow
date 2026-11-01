@@ -4,11 +4,12 @@ import 'tokens.dart';
 
 ThemeData buildRideFlowTheme() {
   final scheme = ColorScheme.fromSeed(
-    seedColor: RfColors.teal,
-    primary: RfColors.ink,
-    onPrimary: RfColors.onInk,
+    brightness: Brightness.dark,
+    seedColor: RfColors.gold,
+    primary: RfColors.gold,
+    onPrimary: RfColors.onGold,
     secondary: RfColors.teal,
-    onSecondary: Colors.white,
+    onSecondary: RfColors.onGold,
     error: RfColors.coral,
     surface: RfColors.surface,
     onSurface: RfColors.text,
@@ -45,7 +46,7 @@ ThemeData buildRideFlowTheme() {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: RfColors.surface,
+      fillColor: RfColors.surfaceSunken,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       floatingLabelBehavior: FloatingLabelBehavior.always,
       labelStyle: RfType.label,
@@ -85,12 +86,12 @@ ThemeData buildRideFlowTheme() {
     ),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
-      backgroundColor: RfColors.ink,
+      backgroundColor: RfColors.ink3,
       contentTextStyle: RfType.body.copyWith(color: RfColors.onInk),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(RfRadius.md)),
     ),
     dividerTheme: const DividerThemeData(color: RfColors.line, thickness: 1, space: 1),
     progressIndicatorTheme: const ProgressIndicatorThemeData(color: RfColors.teal),
-    switchTheme: SwitchThemeData(thumbColor: WidgetStateProperty.all(Colors.white)),
+    switchTheme: SwitchThemeData(thumbColor: WidgetStateProperty.all(RfColors.text)),
   );
 }

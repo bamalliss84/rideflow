@@ -31,12 +31,12 @@ class RfButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (bg, fg, border) = switch (kind) {
-      RfButtonKind.primary => (RfColors.ink, RfColors.onInk, null),
-      RfButtonKind.go => (RfColors.teal, Colors.white, null),
-      RfButtonKind.danger => (RfColors.coral, Colors.white, null),
-      RfButtonKind.secondary => (RfColors.surface, RfColors.text, RfColors.lineStrong),
-      RfButtonKind.ghost => (Colors.transparent, RfColors.tealDeep, null),
-      RfButtonKind.onInk => (RfColors.onInk, RfColors.ink, null),
+      RfButtonKind.primary => (RfColors.gold, RfColors.onGold, null),
+      RfButtonKind.go => (RfColors.gold, RfColors.onGold, null),
+      RfButtonKind.danger => (RfColors.coral, RfColors.onGold, null),
+      RfButtonKind.secondary => (RfColors.surfaceSunken, RfColors.text, null),
+      RfButtonKind.ghost => (Colors.transparent, RfColors.text, null),
+      RfButtonKind.onInk => (RfColors.surfaceSunken, RfColors.text, null),
     };
     final disabled = onPressed == null || loading;
     final child = Row(mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.center, children: [
@@ -141,8 +141,8 @@ class StatusPill extends StatelessWidget {
       Tone.success => (RfColors.tealSoft, RfColors.tealDeep),
       Tone.warning => (RfColors.amberSoft, RfColors.amberDeep),
       Tone.danger => (RfColors.coralSoft, RfColors.coralDeep),
-      Tone.info => (RfColors.blueSoft, const Color(0xFF1D4ED8)),
-      Tone.dark => (RfColors.ink, RfColors.onInk),
+      Tone.info => (RfColors.blueSoft, RfColors.blue),
+      Tone.dark => (RfColors.surfaceSunken, RfColors.text),
       Tone.neutral => (RfColors.surfaceSunken, RfColors.textMuted),
     };
 
@@ -158,32 +158,72 @@ Tone toneFor(String status) => switch (status) {
 
 /// Pickup -> drop-off with a connector line. Long Arabic names wrap instead of being cut.
 class RouteStops extends StatelessWidget {
-  const RouteStops({super.key, required this.pickupLabel, required this.pickup, required this.dropoffLabel, required this.dropoff, this.dense = false, this.onInk = false});
+  const RouteStops({super.key, required this.pickupLabel, required this.pickup, required this.dropoffLabel, required this.dropoff, this.dense = false, this.onInk = false, this.showLabels = true});
   final String pickupLabel, pickup, dropoffLabel, dropoff;
-  final bool dense, onInk;
+  final bool dense, onInk, showLabels;
   @override
   Widget build(BuildContext context) {
     final main = (dense ? RfType.bodyStrong : RfType.h3).copyWith(color: onInk ? RfColors.onInk : RfColors.text);
     final cap = RfType.caption.copyWith(color: onInk ? RfColors.onInkMuted : RfColors.textMuted);
     Widget stop(Widget marker, String label, String text) => Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          SizedBox(width: 22, child: Padding(padding: const EdgeInsets.only(top: 3), child: marker)),
+          SizedBox(width: 24, height: 24, child: Center(child: marker)),
           const SizedBox(width: 10),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(label, style: cap),
-              const SizedBox(height: 1),
+              if (showLabels) ...[Text(label, style: cap), const SizedBox(height: 1)],
               Text(text.isEmpty ? '—' : text, style: main, softWrap: true),
             ]),
           ),
         ]);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      stop(Container(width: 14, height: 14, decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: RfColors.teal, width: 4))), pickupLabel, pickup),
-      Padding(
-        padding: const EdgeInsetsDirectional.only(start: 10, top: 2, bottom: 2),
-        child: Container(width: 2, height: dense ? 14 : 20, color: onInk ? RfColors.ink3 : RfColors.line),
+      stop(
+        Container(
+          width: 18,
+          height: 18,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: RfColors.teal, width: 3)),
+          child: Container(width: 5, height: 5, decoration: const BoxDecoration(color: RfColors.teal, shape: BoxShape.circle)),
+        ),
+        pickupLabel,
+        pickup,
       ),
-      stop(Container(width: 14, height: 14, decoration: BoxDecoration(color: onInk ? RfColors.amber : RfColors.ink, borderRadius: BorderRadius.circular(3))), dropoffLabel, dropoff),
+      Padding(
+        padding: const EdgeInsetsDirectional.only(start: 11, top: 2, bottom: 2),
+        child: Column(children: [
+          for (var i = 0; i < (dense ? 2 : 3); i++)
+            Container(width: 2, height: 4, margin: const EdgeInsets.symmetric(vertical: 1), color: RfColors.textMuted),
+        ]),
+      ),
+      stop(const Icon(Icons.place_rounded, size: 24, color: RfColors.gold), dropoffLabel, dropoff),
     ]);
+  }
+}
+
+// ---------------------------------------------------------------- rating
+
+/// Star, score and sample count. A provisional score is only the smoothing prior, so it reads "new" instead.
+class RatingBadge extends StatelessWidget {
+  const RatingBadge({super.key, required this.score, required this.count, required this.provisional, required this.newLabel, this.large = false});
+  final double? score;
+  final int count;
+  final bool provisional, large;
+  final String newLabel;
+  @override
+  Widget build(BuildContext context) {
+    final isNew = provisional || score == null;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(color: RfColors.surfaceSunken, borderRadius: BorderRadius.circular(RfRadius.pill)),
+      child: isNew
+          ? Text(newLabel, style: RfType.caption.copyWith(color: RfColors.teal, fontWeight: FontWeight.w800, fontSize: large ? 15 : 14))
+          : Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(Icons.star_rounded, size: large ? 20 : 16, color: RfColors.gold),
+              const SizedBox(width: 4),
+              Ltr(score!.toStringAsFixed(1), style: RfType.bodyStrong.copyWith(fontSize: large ? 17 : 15)),
+              const SizedBox(width: 4),
+              Ltr('($count)', style: RfType.caption),
+            ]),
+    );
   }
 }
 

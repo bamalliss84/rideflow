@@ -186,9 +186,9 @@ class _TripScreenState extends ConsumerState<TripScreen> {
                           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                             Text(ride.rider!.displayName.isEmpty ? t.rider : ride.rider!.displayName, style: RfType.bodyStrong),
                             if (ride.rider!.phone != null) Ltr(ride.rider!.phone!, style: RfType.body.copyWith(color: RfColors.tealDeep, fontWeight: FontWeight.w700)),
-                            if (ride.rider!.ratingAvg != null) Text(t.riderRating(ride.rider!.ratingAvg!.toStringAsFixed(1)), style: RfType.caption),
                           ]),
                         ),
+                        RatingBadge(score: ride.rider!.ratingAvg, count: ride.rider!.ratingCount, provisional: ride.rider!.ratingProvisional, newLabel: t.newUser),
                       ]),
                     ),
                   ],
@@ -242,7 +242,43 @@ class _CashCardState extends ConsumerState<_CashCard> {
   final _cashKey = newActionKey();
   final _rateKey = newActionKey();
   int _stars = 0;
+  final _tags = <String>{};
+  bool _sendingRating = false;
   bool _rated = false;
+
+  static const _goodTags = ['punctual', 'polite', 'paid_smoothly', 'great_service'];
+  static const _badTags = ['late', 'rude', 'wrong_location', 'price_dispute'];
+
+  String _tagLabel(AppLocalizations t, String tag) => switch (tag) {
+        'punctual' => t.tag_punctual,
+        'polite' => t.tag_polite,
+        'paid_smoothly' => t.tag_paid_smoothly,
+        'great_service' => t.tag_great_service,
+        'late' => t.tag_late,
+        'rude' => t.tag_rude,
+        'wrong_location' => t.tag_wrong_location,
+        _ => t.tag_price_dispute,
+      };
+
+  Future<void> _sendRating(Ride r) async {
+    setState(() => _sendingRating = true);
+    try {
+      await ref.read(driverApiProvider).rate(r.id, _stars, tags: _tags.toList(), actionKey: _rateKey);
+      if (mounted) setState(() => _rated = true);
+      widget.onChanged();
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      if (e.code == 'already_rated') {
+        setState(() => _rated = true);
+      } else {
+        showToast(context, errorMessage(context, e), error: true);
+      }
+    } catch (e) {
+      if (mounted) showToast(context, errorMessage(context, e), error: true);
+    } finally {
+      if (mounted) setState(() => _sendingRating = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -275,24 +311,44 @@ class _CashCardState extends ConsumerState<_CashCard> {
         const Divider(),
         const SizedBox(height: RfSpace.sm),
         Text(t.rateRider, style: RfType.bodyStrong),
-        if (_rated)
-          Padding(padding: const EdgeInsets.only(top: 6), child: Text(t.rated, style: RfType.body.copyWith(color: RfColors.tealDeep)))
-        else
+        if (_rated || r.myRatingStars != null)
+          Padding(padding: const EdgeInsets.only(top: 6), child: Text(t.rated, key: const Key('rated'), style: RfType.body.copyWith(color: RfColors.tealDeep)))
+        else ...[
           Row(mainAxisAlignment: MainAxisAlignment.center, children: [
             for (var i = 1; i <= 5; i++)
               IconButton(
+                key: Key('rate_$i'),
                 tooltip: '$i',
                 iconSize: 38,
-                onPressed: _runner.busy
-                    ? null
-                    : () async {
-                        setState(() => _stars = i);
-                        final ok = await _runner.run(context, () => ref.read(driverApiProvider).rate(r.id, i, actionKey: _rateKey), onChanged: () => setState(() {}));
-                        if (ok) setState(() => _rated = true);
-                      },
-                icon: Icon(i <= _stars ? Icons.star_rounded : Icons.star_outline_rounded, color: RfColors.amber),
+                onPressed: () => setState(() {
+                  _stars = i;
+                  _tags.clear();
+                }),
+                icon: Icon(i <= _stars ? Icons.star_rounded : Icons.star_outline_rounded, color: RfColors.gold),
               ),
           ]),
+          if (_stars > 0) ...[
+            Text(t.rateWhat, style: RfType.caption),
+            const SizedBox(height: RfSpace.xs),
+            Wrap(spacing: RfSpace.xs, runSpacing: RfSpace.xs, children: [
+              for (final tag in _stars >= 4 ? _goodTags : _badTags)
+                FilterChip(
+                  key: Key('tag_$tag'),
+                  label: Text(_tagLabel(t, tag), style: RfType.caption.copyWith(color: _tags.contains(tag) ? RfColors.canvas : RfColors.text, fontWeight: FontWeight.w700)),
+                  selected: _tags.contains(tag),
+                  showCheckmark: false,
+                  selectedColor: RfColors.text,
+                  backgroundColor: RfColors.surfaceSunken,
+                  side: BorderSide.none,
+                  onSelected: (on) => setState(() => on ? _tags.add(tag) : _tags.remove(tag)),
+                ),
+            ]),
+            const SizedBox(height: RfSpace.sm),
+            RfButton(key: const Key('sendRating'), label: t.sendRating, loading: _sendingRating, onPressed: () => _sendRating(r)),
+            const SizedBox(height: RfSpace.xs),
+            Text(t.ratePrivacy, style: RfType.caption),
+          ],
+        ],
       ]),
     );
   }

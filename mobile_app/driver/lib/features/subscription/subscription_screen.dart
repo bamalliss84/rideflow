@@ -125,7 +125,7 @@ class _Summary extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(RfSpace.lg),
       decoration: BoxDecoration(
-        color: s.entitled ? RfColors.ink : RfColors.amberSoft,
+        color: s.entitled ? RfColors.ink2 : RfColors.amberSoft,
         borderRadius: BorderRadius.circular(RfRadius.xl),
         boxShadow: RfShadow.card,
       ),
@@ -204,7 +204,7 @@ class _AccountCard extends StatelessWidget {
       child: RfCard(
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Row(children: [
-            const Icon(Icons.account_balance_rounded, color: RfColors.ink),
+            const Icon(Icons.account_balance_rounded, color: RfColors.text),
             const SizedBox(width: RfSpace.xs),
             Expanded(child: Text(a.bankName, style: RfType.bodyStrong)),
           ]),

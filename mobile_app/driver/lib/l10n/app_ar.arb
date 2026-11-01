@@ -446,5 +446,224 @@
   "chooseFromGallery": "من المعرض",
   "useCamera": "الكاميرا",
   "selectPlan": "اختر الباقة",
-  "operator": "المشغّل"
+  "operator": "المشغّل",
+  "availableRequests": "الطلبات المتاحة",
+  "tabAll": "الكل ({n})",
+  "@tabAll": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "tabRiderPrice": "بسعر الراكب ({n})",
+  "@tabRiderPrice": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "tabMyOffers": "عروضي ({n})",
+  "@tabMyOffers": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "statusOnlineLine": "متصل · موقعك قبل {s} ث",
+  "@statusOnlineLine": {
+    "placeholders": {
+      "s": {
+        "type": "String"
+      }
+    }
+  },
+  "stopShort": "إيقاف",
+  "todayLine": "اليوم: {rides} رحلة · {cash}",
+  "@todayLine": {
+    "placeholders": {
+      "rides": {
+        "type": "String"
+      },
+      "cash": {
+        "type": "String"
+      }
+    }
+  },
+  "riderPriceLabel": "سعر الراكب",
+  "estimateShort": "{currency} · تقدير",
+  "@estimateShort": {
+    "placeholders": {
+      "currency": {
+        "type": "String"
+      }
+    }
+  },
+  "newUser": "جديد",
+  "acceptPrice": "اقبل {amount}",
+  "@acceptPrice": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "offerOtherPrice": "قدّم سعرًا آخر",
+  "hideRequest": "إخفاء الطلب",
+  "requestHidden": "أخفينا الطلب من قائمتك",
+  "undo": "تراجع",
+  "showHidden": "إظهار الطلبات المخفية ({n})",
+  "@showHidden": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "noRequests": "لا توجد طلبات الآن",
+  "noRequestsHint": "ستظهر هنا فور وصولها.",
+  "yourPrice": "سعرك",
+  "matchesRider": "مطابق لسعر الراكب",
+  "aboveRider": "أعلى من سعر الراكب بـ {amount}",
+  "@aboveRider": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "belowRider": "أقل من سعر الراكب بـ {amount}",
+  "@belowRider": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "withinEstimate": "ضمن التقدير",
+  "belowEstimate": "أقل من التقدير",
+  "aboveEstimate": "أعلى من التقدير",
+  "bindingNote": "عرضك ملزم لهذه الرحلة وله مدة صلاحية. تصبح الرحلة لك بعد أن يختارك الراكب وتؤكد أنت.",
+  "sendOfferAmount": "أرسل عرض {amount}",
+  "@sendOfferAmount": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "openOffersTitle": "عروضك المفتوحة",
+  "offersOfMax": "{n} من {max}",
+  "@offersOfMax": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "waitingRider": "بانتظار اختيار الراكب",
+  "endingSoon": "ينتهي عرضك قريبًا",
+  "openOffersCount": "{n} عروض مفتوحة",
+  "@openOffersCount": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "soonestEnds": "أقربها ينتهي بعد {s} ثانية",
+  "@soonestEnds": {
+    "placeholders": {
+      "s": {
+        "type": "String"
+      }
+    }
+  },
+  "follow": "متابعة",
+  "yourOfferAmount": "عرضك {amount}",
+  "@yourOfferAmount": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "editOffer": "تعديل العرض",
+  "noOpenOffers": "لا توجد عروض مفتوحة.",
+  "sendFailedTitle": "لم يصل عرضك بعد",
+  "sendFailedBody": "تعذّر الاتصال بالخادم. سعرك محفوظ، ويمكنك إعادة الإرسال بأمان بدون تكرار العرض.",
+  "resend": "إعادة الإرسال",
+  "limitTitle": "وصلت حد العروض المفتوحة",
+  "limitBody": "اسحب عرضًا أو انتظر انتهاءه، ثم أرسل هذا العرض.",
+  "bidLimitBody": "وصلت الحد الأقصى من العروض على هذا الطلب.",
+  "openMyOffers": "فتح عروضي",
+  "requestGoneTitle": "لم يعد هذا الطلب متاحًا",
+  "requestGoneBody": "ربما اختار الراكب سائقًا آخر أو ألغى الطلب. لم يُرسل عرضك.",
+  "backToRequests": "الرجوع للطلبات",
+  "cantSendTitle": "لا يمكن إرسال العرض الآن",
+  "cantSendBody": "يجب أن تكون متصلًا وموقعك محدّثًا لتقديم العروض. سعرك محفوظ.",
+  "refreshLocation": "تحديث الموقع والاتصال",
+  "remainingToConfirm": "باقي للتأكيد",
+  "hurryConfirm": "أسرع، باقي القليل",
+  "secondsShort": "{s} ث",
+  "@secondsShort": {
+    "placeholders": {
+      "s": {
+        "type": "String"
+      }
+    }
+  },
+  "cashSuffix": "نقدًا",
+  "withdrawOthers": "عند التأكيد نسحب عروضك الأخرى المفتوحة ({n}) تلقائيًا.",
+  "@withdrawOthers": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "declineTitle": "رفض هذه الرحلة؟",
+  "declineBody": "لا توجد عقوبة على الرفض قبل التأكيد. سيعود الراكب لاختيار عرض آخر، وتبقى عروضك الأخرى مفتوحة.",
+  "backToConfirm": "رجوع للتأكيد",
+  "declineYes": "نعم، أرفض الرحلة",
+  "rateQuestion": "كيف كانت رحلتك مع {name}؟",
+  "@rateQuestion": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "rateWhat": "ما السبب؟",
+  "sendRating": "إرسال التقييم",
+  "ratePrivacy": "لا يرى الراكب تقييمك بشكل منفرد، ويظهر له المعدل العام فقط.",
+  "ridesDoneLine": "{n} رحلة مكتملة",
+  "@ridesDoneLine": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "completionLine": "التزام {p}%",
+  "@completionLine": {
+    "placeholders": {
+      "p": {
+        "type": "String"
+      }
+    }
+  },
+  "tag_punctual": "في الموعد",
+  "tag_polite": "محترم",
+  "tag_paid_smoothly": "دفع بدون مشكلة",
+  "tag_great_service": "تجربة ممتازة",
+  "tag_late": "تأخر",
+  "tag_rude": "غير محترم",
+  "tag_wrong_location": "موقع خاطئ",
+  "tag_price_dispute": "خلاف على السعر"
 }

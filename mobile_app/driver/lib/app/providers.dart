@@ -83,6 +83,7 @@ final profileProvider = FutureProvider.autoDispose<DriverProfile>((ref) => ref.w
 final eligibilityProvider = FutureProvider.autoDispose<Eligibility>((ref) => ref.watch(driverApiProvider).eligibility());
 final subscriptionProvider = FutureProvider.autoDispose<SubscriptionOverview>((ref) => ref.watch(driverApiProvider).subscription());
 final offersProvider = FutureProvider.autoDispose<List<Ride>>((ref) => ref.watch(driverApiProvider).offers());
+final hiddenOffersProvider = FutureProvider.autoDispose<int>((ref) => ref.watch(driverApiProvider).hiddenOfferCount());
 final ridesProvider = FutureProvider.autoDispose<List<Ride>>((ref) => ref.watch(driverApiProvider).rides());
 final rideProvider = FutureProvider.autoDispose.family<Ride, String>((ref, id) => ref.watch(driverApiProvider).ride(id));
 final trustProvider = FutureProvider.autoDispose<TrustSnapshot>((ref) => ref.watch(driverApiProvider).trust());

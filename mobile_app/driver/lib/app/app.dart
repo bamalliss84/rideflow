@@ -187,7 +187,7 @@ class _Splash extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final auth = ref.watch(authProvider);
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: RfColors.canvas,
       body: auth.hasError ? ErrorView(error: auth.error!, onRetry: () => ref.invalidate(authProvider)) : const LoadingView(),
     );
   }

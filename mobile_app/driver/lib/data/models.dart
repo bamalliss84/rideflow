@@ -97,7 +97,9 @@ class Eligibility {
         hasLocation = _map(j['presence'])['has_location'] == true,
         locationFresh = _map(j['presence'])['fresh'] == true,
         locationServerTs = _date(_map(j['presence'])['server_ts']),
-        staleAfterSeconds = _int(_map(j['presence'])['stale_after_seconds']) ?? 120;
+        staleAfterSeconds = _int(_map(j['presence'])['stale_after_seconds']) ?? 120,
+        maxOpenBids = _int(j['max_open_bids']);
+  final int? maxOpenBids;
   final bool eligible, subscriptionActive, isOnline, hasLocation, locationFresh;
   final List<String> reasons;
   final String status;
@@ -172,10 +174,11 @@ class Bid {
         amountMinor = _int(j['amount_minor']) ?? 0,
         etaSeconds = _int(j['eta_seconds']) ?? 0,
         status = _str(j['status']),
-        expiresAt = _date(j['expires_at']);
+        expiresAt = _date(j['expires_at']),
+        createdAt = _date(j['created_at']);
   final String id, status;
   final int amountMinor, etaSeconds;
-  final DateTime? expiresAt;
+  final DateTime? expiresAt, createdAt;
 }
 
 class Party {
@@ -183,10 +186,16 @@ class Party {
       : displayName = _str(j['display_name']),
         phone = j['phone'] as String?,
         ratingAvg = _double(_map(j['trust'])['rating_avg']),
+        ratingCount = _int(_map(j['trust'])['rating_count']) ?? 0,
+        ratingProvisional = _map(j['trust'])['rating_provisional'] != false,
+        completedRides = _int(_map(j['trust'])['completed_rides']) ?? 0,
+        completionRate = _double(_map(j['trust'])['completion_rate']),
         tier = _str(_map(j['trust'])['tier']);
   final String displayName, tier;
   final String? phone;
-  final double? ratingAvg;
+  final double? ratingAvg, completionRate;
+  final int ratingCount, completedRides;
+  final bool ratingProvisional;
 }
 
 class Ride {
@@ -205,6 +214,9 @@ class Ride {
         estimateMin = _int(_map(json['estimate'])['min_minor']),
         estimateMax = _int(_map(json['estimate'])['max_minor']),
         distanceM = _int(_map(json['estimate'])['distance_m']),
+        bidStepMinor = _int(_map(json['estimate'])['bid_step_minor']),
+        riderPriceMinor = _int(json['rider_price_minor']),
+        myRatingStars = _int(_map(json['my_rating'])['stars']),
         agreedFareMinor = _int(json['agreed_fare_minor']),
         matchDeadline = _date(json['match_deadline']),
         myBid = json['my_bid'] is Map ? Bid(_map(json['my_bid'])) : null,
@@ -220,7 +232,7 @@ class Ride {
   final int version;
   final Set<String> allowedActions;
   final LatLng? pickup, dropoff;
-  final int? estimateMin, estimateMax, distanceM, agreedFareMinor;
+  final int? estimateMin, estimateMax, distanceM, agreedFareMinor, bidStepMinor, riderPriceMinor, myRatingStars;
   final DateTime? matchDeadline, createdAt, completedAt, selectedAt;
   final Bid? myBid;
   final Party? rider;
