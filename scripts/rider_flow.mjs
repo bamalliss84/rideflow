@@ -40,7 +40,7 @@ for (const r of (await call("rides?page_size=50", null, token)).data?.results ??
   }
 }
 
-const ride = await call("rides", { pickup: { lat, lng }, pickup_landmark: "قرب جامع المحضار، الشرج", dropoff: { lat: lat + 0.012, lng: lng + 0.015 }, dropoff_landmark: "سوق المكلا المركزي" }, token);
+const ride = await call("rides", { pickup: { lat, lng }, pickup_landmark: "قرب جامع المحضار، الشرج", dropoff: { lat: lat + 0.012, lng: lng + 0.015 }, dropoff_landmark: "سوق المكلا المركزي", ...(process.env.RIDER_PRICE ? { rider_price_minor: Number(process.env.RIDER_PRICE) } : {}) }, token);
 if (ride.status !== 201) throw new Error(`create ride ${ride.status} ${JSON.stringify(ride.data)}`);
 const id = ride.data.id;
 log("ride_requested", { id, status: ride.data.status });

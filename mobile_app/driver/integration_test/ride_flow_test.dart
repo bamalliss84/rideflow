@@ -157,7 +157,7 @@ void main() {
     // Online and ready (server-confirmed fresh location). Wait for home to load (it may start signed in).
     await waitFor(tester, find.byKey(const Key('toggleOnline')), timeout: const Duration(seconds: 30));
     await pumpFor(tester, const Duration(seconds: 2));
-    final ready = find.text('تصلك الطلبات القريبة الآن');
+    final ready = find.byKey(const Key('statusReady'));
     if (ready.evaluate().isEmpty) {
       final notUpdating = find.byKey(const Key('locationNotUpdating'));
       if (notUpdating.evaluate().isEmpty) {
@@ -176,18 +176,21 @@ void main() {
     await shot(tester, '02-home-online');
 
     // An offer arrives (rider script) -> bid.
-    final makeOffer = find.textContaining('قدّم عرضك');
-    await waitFor(tester, makeOffer, timeout: const Duration(minutes: 3), tick: () => container.invalidate(offersProvider));
+    final card = find.byWidgetPredicate((w) => w.key is ValueKey<String> && (w.key! as ValueKey<String>).value.startsWith('toggleCard_'));
+    await waitFor(tester, card, timeout: const Duration(minutes: 3), tick: () => container.invalidate(offersProvider));
+    await tapOn(tester, card);
+    await pumpFor(tester);
+    final makeOffer = find.byWidgetPredicate((w) => w.key is ValueKey<String> && (w.key! as ValueKey<String>).value.startsWith('makeOffer_'));
     await pumpFor(tester, const Duration(seconds: 1));
     await shot(tester, '03-offer');
     await tapOn(tester, makeOffer.first);
     await pumpFor(tester, const Duration(seconds: 1));
-    await tester.enterText(find.byKey(const Key('bidAmount')), '700');
     await tapOn(tester, find.byKey(const Key('eta_5')));
     await pumpFor(tester);
     await shot(tester, '04-bid-sheet');
     await tapOn(tester, find.byKey(const Key('sendBid')));
     await pumpFor(tester, const Duration(seconds: 2));
+    await shot(tester, '04b-status-bar');
 
     // Rider selects -> the confirmation screen opens by itself.
     await waitFor(tester, find.byKey(const Key('confirmTitle')), timeout: const Duration(minutes: 2));
@@ -208,5 +211,13 @@ void main() {
     await tapOn(tester, find.byKey(const Key('confirmCash')));
     await waitFor(tester, find.text('أكّدت استلام النقد'), timeout: const Duration(seconds: 30));
     await shot(tester, '11-cash-confirmed');
+    await tapOn(tester, find.byKey(const Key('rate_5')));
+    await pumpFor(tester);
+    await tapOn(tester, find.byKey(const Key('tag_paid_smoothly')));
+    await pumpFor(tester);
+    await shot(tester, '12-rating');
+    await tapOn(tester, find.byKey(const Key('sendRating')));
+    await waitFor(tester, find.byKey(const Key('rated')), timeout: const Duration(seconds: 20));
+    await shot(tester, '13-rated');
   });
 }
