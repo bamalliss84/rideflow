@@ -3756,6 +3756,9 @@ export interface components {
             cash: {
                 [key: string]: unknown;
             } | null;
+            no_show: {
+                [key: string]: unknown;
+            } | null;
             config_version: number;
         };
         RideCreateRequest: {

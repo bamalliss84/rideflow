@@ -234,6 +234,7 @@ class RideSerializer(serializers.Serializer):
     arrival = serializers.DictField(allow_null=True)
     cancellation = serializers.DictField(allow_null=True)
     cash = serializers.DictField(allow_null=True)
+    no_show = serializers.DictField(allow_null=True)
     config_version = serializers.IntegerField()
 
     def to_representation(self, ride):
@@ -322,9 +323,20 @@ class RideSerializer(serializers.Serializer):
             }
             if ride.completed_at and exact
             else None,
+            "no_show": _no_show_state(ride) if viewer == "driver" and ride.status == "arrived" else None,
             "config_version": ride.config_version,
         }
         return _jsonable_deep(data)
+
+
+def _no_show_state(ride):
+    """What the driver app needs to explain when a no-show can be reported; `mark_no_show` still decides."""
+    policy = current_policy()
+    return {
+        "wait_seconds": policy["noshow.min_wait_seconds"],
+        "contact_required": policy["noshow.require_contact_attempt"],
+        "contact_attempts": RideEvent.objects.filter(ride=ride, event_type="contact_attempt", created_at__gte=ride.arrived_at).count(),
+    }
 
 
 def _jsonable_deep(value):

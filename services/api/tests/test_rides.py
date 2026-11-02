@@ -218,6 +218,15 @@ def test_no_show_requires_wait_geofence_and_contact(ride_flow):
         assert violation.evidence["contact_attempts"] == 1
 
 
+def test_driver_sees_what_a_no_show_still_needs(ride_flow):
+    f = ride_flow
+    ride = f.arrived()
+    assert ride["no_show"] == {"wait_seconds": 300, "contact_required": True, "contact_attempts": 0}
+    f.d1_api.post(f"/api/v1/rides/{ride['id']}/contact-attempts", {"method": "call"})
+    assert f.snapshot(ride["id"], api=f.d1_api)["no_show"]["contact_attempts"] == 1
+    assert f.snapshot(ride["id"])["no_show"] is None  # the rider doesn't need it
+
+
 def test_no_show_rejected_when_arrival_outside_geofence(ride_flow):
     f = ride_flow
     ride = f.arrived(dx=0.01)  # ~1 km away from pickup

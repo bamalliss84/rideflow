@@ -8600,6 +8600,10 @@ components:
           type: object
           additionalProperties: {}
           nullable: true
+        no_show:
+          type: object
+          additionalProperties: {}
+          nullable: true
         config_version:
           type: integer
       required:
@@ -8620,6 +8624,7 @@ components:
       - match_deadline
       - my_bid
       - my_rating
+      - no_show
       - open_bid_count
       - pickup
       - pickup_landmark
