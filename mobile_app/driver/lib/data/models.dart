@@ -223,6 +223,8 @@ class Ride {
         rider = json['rider'] is Map ? Party(_map(json['rider'])) : null,
         createdAt = _date(_map(json['timestamps'])['created_at']),
         selectedAt = _date(_map(json['timestamps'])['selected_at']),
+        arrivedAt = _date(_map(json['timestamps'])['arrived_at']),
+        noShow = json['no_show'] is Map ? _map(json['no_show']) : null,
         completedAt = _date(_map(json['timestamps'])['completed_at']),
         cancellation = json['cancellation'] is Map ? _map(json['cancellation']) : null,
         cash = json['cash'] is Map ? _map(json['cash']) : null;
@@ -233,15 +235,19 @@ class Ride {
   final Set<String> allowedActions;
   final LatLng? pickup, dropoff;
   final int? estimateMin, estimateMax, distanceM, agreedFareMinor, bidStepMinor, riderPriceMinor, myRatingStars;
-  final DateTime? matchDeadline, createdAt, completedAt, selectedAt;
+  final DateTime? matchDeadline, createdAt, completedAt, selectedAt, arrivedAt;
   final Bid? myBid;
   final Party? rider;
-  final Json? cancellation, cash;
+  final Json? cancellation, cash, noShow;
 
   static const activeStatuses = {'match_pending', 'assigned', 'en_route', 'arrived', 'in_progress'};
   bool get isActiveForDriver => viewerRole == 'driver' && activeStatuses.contains(status);
   bool get driverCashConfirmed => cash?['driver_confirmed_at'] != null;
   int? get cashAmountMinor => _int(cash?['amount_minor']);
+  int get noShowWaitSeconds => _int(noShow?['wait_seconds']) ?? 0;
+  int get contactAttempts => _int(noShow?['contact_attempts']) ?? 0;
+  bool get contactRequired => noShow?['contact_required'] == true;
+  bool get arrivedOutsidePickup => _map(json['arrival'])['within_geofence'] == false;
 }
 
 class NotificationItem {

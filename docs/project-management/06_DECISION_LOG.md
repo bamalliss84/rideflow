@@ -114,4 +114,15 @@ D038 APPROVED by owner 2026-11-01: Rating placement, confirmation screen and the
 - Not implemented yet: retaliation detection, delayed rating updates, a required reason for low ratings, rating reminders.
 - Linked tests: `tests/test_rider_price_and_hide.py`, `mobile_app/driver/test/requests_test.dart`.
 
+D039 APPROVED by owner 2026-11-02: The driver's active trip screen is model 1, one step at a time (canvas artboards `Trip-Options`, `Trip-Stages`), with these extras.
+- Stages: to the rider, waiting, to the destination, collect the fare, then rating as its own screen. One next action shows at a time, even where the backend allows skipping "en route". Cancel moves into a menu.
+- During the wait, "Rider didn't show" stays locked and says why: time left, a call is needed, or the arrival was outside the pickup area. The backend still decides (`mark_no_show`), and the ride now returns `no_show` to the driver with the wait and call count.
+- Call button opens the phone's dialer. After arrival, a call that opens also records the contact attempt, replacing the manual button. Before arrival nothing is recorded, because recording tells the rider the driver is waiting.
+- "Open in maps" opens the phone's maps app: the pickup before the trip, the destination during it. There is no in-app map.
+- Cancelling uses ready-made reasons, and "another reason" asks for text. The chosen text is stored as the cancel reason.
+- "Later" on the rating leaves it available from My rides within `ratings.window_days`. It is offered once the driver has confirmed the cash.
+- Rationale: fewer steps while driving, and contact evidence that needs no extra tap.
+- Impact: driver app, with the new `url_launcher` dependency, plus the read-only `no_show` field on the ride.
+- Linked tests: `mobile_app/driver/test/trip_screen_test.dart`, `services/api/tests/test_rides.py`.
+
 Rule: New decisions get sequential ID, date, approver, rationale, impact and linked task. Never silently reinterpret proposals as approved.

@@ -7,7 +7,7 @@ import 'tokens.dart';
 
 // ---------------------------------------------------------------- buttons
 
-enum RfButtonKind { primary, go, danger, secondary, ghost, onInk }
+enum RfButtonKind { primary, go, live, danger, secondary, ghost, onInk }
 
 /// One button component for the whole app: fixed heights, loading state, disabled state, optional icon.
 class RfButton extends StatelessWidget {
@@ -33,6 +33,7 @@ class RfButton extends StatelessWidget {
     final (bg, fg, border) = switch (kind) {
       RfButtonKind.primary => (RfColors.gold, RfColors.onGold, null),
       RfButtonKind.go => (RfColors.gold, RfColors.onGold, null),
+      RfButtonKind.live => (RfColors.teal, RfColors.canvas, null),
       RfButtonKind.danger => (RfColors.coral, RfColors.onGold, null),
       RfButtonKind.secondary => (RfColors.surfaceSunken, RfColors.text, null),
       RfButtonKind.ghost => (Colors.transparent, RfColors.text, null),

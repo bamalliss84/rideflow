@@ -239,7 +239,7 @@
   "action_start": "بدء الرحلة",
   "action_complete": "إنهاء الرحلة",
   "action_driver_cancel": "إلغاء الرحلة",
-  "action_no_show": "تسجيل عدم حضور",
+  "action_no_show": "لم يحضر الراكب",
   "confirmDeadline": "أكّد قبل {time}",
   "@confirmDeadline": {
     "placeholders": {
@@ -250,7 +250,100 @@
   },
   "cancelReason": "سبب الإلغاء",
   "declineReason": "سبب الاعتذار (اختياري)",
-  "logContact": "تسجيل محاولة تواصل",
+  "callRider": "اتصال",
+  "tripStep": "الخطوة {step} من 4",
+  "@tripStep": {
+    "placeholders": {
+      "step": {
+        "type": "String"
+      }
+    }
+  },
+  "tripOptions": "خيارات الرحلة",
+  "goToRider": "توجّه إلى الراكب",
+  "goToDestination": "توجّه إلى الوجهة",
+  "etaPromise": "وعدت بالوصول خلال {time}",
+  "@etaPromise": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "tripDistance": "مسافة الرحلة {distance}",
+  "@tripDistance": {
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "atPickup": "أنت في نقطة الالتقاء",
+  "waitingFor": "بانتظار {name}",
+  "@waitingFor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "waitTime": "مدة الانتظار",
+  "contactCount": "محاولات الاتصال: {count}",
+  "@contactCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "noShowAfter": "يتاح «لم يحضر الراكب» بعد {time}",
+  "@noShowAfter": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "noShowCallFirst": "اتصل بالراكب أولًا لتسجيل عدم حضوره.",
+  "noShowOutside": "سُجّل وصولك خارج نطاق نقطة الالتقاء، فلا يمكن تسجيل عدم الحضور.",
+  "agreedFare": "الأجرة المتفق عليها",
+  "fareCash": "الأجرة نقدًا",
+  "collectFrom": "استلم الأجرة من {name}",
+  "@collectFrom": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "tripFinished": "اكتملت الرحلة · استلمت {amount}",
+  "@tripFinished": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "rateQuestion": "كيف كانت رحلتك مع {name}؟",
+  "@rateQuestion": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "callFailed": "تعذّر فتح الاتصال على هذا الجوال.",
+  "openInMaps": "فتح في الخرائط",
+  "mapsFailed": "تعذّر فتح الخرائط على هذا الجوال.",
+  "cancelSheetTitle": "لماذا تريد إلغاء الرحلة؟",
+  "cancelSheetNote": "يُحفظ السبب في سجل الرحلة.",
+  "cancelRiderAsked": "الراكب طلب الإلغاء",
+  "cancelCarProblem": "عطل في السيارة",
+  "cancelWrongPickup": "نقطة الالتقاء غير صحيحة",
+  "cancelOther": "سبب آخر",
+  "keepRide": "رجوع",
+  "rateLater": "لاحقًا",
+  "rateLaterNote": "يمكنك التقييم لاحقًا من «رحلاتي».",
   "contactLogged": "سُجّلت محاولة التواصل.",
   "rider": "الراكب",
   "riderPhone": "جوال الراكب: {phone}",
@@ -261,21 +354,9 @@
       }
     }
   },
-  "agreedFare": "الأجرة المتفق عليها",
-  "cashTitle": "الدفع نقدًا",
-  "cashInstruction": "استلم {amount} نقدًا من الراكب ثم أكّد الاستلام.",
-  "@cashInstruction": {
-    "placeholders": {
-      "amount": {
-        "type": "String"
-      }
-    }
-  },
-  "confirmCash": "تأكيد استلام النقد",
-  "cashConfirmed": "أكّدت استلام النقد",
+  "confirmCash": "استلمت الأجرة",
   "rateRider": "قيّم الراكب",
   "rated": "شكرًا، تم التقييم.",
-  "noShowNote": "يُقبل فقط بعد مدة الانتظار ومحاولة التواصل داخل نطاق الوصول.",
   "historyEmpty": "لا توجد رحلات بعد.",
   "earningsTitle": "ملخص الأجرة النقدية",
   "earningsNote": "مجموع الأجرة المتفق عليها في رحلاتك المكتملة كما سجلها التطبيق. تُدفع نقدًا لك مباشرة، وليست إيرادًا للمنصة.",
@@ -379,11 +460,6 @@
     }
   },
   "newRider": "راكب جديد",
-  "stageConfirmed": "مؤكدة",
-  "stageToPickup": "إلى الراكب",
-  "stageArrived": "وصلت",
-  "stageInTrip": "في الرحلة",
-  "stageDone": "اكتملت",
   "nextStepTitle": "الخطوة التالية",
   "noActions": "لا يوجد إجراء مطلوب منك الآن.",
   "callPhone": "جوال الراكب",
@@ -631,14 +707,6 @@
   "declineBody": "لا توجد عقوبة على الرفض قبل التأكيد. سيعود الراكب لاختيار عرض آخر، وتبقى عروضك الأخرى مفتوحة.",
   "backToConfirm": "رجوع للتأكيد",
   "declineYes": "نعم، أرفض الرحلة",
-  "rateQuestion": "كيف كانت رحلتك مع {name}؟",
-  "@rateQuestion": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "rateWhat": "ما السبب؟",
   "sendRating": "إرسال التقييم",
   "ratePrivacy": "لا يرى الراكب تقييمك بشكل منفرد، ويظهر له المعدل العام فقط.",

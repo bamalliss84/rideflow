@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/api/api_client.dart';
 import '../core/api/api_exception.dart';
 import '../core/auth/session_store.dart';
+import '../core/external_apps.dart';
 import '../core/location/location_service.dart';
 import '../core/realtime/events_socket.dart';
 import '../data/driver_api.dart';
@@ -21,6 +22,7 @@ final apiClientProvider = Provider<ApiClient>((ref) {
 
 final driverApiProvider = Provider<DriverApi>((ref) => DriverApi(ref.watch(apiClientProvider)));
 final locationServiceProvider = Provider<LocationService>((ref) => LocationService());
+final externalAppsProvider = Provider<ExternalApps>((ref) => const ExternalApps());
 
 final localeProvider = StateProvider<Locale>((ref) => const Locale('ar'));
 
