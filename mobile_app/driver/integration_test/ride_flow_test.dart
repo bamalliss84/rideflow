@@ -131,8 +131,8 @@ void main() {
     onTimeout = (name) => shot(tester, name);
     if (!mobile) {
       // Lay out as a phone (not the landscape desktop window) so screens and screenshots match the device.
-      tester.view.physicalSize = const Size(1080, 2400);
-      tester.view.devicePixelRatio = 2.75;
+      tester.view.physicalSize = const Size(720, 1576);
+      tester.view.devicePixelRatio = 1.75;
       addTearDown(tester.view.reset);
     }
     final container = ProviderContainer(overrides: [

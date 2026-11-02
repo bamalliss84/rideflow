@@ -21,10 +21,10 @@ ThemeData buildRideFlowTheme() {
     titleLarge: RfType.h2,
     titleMedium: RfType.h3,
     titleSmall: RfType.bodyStrong,
-    bodyLarge: RfType.body.copyWith(fontSize: 16),
+    bodyLarge: RfType.body.copyWith(fontSize: 15),
     bodyMedium: RfType.body,
     bodySmall: RfType.caption,
-    labelLarge: RfType.cta.copyWith(fontSize: 16),
+    labelLarge: RfType.cta.copyWith(fontSize: 15),
     labelMedium: RfType.label,
     labelSmall: RfType.caption,
   );

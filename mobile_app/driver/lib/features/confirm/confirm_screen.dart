@@ -154,7 +154,7 @@ class _ConfirmRideScreenState extends ConsumerState<ConfirmRideScreen> {
                   const SizedBox(height: RfSpace.xl),
                   Text(t.confirmTitle, key: const Key('confirmTitle'), style: RfType.display.copyWith(color: RfColors.onInk)),
                   const SizedBox(height: RfSpace.sm),
-                  MoneyText(formatMoney(fare, ride.currency, units), style: RfType.display.copyWith(color: RfColors.gold, fontSize: 56)),
+                  MoneyText(formatMoney(fare, ride.currency, units), style: RfType.display.copyWith(color: RfColors.gold, fontSize: 42)),
                   Text('${t.agreedFare} · ${t.cashSuffix}', style: RfType.body.copyWith(color: RfColors.onInkMuted)),
                   if (rider != null) ...[
                     const SizedBox(height: RfSpace.lg),

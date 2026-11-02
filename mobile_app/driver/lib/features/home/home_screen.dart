@@ -257,7 +257,7 @@ class _OnlineHeader extends ConsumerWidget {
           child: Text(
             ready && ago != null ? t.statusOnlineLine('$ago') : t.degradedSubtitle,
             key: Key(ready ? 'statusReady' : 'statusDegraded'),
-            style: RfType.caption.copyWith(fontSize: 14),
+            style: RfType.caption.copyWith(fontSize: 13),
           ),
         ),
         if (socket != null && socket != SocketState.connected) StatusPill(t.realtimeReconnecting, tone: Tone.warning, dot: true),
@@ -570,13 +570,13 @@ class _Tabs extends StatelessWidget {
               borderRadius: BorderRadius.circular(RfRadius.md),
               onTap: () => onSelect(id),
               child: SizedBox(
-                height: 46,
+                height: 42,
                 child: Center(
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 6),
-                      child: Text(label, style: RfType.bodyStrong.copyWith(fontSize: 14, color: selected == id ? RfColors.onGold : RfColors.text)),
+                      child: Text(label, style: RfType.bodyStrong.copyWith(fontSize: 13, color: selected == id ? RfColors.onGold : RfColors.text)),
                     ),
                   ),
                 ),
@@ -709,42 +709,40 @@ class _RequestCard extends StatelessWidget {
               padding: const EdgeInsets.all(RfSpace.md),
               child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 Row(children: [
-                  CircleAvatar(radius: 20, backgroundColor: RfColors.surfaceSunken, child: Text(name.characters.first, style: RfType.bodyStrong)),
+                  CircleAvatar(radius: 16, backgroundColor: RfColors.surfaceSunken, child: Text(name.characters.first, style: RfType.caption.copyWith(color: RfColors.text, fontWeight: FontWeight.w800))),
                   const SizedBox(width: RfSpace.xs),
                   Expanded(child: Text(name, style: RfType.bodyStrong, maxLines: 1, overflow: TextOverflow.ellipsis)),
                   RatingBadge(score: rider?.ratingAvg, count: rider?.ratingCount ?? 0, provisional: rider?.ratingProvisional ?? true, newLabel: t.newUser),
                 ]),
                 const SizedBox(height: RfSpace.sm),
-                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                      Text(formatDistance(ride.distanceM), style: RfType.caption.copyWith(fontWeight: FontWeight.w700)),
-                      const SizedBox(height: 6),
-                      RouteStops(pickupLabel: t.pickup, pickup: ride.pickupLandmark, dropoffLabel: t.dropoff, dropoff: ride.dropoffLandmark, dense: true, showLabels: false),
-                    ]),
-                  ),
-                  const SizedBox(width: RfSpace.xs),
-                  Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                RouteStops(pickupLabel: t.pickup, pickup: ride.pickupLandmark, dropoffLabel: t.dropoff, dropoff: ride.dropoffLandmark, dense: true, showLabels: false),
+                const SizedBox(height: RfSpace.sm),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: RfSpace.sm, vertical: RfSpace.xs),
+                  decoration: BoxDecoration(color: RfColors.surfaceSunken, borderRadius: BorderRadius.circular(RfRadius.sm)),
+                  child: Row(children: [
                     if (price != null) ...[
-                      StatusPill(t.riderPriceLabel, tone: Tone.warning),
-                      const SizedBox(height: 4),
-                      Ltr(formatMoney(price, '', minorUnits), style: RfType.h1.copyWith(color: RfColors.gold)),
-                      Text(ride.currency, style: RfType.caption),
-                      const SizedBox(height: 4),
-                      Text(t.estimateLabel, style: RfType.caption),
-                      Ltr(range, style: RfType.caption.copyWith(color: RfColors.text, fontWeight: FontWeight.w700)),
-                    ] else ...[
-                      Ltr(range, style: RfType.h3),
-                      Text(t.estimateShort(ride.currency), style: RfType.caption),
+                      Expanded(
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text(t.riderPriceLabel, style: RfType.caption.copyWith(color: RfColors.gold, fontWeight: FontWeight.w700)),
+                          MoneyText(formatMoney(price, ride.currency, minorUnits), style: RfType.h3.copyWith(color: RfColors.gold)),
+                        ]),
+                      ),
+                      const SizedBox(width: RfSpace.xs),
                     ],
-                    const SizedBox(height: 4),
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('${t.estimateShort(ride.currency)} · ${formatDistance(ride.distanceM)}', style: RfType.caption, maxLines: 1, overflow: TextOverflow.ellipsis),
+                        Ltr(range, style: RfType.h3),
+                      ]),
+                    ),
                     AnimatedRotation(
                       turns: open ? 0.5 : 0,
                       duration: const Duration(milliseconds: 150),
                       child: const Icon(Icons.expand_more_rounded, color: RfColors.text),
                     ),
                   ]),
-                ]),
+                ),
               ]),
             ),
           ),
@@ -915,7 +913,7 @@ class _OffersBar extends StatelessWidget {
               padding: const EdgeInsets.all(RfSpace.sm),
               child: Row(children: [
                 CircleAvatar(
-                  radius: 23,
+                  radius: 21,
                   backgroundColor: urgent ? RfColors.gold : RfColors.teal,
                   child: Ltr(_clock(left), style: RfType.caption.copyWith(color: RfColors.onGold, fontWeight: FontWeight.w800)),
                 ),
@@ -1129,7 +1127,7 @@ class _BidSheetState extends ConsumerState<BidSheet> {
           padding: const EdgeInsets.all(RfSpace.sm),
           decoration: BoxDecoration(color: RfColors.surfaceSunken, borderRadius: BorderRadius.circular(RfRadius.md)),
           child: Row(children: [
-            CircleAvatar(radius: 22, backgroundColor: RfColors.canvas, child: Text(name.characters.first, style: RfType.h3)),
+            CircleAvatar(radius: 18, backgroundColor: RfColors.canvas, child: Text(name.characters.first, style: RfType.bodyStrong)),
             const SizedBox(width: RfSpace.sm),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1174,7 +1172,7 @@ class _BidSheetState extends ConsumerState<BidSheet> {
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   textDirection: TextDirection.ltr,
                   textAlign: TextAlign.center,
-                  style: RfType.display.copyWith(fontSize: 38, color: RfColors.gold),
+                  style: RfType.display.copyWith(fontSize: 30, color: RfColors.gold),
                   inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))],
                   decoration: const InputDecoration(
                     filled: false,
@@ -1209,7 +1207,7 @@ class _BidSheetState extends ConsumerState<BidSheet> {
                     borderRadius: BorderRadius.circular(RfRadius.sm),
                     onTap: () => setState(() => _eta = m),
                     child: SizedBox(
-                      height: 48,
+                      height: 44,
                       child: Center(child: Text(t.minutesShort('$m'), style: RfType.bodyStrong.copyWith(color: _eta == m ? RfColors.canvas : RfColors.text))),
                     ),
                   ),
@@ -1237,7 +1235,7 @@ class _StepButton extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(RfRadius.md),
           onTap: onTap,
-          child: SizedBox(width: 60, height: 60, child: Icon(icon, size: 30, color: primary ? RfColors.onGold : RfColors.text)),
+          child: SizedBox(width: 50, height: 50, child: Icon(icon, size: 26, color: primary ? RfColors.onGold : RfColors.text)),
         ),
       );
 }

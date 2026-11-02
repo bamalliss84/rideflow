@@ -44,7 +44,7 @@ class RfButton extends StatelessWidget {
         SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: fg))
       else ...[
         if (icon != null) ...[Icon(icon, size: 22, color: fg), const SizedBox(width: 10)],
-        Flexible(child: Text(label, style: RfType.cta.copyWith(color: fg, fontSize: large ? 18 : 16), overflow: TextOverflow.ellipsis)),
+        Flexible(child: Text(label, style: RfType.cta.copyWith(color: fg, fontSize: large ? 16 : 15), overflow: TextOverflow.ellipsis)),
       ],
     ]);
     final button = Material(
@@ -57,7 +57,7 @@ class RfButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(RfRadius.md),
         onTap: disabled ? null : onPressed,
         child: Container(
-          height: large ? 60 : 52,
+          height: large ? 54 : 48,
           padding: const EdgeInsets.symmetric(horizontal: 20),
           alignment: Alignment.center,
           child: child,
@@ -215,11 +215,11 @@ class RatingBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(color: RfColors.surfaceSunken, borderRadius: BorderRadius.circular(RfRadius.pill)),
       child: isNew
-          ? Text(newLabel, style: RfType.caption.copyWith(color: RfColors.teal, fontWeight: FontWeight.w800, fontSize: large ? 15 : 14))
+          ? Text(newLabel, style: RfType.caption.copyWith(color: RfColors.teal, fontWeight: FontWeight.w800, fontSize: large ? 14 : 13))
           : Row(mainAxisSize: MainAxisSize.min, children: [
-              Icon(Icons.star_rounded, size: large ? 20 : 16, color: RfColors.gold),
+              Icon(Icons.star_rounded, size: large ? 18 : 15, color: RfColors.gold),
               const SizedBox(width: 4),
-              Ltr(score!.toStringAsFixed(1), style: RfType.bodyStrong.copyWith(fontSize: large ? 17 : 15)),
+              Ltr(score!.toStringAsFixed(1), style: RfType.bodyStrong.copyWith(fontSize: large ? 15 : 14)),
               const SizedBox(width: 4),
               Ltr('($count)', style: RfType.caption),
             ]),
@@ -259,7 +259,7 @@ class MetricTile extends StatelessWidget {
           Flexible(child: Text(label, style: RfType.caption.copyWith(color: onInk ? RfColors.onInkMuted : RfColors.textMuted))),
         ]),
         const SizedBox(height: 4),
-        MoneyText(value, style: RfType.number.copyWith(fontSize: 20, color: onInk ? RfColors.onInk : RfColors.text)),
+        MoneyText(value, style: RfType.number.copyWith(fontSize: 17, color: onInk ? RfColors.onInk : RfColors.text)),
       ]);
 }
 
