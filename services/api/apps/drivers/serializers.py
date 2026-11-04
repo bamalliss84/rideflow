@@ -81,6 +81,7 @@ class DriverProfileSerializer(serializers.ModelSerializer):
     phone = serializers.CharField(source="user.phone", read_only=True)
     vehicles = VehicleSerializer(many=True, read_only=True)
     documents = DriverDocumentSerializer(many=True, read_only=True)
+    photo_url = serializers.CharField(read_only=True, allow_null=True)
 
     class Meta:
         model = DriverProfile
@@ -88,6 +89,7 @@ class DriverProfileSerializer(serializers.ModelSerializer):
             "id",
             "full_name",
             "phone",
+            "photo_url",
             "status",
             "is_online",
             "online_since",

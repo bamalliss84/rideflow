@@ -50,6 +50,7 @@ PARAMS = {
     "noshow.min_wait_seconds": Param(300, int, 60, 3600, PROPOSED, "D010"),
     "noshow.geofence_m": Param(200, int, 20, 2000, PROPOSED, "D010"),
     "noshow.max_accuracy_m": Param(100, int, 5, 1000, PROVISIONAL, "GPS accuracy above this is not evidence"),
+    "noshow.late_location_seconds": Param(60, int, 0, 600, PROPOSED, "D045: a location read this close to the arrival counts"),
     "noshow.require_contact_attempt": Param(True, bool, None, None, APPROVED, "BUSINESS_RULES §3"),
     # Presence / location
     "presence.stale_seconds": Param(120, int, 15, 3600, PROVISIONAL, ""),

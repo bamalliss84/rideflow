@@ -532,25 +532,42 @@ def mark_en_route(ride_id, driver, expected_version):
     return ride
 
 
-def mark_arrived(ride_id, driver, expected_version, *, point, accuracy_m, device_ts=None):
-    """Arrival is recorded with geofence evaluation; GPS is evidence, never sole proof (T3)."""
+def _arrival_check(ride, point, accuracy_m, policy):
+    distance = geo.haversine_m(point, ride.pickup)
+    usable = accuracy_m <= policy["noshow.max_accuracy_m"]
+    return int(distance), usable and distance <= policy["noshow.geofence_m"] + accuracy_m
+
+
+def mark_arrived(ride_id, driver, expected_version, *, point=None, accuracy_m=None, device_ts=None):
+    """Arrival is recorded with geofence evaluation; GPS is evidence, never sole proof (T3).
+    Without a location it is still recorded, and can't support a no-show unless one follows in time (D045)."""
     policy = current_policy()
     with transaction.atomic():
         ride = _lock(ride_id)
         _assert_assigned_driver(ride, driver)
         _check_version(ride, expected_version)
-        distance = geo.haversine_m(point, ride.pickup)
-        usable = accuracy_m <= policy["noshow.max_accuracy_m"]
-        within = usable and distance <= policy["noshow.geofence_m"] + accuracy_m
+        if point is None:
+            _transition(
+                ride,
+                "arrive",
+                actor=driver.user,
+                role=sm.DRIVER,
+                device_ts=device_ts,
+                data={"location": "unavailable"},
+                arrived_at=timezone.now(),
+            )
+            _hint(ride.rider, "ride.driver_arrived", ride)
+            return ride
+        distance, within = _arrival_check(ride, point, accuracy_m, policy)
         _transition(
             ride,
             "arrive",
             actor=driver.user,
             role=sm.DRIVER,
             device_ts=device_ts,
-            data={"distance_m": int(distance), "accuracy_m": accuracy_m, "within_geofence": within},
+            data={"distance_m": distance, "accuracy_m": accuracy_m, "within_geofence": within},
             arrived_at=timezone.now(),
-            arrival_distance_m=int(distance),
+            arrival_distance_m=distance,
             arrival_accuracy_m=accuracy_m,
             arrival_within_geofence=within,
         )
@@ -559,6 +576,39 @@ def mark_arrived(ride_id, driver, expected_version, *, point, accuracy_m, device
         )
         _hint(ride.rider, "ride.driver_arrived", ride)
     return ride
+
+
+def add_arrival_location(ride_id, driver, *, point, accuracy_m, device_ts):
+    """A location that follows an arrival recorded without one (D045). It may arrive long after, once the phone is back
+    online, so it takes no expected_version and never changes the ride's state. It counts as the arrival's location only
+    if it was read close to the arrival; otherwise it is kept as evidence alone. An existing location is never replaced."""
+    policy = current_policy()
+    with transaction.atomic():
+        ride = _lock(ride_id)
+        _assert_assigned_driver(ride, driver)
+        if ride.arrived_at is None:
+            raise Conflict("The arrival hasn't been recorded.", code="invalid_transition")
+        if ride.arrival_accuracy_m is not None:
+            return {"recorded": False, "counted": False}
+        counted = abs((device_ts - ride.arrived_at).total_seconds()) <= policy["noshow.late_location_seconds"]
+        distance, within = _arrival_check(ride, point, accuracy_m, policy)
+        LocationEvidence.objects.create(
+            ride=ride, actor=driver.user, kind=EvidenceKind.ARRIVAL, point=point, accuracy_m=accuracy_m, device_ts=device_ts
+        )
+        _event(
+            ride,
+            "arrival_location",
+            actor=driver.user,
+            role=sm.DRIVER,
+            device_ts=device_ts,
+            data={"distance_m": distance, "accuracy_m": accuracy_m, "within_geofence": within, "counted": counted},
+        )
+        if counted:
+            ride.arrival_distance_m = distance
+            ride.arrival_accuracy_m = accuracy_m
+            ride.arrival_within_geofence = within
+            ride.save(update_fields=["arrival_distance_m", "arrival_accuracy_m", "arrival_within_geofence", "updated_at"])
+    return {"recorded": True, "counted": counted}
 
 
 def record_contact_attempt(ride_id, driver, method):

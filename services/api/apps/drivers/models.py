@@ -40,6 +40,10 @@ class DriverProfile(TenantScopedModel):
     reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+")
     reviewed_at = models.DateTimeField(null=True, blank=True)
     submitted_at = models.DateTimeField(null=True, blank=True)
+    # What riders see (D047), apart from the identity documents the operator reviews.
+    photo = models.FileField(upload_to=tenant_upload_to("driver-photos"), max_length=255, blank=True)
+    photo_content_type = models.CharField(max_length=32, blank=True)
+    photo_updated_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["tenant", "user"], name="uniq_driver_profile_per_tenant")]
@@ -47,6 +51,11 @@ class DriverProfile(TenantScopedModel):
 
     def __str__(self):
         return f"Driver {self.user_id}"
+
+    @property
+    def photo_url(self):
+        """Relative to the API root. The time changes with the photo, so an app's copy of the old one isn't reused."""
+        return f"drivers/{self.pk}/photo?v={int(self.photo_updated_at.timestamp())}" if self.photo else None
 
 
 class Vehicle(TenantScopedModel):

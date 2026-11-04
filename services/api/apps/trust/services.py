@@ -139,7 +139,9 @@ def compute_trust(user, role, policy=None):
             ),
         }
         weights = policy["trust.rider_weights"]
-        completion_rate = completed / matched if matched else None
+        # Only rides that were matched: a completed ride with no match time would push the rate above 100%.
+        completed_matched = rides.filter(assigned_at__isnull=False, completed_at__isnull=False).count()
+        completion_rate = completed_matched / matched if matched else None
     total_weight = sum(weights.values()) or 1
     score = round(100 * sum(weights[k] * components[k] for k in weights) / total_weight, 1)
     thresholds = policy["trust.tier_thresholds"]

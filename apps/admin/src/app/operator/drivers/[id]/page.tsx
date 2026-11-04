@@ -52,6 +52,9 @@ export default function DriverDetailPage() {
     inlineErrors: true,
   });
 
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const removePhoto = useAction<undefined>("POST", `${base}/remove-photo`, { invalidate: [base, "admin/drivers"], inlineErrors: true });
+
   if (q.isPending) return <PageSkeleton />;
   if (q.error) return <ErrorState error={q.error} onRetry={() => void q.refetch()} />;
   const d = q.data;
@@ -101,6 +104,21 @@ export default function DriverDetailPage() {
                 { label: t.common.created, value: fmt.dateTime(d.created_at) },
                 { label: dr.availability, value: d.online_since ? <MetaLine className="text-sm text-ink" parts={[t.common.online, fmt.relative(d.online_since)]} /> : t.common.offline },
                 { label: dr.reviewNote, value: d.review_note || "—" },
+                {
+                  label: dr.photo,
+                  value: d.photo_url ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <FilePreviewButton path={`${base}/photo`} contentType="image/png" title={d.full_name || d.phone} />
+                      {reviewer ? (
+                        <Button size="sm" variant="secondary" onClick={() => setConfirmRemove(true)}>
+                          {dr.removePhoto}
+                        </Button>
+                      ) : null}
+                    </div>
+                  ) : (
+                    "—"
+                  ),
+                },
               ]}
             />
           </Card>
@@ -214,6 +232,15 @@ export default function DriverDetailPage() {
         </div>
       </div>
 
+      <ConfirmDialog
+        open={confirmRemove}
+        onClose={() => setConfirmRemove(false)}
+        title={dr.removePhoto}
+        message={dr.removePhotoConfirm}
+        confirmLabel={dr.removePhoto}
+        tone="danger"
+        onConfirm={() => removePhoto.mutateAsync(undefined)}
+      />
       <ConfirmDialog
         open={decision !== null}
         onClose={() => setDecision(null)}

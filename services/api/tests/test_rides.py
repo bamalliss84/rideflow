@@ -4,7 +4,7 @@ import pytest
 from django.utils import timezone
 
 from apps.core.context import tenant_context
-from apps.rides.models import Bid, Ride, RideEvent
+from apps.rides.models import Bid, LocationEvidence, Ride, RideEvent
 from apps.trust.models import Violation
 
 pytestmark = pytest.mark.django_db
@@ -243,6 +243,100 @@ def test_no_show_rejected_with_inaccurate_gps(ride_flow):
     f = ride_flow
     ride = f.arrived(accuracy=500)  # a single inaccurate fix is never proof
     assert ride["arrival"]["within_geofence"] is False
+
+
+def _arrived_without_location(f):
+    ride = f.assigned()
+    r = f.d1_api.post(f"/api/v1/rides/{ride['id']}/arrive", {"expected_version": ride["version"]})
+    assert r.status_code == 200, r.data
+    return r.data
+
+
+def _late_location(f, ride, seconds=10, dx=0.0, accuracy=8.0):
+    lng, lat = f.tenant.center
+    read_at = timezone.now() + timedelta(seconds=seconds)
+    body = {"lat": lat, "lng": lng + dx, "accuracy_m": accuracy, "device_ts": read_at.isoformat()}
+    return f.d1_api.post(f"/api/v1/rides/{ride['id']}/arrival-location", body)
+
+
+def test_arrival_without_location_is_recorded_but_cannot_support_a_no_show(ride_flow):
+    f = ride_flow
+    ride = _arrived_without_location(f)
+    assert ride["status"] == "arrived"
+    assert ride["arrival"]["within_geofence"] is None
+    assert ride["arrival"]["accuracy_m"] is None
+    f.d1_api.post(f"/api/v1/rides/{ride['id']}/contact-attempts", {"method": "call"})
+    with tenant_context(f.tenant.tenant):
+        Ride.objects.filter(pk=ride["id"]).update(arrived_at=timezone.now() - timedelta(minutes=10))
+    r = f.d1_api.post(f"/api/v1/rides/{ride['id']}/no-show", {"expected_version": f.snapshot(ride["id"])["version"]})
+    assert r.status_code == 422
+    assert "arrival_not_within_geofence" in r.data["detail"]["failed_checks"]
+
+
+def test_arrive_refuses_part_of_a_location(ride_flow):
+    f = ride_flow
+    ride = f.assigned()
+    r = f.d1_api.post(f"/api/v1/rides/{ride['id']}/arrive", {"expected_version": ride["version"], "lat": 14.5})
+    assert r.status_code == 400
+
+
+def test_location_read_soon_after_arrival_counts(ride_flow):
+    f = ride_flow
+    ride = _arrived_without_location(f)
+    r = _late_location(f, ride)
+    assert r.status_code == 200, r.data
+    assert r.data == {"recorded": True, "counted": True}
+    after = f.snapshot(ride["id"], f.d1_api)
+    assert after["arrival"]["within_geofence"] is True
+    assert after["version"] == ride["version"], "a late location doesn't change the ride's state"
+
+
+def test_late_location_far_from_pickup_counts_as_outside(ride_flow):
+    f = ride_flow
+    ride = _arrived_without_location(f)
+    assert _late_location(f, ride, dx=0.01).data["counted"] is True
+    assert f.snapshot(ride["id"], f.d1_api)["arrival"]["within_geofence"] is False
+
+
+def test_location_read_long_after_arrival_is_evidence_only(ride_flow):
+    f = ride_flow
+    ride = _arrived_without_location(f)
+    r = _late_location(f, ride, seconds=300)
+    assert r.data == {"recorded": True, "counted": False}
+    assert f.snapshot(ride["id"], f.d1_api)["arrival"]["within_geofence"] is None
+    with tenant_context(f.tenant.tenant):
+        assert LocationEvidence.objects.filter(ride_id=ride["id"], kind="arrival").count() == 1
+
+
+def test_late_location_never_replaces_one_already_there(ride_flow):
+    f = ride_flow
+    ride = f.arrived(dx=0.01)
+    r = _late_location(f, ride)
+    assert r.data == {"recorded": False, "counted": False}
+    assert f.snapshot(ride["id"], f.d1_api)["arrival"]["within_geofence"] is False
+
+
+def test_late_location_needs_a_recorded_arrival(ride_flow):
+    f = ride_flow
+    assert _late_location(f, f.assigned()).status_code == 409
+
+
+def test_late_location_is_accepted_after_the_trip_moved_on(ride_flow):
+    f = ride_flow
+    ride = _arrived_without_location(f)
+    r = f.d1_api.post(f"/api/v1/rides/{ride['id']}/start", {"expected_version": ride["version"]})
+    assert r.status_code == 200, r.data
+    assert _late_location(f, ride).data["recorded"] is True
+    assert f.snapshot(ride["id"])["status"] == "in_progress"
+
+
+def test_late_location_only_from_the_assigned_driver(ride_flow):
+    f = ride_flow
+    ride = _arrived_without_location(f)
+    lng, lat = f.tenant.center
+    body = {"lat": lat, "lng": lng, "accuracy_m": 8, "device_ts": timezone.now().isoformat()}
+    r = f.d2_api.post(f"/api/v1/rides/{ride['id']}/arrival-location", body)
+    assert r.status_code == 404
 
 
 def test_amendment_requires_other_party(ride_flow):

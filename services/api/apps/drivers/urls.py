@@ -12,6 +12,7 @@ router.register("admin/vehicles", views.AdminVehicleViewSet, basename="admin-veh
 
 urlpatterns = [
     path("driver/profile", views.DriverProfileView.as_view(), name="driver-profile"),
+    path("driver/photo", views.DriverPhotoView.as_view(), name="driver-photo"),
     path("driver/eligibility", views.DriverEligibilityView.as_view(), name="driver-eligibility"),
     path("driver/submit", views.DriverSubmitView.as_view(), name="driver-submit"),
     path("driver/availability", views.DriverAvailabilityView.as_view(), name="driver-availability"),

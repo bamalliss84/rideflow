@@ -12,23 +12,27 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.core.context import tenant_context
+from apps.core.files import private_file_response
 from apps.core.filters import TenantFilterSet
 from apps.core.idempotency import idempotent
 from apps.core.permissions import IsDriver, IsRiderOrDriver, TenantPermission, request_roles
 from apps.core.throttling import IPScopedThrottle
 from apps.core.views import schema_safe
+from apps.drivers.models import DriverProfile
 from apps.drivers.services import get_driver_for_user
 from apps.tenancy.models import Tenant
 from apps.tenancy.policy import current_policy
 
 from . import services
 from . import state_machine as sm
-from .models import LocationEvidence, Ride, RideAmendment, RideEvent, TripShare
+from .models import Bid, LocationEvidence, Ride, RideAmendment, RideEvent, TripShare
 from .serializers import (
     AdminRideSerializer,
     AmendmentCreateSerializer,
     AmendmentRespondSerializer,
     AmendmentSerializer,
+    ArrivalLocationResultSerializer,
+    ArrivalLocationSerializer,
     ArriveSerializer,
     BidCreateSerializer,
     BidSerializer,
@@ -275,11 +279,25 @@ class RideViewSet(viewsets.GenericViewSet):
             pk,
             self._driver(),
             data["expected_version"],
-            point=Point(data["lng"], data["lat"], srid=4326),
-            accuracy_m=data["accuracy_m"],
+            point=Point(data["lng"], data["lat"], srid=4326) if "lat" in data else None,
+            accuracy_m=data.get("accuracy_m"),
             device_ts=data.get("device_ts"),
         )
         return self._snapshot(pk)
+
+    @extend_schema(request=ArrivalLocationSerializer, responses=ArrivalLocationResultSerializer)
+    @action(detail=True, methods=["post"], url_path="arrival-location")
+    @idempotent("ride.arrival_location")
+    def arrival_location(self, request, pk=None):
+        data = _valid(ArrivalLocationSerializer, request)
+        result = services.add_arrival_location(
+            pk,
+            self._driver(),
+            point=Point(data["lng"], data["lat"], srid=4326),
+            accuracy_m=data["accuracy_m"],
+            device_ts=data["device_ts"],
+        )
+        return Response(ArrivalLocationResultSerializer(result).data)
 
     @extend_schema(request=ContactAttemptSerializer, responses={201: RideEventSerializer})
     @action(detail=True, methods=["post"], url_path="contact-attempts")
@@ -371,6 +389,24 @@ class PublicTripView(APIView):
             response = Response(public_trip_data(share.ride, services.driver_position(share.ride, current_policy())))
         response["Cache-Control"] = "no-store"
         return response
+
+
+class DriverPhotoFileView(APIView):
+    """A driver's photo, for the driver and for riders who have an offer or a ride from them (D047)."""
+
+    permission_classes = [IsRiderOrDriver]
+
+    @extend_schema(responses={(200, "application/octet-stream"): bytes})
+    def get(self, request, driver_id):
+        driver = get_object_or_404(DriverProfile, pk=driver_id)
+        user = request.user
+        if not (
+            driver.user_id == user.pk
+            or Ride.objects.filter(rider=user, driver=driver).exists()
+            or Bid.objects.filter(ride__rider=user, driver=driver).exists()
+        ):
+            raise NotFound
+        return private_file_response(driver.photo, driver.photo_content_type)
 
 
 class DriverOffersView(APIView):

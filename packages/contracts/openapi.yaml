@@ -1208,6 +1208,51 @@ paths:
               schema:
                 $ref: '#/components/schemas/AdminDriver'
           description: ''
+  /api/v1/admin/drivers/{id}/photo:
+    get:
+      operationId: admin_drivers_photo_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: نوع نص UUID يحدد هذا driver profile.
+        required: true
+      tags:
+      - admin-drivers
+      security:
+      - BearerJWT: []
+      responses:
+        '200':
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+          description: ''
+  /api/v1/admin/drivers/{id}/remove-photo:
+    post:
+      operationId: admin_drivers_remove_photo_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: نوع نص UUID يحدد هذا driver profile.
+        required: true
+      tags:
+      - admin-drivers
+      security:
+      - BearerJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminDriver'
+          description: ''
   /api/v1/admin/enforcement-actions:
     get:
       operationId: admin_enforcement_actions_list
@@ -3313,6 +3358,35 @@ paths:
               schema:
                 $ref: '#/components/schemas/LocationUpdateResult'
           description: ''
+  /api/v1/driver/photo:
+    post:
+      operationId: driver_photo_create
+      tags:
+      - driver
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DriverPhotoUploadRequest'
+        required: true
+      security:
+      - BearerJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DriverProfile'
+          description: ''
+    delete:
+      operationId: driver_photo_destroy
+      tags:
+      - driver
+      security:
+      - BearerJWT: []
+      responses:
+        '204':
+          description: No response body
   /api/v1/driver/profile:
     get:
       operationId: driver_profile_retrieve
@@ -3502,6 +3576,30 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Vehicle'
+          description: ''
+  /api/v1/drivers/{driver_id}/photo:
+    get:
+      operationId: drivers_photo_retrieve
+      description: A driver's photo, for the driver and for riders who have an offer
+        or a ride from them (D047).
+      parameters:
+      - in: path
+        name: driver_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - drivers
+      security:
+      - BearerJWT: []
+      responses:
+        '200':
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
           description: ''
   /api/v1/drivers/nearby:
     get:
@@ -4852,6 +4950,42 @@ paths:
               schema:
                 $ref: '#/components/schemas/Amendment'
           description: ''
+  /api/v1/rides/{id}/arrival-location:
+    post:
+      operationId: rides_arrival_location_create
+      description: |-
+        Rider and driver ride API. Every mutation requires `Idempotency-Key`; lifecycle changes also require
+        `expected_version` (optimistic concurrency, 409 on mismatch).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^[0-9a-f-]{36}$
+        required: true
+      tags:
+      - rides
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ArrivalLocationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ArrivalLocationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ArrivalLocationRequest'
+        required: true
+      security:
+      - BearerJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArrivalLocationResult'
+          description: ''
   /api/v1/rides/{id}/arrive:
     post:
       operationId: rides_arrive_create
@@ -5730,6 +5864,10 @@ components:
         phone:
           type: string
           readOnly: true
+        photo_url:
+          type: string
+          readOnly: true
+          nullable: true
         status:
           allOf:
           - $ref: '#/components/schemas/DriverStatusEnum'
@@ -5781,6 +5919,7 @@ components:
       - is_online
       - online_since
       - phone
+      - photo_url
       - review_note
       - reviewed_at
       - status
@@ -6133,8 +6272,47 @@ components:
         * `pending` - Pending
         * `upheld` - Upheld (violation overturned)
         * `rejected` - Rejected
+    ArrivalLocationRequest:
+      type: object
+      properties:
+        lat:
+          type: number
+          format: double
+          maximum: 90
+          minimum: -90
+        lng:
+          type: number
+          format: double
+          maximum: 180
+          minimum: -180
+        accuracy_m:
+          type: number
+          format: double
+          maximum: 10000
+          minimum: 0
+        device_ts:
+          type: string
+          format: date-time
+      required:
+      - accuracy_m
+      - device_ts
+      - lat
+      - lng
+    ArrivalLocationResult:
+      type: object
+      properties:
+        recorded:
+          type: boolean
+          description: False when the arrival already has a location.
+        counted:
+          type: boolean
+          description: True when it now counts as the location of the arrival.
+      required:
+      - counted
+      - recorded
     ArriveRequest:
       type: object
+      description: The location is left out when the phone can't get one in time (D045).
       properties:
         expected_version:
           type: integer
@@ -6159,10 +6337,7 @@ components:
           format: date-time
           nullable: true
       required:
-      - accuracy_m
       - expected_version
-      - lat
-      - lng
     AuditEvent:
       type: object
       properties:
@@ -6984,6 +7159,14 @@ components:
       required:
       - doc_type
       - file
+    DriverPhotoUploadRequest:
+      type: object
+      properties:
+        file:
+          type: string
+          format: binary
+      required:
+      - file
     DriverPosition:
       type: object
       properties:
@@ -7020,6 +7203,10 @@ components:
         phone:
           type: string
           readOnly: true
+        photo_url:
+          type: string
+          readOnly: true
+          nullable: true
         status:
           allOf:
           - $ref: '#/components/schemas/DriverStatusEnum'
@@ -7067,6 +7254,7 @@ components:
       - is_online
       - online_since
       - phone
+      - photo_url
       - review_note
       - reviewed_at
       - status
@@ -8539,6 +8727,9 @@ components:
         display_name:
           type: string
         phone:
+          type: string
+          nullable: true
+        photo_url:
           type: string
           nullable: true
         verified:

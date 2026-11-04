@@ -88,10 +88,30 @@ class DeclineSerializer(CancelSerializer):
 
 
 class ArriveSerializer(VersionSerializer):
+    """The location is left out when the phone can't get one in time (D045)."""
+
+    lat = serializers.FloatField(min_value=-90, max_value=90, required=False)
+    lng = serializers.FloatField(min_value=-180, max_value=180, required=False)
+    accuracy_m = serializers.FloatField(min_value=0, max_value=10000, required=False)
+    device_ts = serializers.DateTimeField(required=False, allow_null=True)
+
+    def validate(self, attrs):
+        given = [key for key in ("lat", "lng", "accuracy_m") if key in attrs]
+        if given and len(given) < 3:
+            raise serializers.ValidationError("lat, lng and accuracy_m go together.")
+        return attrs
+
+
+class ArrivalLocationSerializer(serializers.Serializer):
     lat = serializers.FloatField(min_value=-90, max_value=90)
     lng = serializers.FloatField(min_value=-180, max_value=180)
     accuracy_m = serializers.FloatField(min_value=0, max_value=10000)
-    device_ts = serializers.DateTimeField(required=False, allow_null=True)
+    device_ts = serializers.DateTimeField()
+
+
+class ArrivalLocationResultSerializer(serializers.Serializer):
+    recorded = serializers.BooleanField(help_text="False when the arrival already has a location.")
+    counted = serializers.BooleanField(help_text="True when it now counts as the location of the arrival.")
 
 
 class ContactAttemptSerializer(serializers.Serializer):
@@ -142,6 +162,7 @@ class PartyBriefSerializer(serializers.Serializer):
     driver_id = serializers.UUIDField(allow_null=True, required=False)
     display_name = serializers.CharField()
     phone = serializers.CharField(allow_null=True)
+    photo_url = serializers.CharField(allow_null=True, required=False)
     verified = serializers.BooleanField()
     trust = TrustBriefSerializer()
     vehicle = VehicleBriefSerializer(allow_null=True, required=False)
@@ -180,6 +201,7 @@ def driver_brief(driver, *, include_contact=False, include_plate=False):
         "driver_id": driver.pk,
         "display_name": _first_name(driver.user),
         "phone": driver.user.phone if include_contact else None,
+        "photo_url": driver.photo_url,
         "verified": driver.status == "approved",
         "trust": _public_trust(summary),
         "vehicle": _vehicle(driver, include_plate),

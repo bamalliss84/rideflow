@@ -500,6 +500,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/drivers/{id}/photo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["admin_drivers_photo_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/drivers/{id}/remove-photo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["admin_drivers_remove_photo_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/enforcement-actions": {
         parameters: {
             query?: never;
@@ -1405,6 +1437,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/driver/photo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["driver_photo_create"];
+        delete: operations["driver_photo_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/driver/profile": {
         parameters: {
             query?: never;
@@ -1543,6 +1591,23 @@ export interface paths {
         get: operations["driver_vehicles_list"];
         put?: never;
         post: operations["driver_vehicles_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/drivers/{driver_id}/photo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description A driver's photo, for the driver and for riders who have an offer or a ride from them (D047). */
+        get: operations["drivers_photo_retrieve"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2105,6 +2170,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/rides/{id}/arrival-location": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Rider and driver ride API. Every mutation requires `Idempotency-Key`; lifecycle changes also require
+         *     `expected_version` (optimistic concurrency, 409 on mismatch).
+         */
+        post: operations["rides_arrival_location_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/rides/{id}/arrive": {
         parameters: {
             query?: never;
@@ -2545,6 +2630,7 @@ export interface components {
             readonly id: string;
             readonly full_name: string;
             readonly phone: string;
+            readonly photo_url: string | null;
             readonly status: components["schemas"]["DriverStatusEnum"];
             readonly is_online: boolean;
             /** Format: date-time */
@@ -2690,14 +2776,31 @@ export interface components {
          * @enum {string}
          */
         AppealStatusEnum: "pending" | "upheld" | "rejected";
-        ArriveRequest: {
-            expected_version: number;
+        ArrivalLocationRequest: {
             /** Format: double */
             lat: number;
             /** Format: double */
             lng: number;
             /** Format: double */
             accuracy_m: number;
+            /** Format: date-time */
+            device_ts: string;
+        };
+        ArrivalLocationResult: {
+            /** @description False when the arrival already has a location. */
+            recorded: boolean;
+            /** @description True when it now counts as the location of the arrival. */
+            counted: boolean;
+        };
+        /** @description The location is left out when the phone can't get one in time (D045). */
+        ArriveRequest: {
+            expected_version: number;
+            /** Format: double */
+            lat?: number;
+            /** Format: double */
+            lng?: number;
+            /** Format: double */
+            accuracy_m?: number;
             /** Format: date-time */
             device_ts?: string | null;
         };
@@ -3016,6 +3119,10 @@ export interface components {
             /** Format: uuid */
             vehicle_id?: string | null;
         };
+        DriverPhotoUploadRequest: {
+            /** Format: binary */
+            file: string;
+        };
         DriverPosition: {
             /** Format: double */
             lat: number;
@@ -3031,6 +3138,7 @@ export interface components {
             readonly id: string;
             readonly full_name: string;
             readonly phone: string;
+            readonly photo_url: string | null;
             readonly status: components["schemas"]["DriverStatusEnum"];
             readonly is_online: boolean;
             /** Format: date-time */
@@ -3766,6 +3874,7 @@ export interface components {
             driver_id?: string | null;
             display_name: string;
             phone: string | null;
+            photo_url?: string | null;
             verified: boolean;
             trust: components["schemas"]["TrustBrief"];
             vehicle?: components["schemas"]["VehicleBrief"] | null;
@@ -5350,6 +5459,50 @@ export interface operations {
                 "multipart/form-data": components["schemas"]["DriverDecisionRequest"];
             };
         };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminDriver"];
+                };
+            };
+        };
+    };
+    admin_drivers_photo_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description نوع نص UUID يحدد هذا driver profile. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+        };
+    };
+    admin_drivers_remove_photo_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description نوع نص UUID يحدد هذا driver profile. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             200: {
                 headers: {
@@ -7039,6 +7192,47 @@ export interface operations {
             };
         };
     };
+    driver_photo_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["DriverPhotoUploadRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DriverProfile"];
+                };
+            };
+        };
+    };
+    driver_photo_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     driver_profile_retrieve: {
         parameters: {
             query?: never;
@@ -7273,6 +7467,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Vehicle"];
+                };
+            };
+        };
+    };
+    drivers_photo_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                driver_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
                 };
             };
         };
@@ -8388,6 +8603,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Amendment"];
+                };
+            };
+        };
+    };
+    rides_arrival_location_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ArrivalLocationRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ArrivalLocationRequest"];
+                "multipart/form-data": components["schemas"]["ArrivalLocationRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArrivalLocationResult"];
                 };
             };
         };

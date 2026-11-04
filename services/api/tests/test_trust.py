@@ -7,12 +7,24 @@ from apps.core.context import tenant_context
 from apps.rides.models import Ride
 from apps.subscriptions.models import SubscriptionLedgerEntry
 from apps.tenancy.services import create_config_version
-from apps.trust.models import EnforcementAction, Violation
-from apps.trust.services import record_incident
+from apps.trust.models import EnforcementAction, TrustSnapshot, Violation
+from apps.trust.services import record_incident, refresh_trust
 
 from .factories import api_for, make_member, ride_payload
 
 pytestmark = pytest.mark.django_db
+
+
+def test_completion_rate_never_passes_100_percent(ride_flow):
+    f = ride_flow
+    first = f.completed()
+    f.completed()
+    with tenant_context(f.tenant.tenant):
+        # An old ride completed with no match time must not count on top of the matched ones.
+        Ride.objects.filter(pk=first["id"]).update(assigned_at=None)
+        rider = Ride.objects.get(pk=first["id"]).rider
+        refresh_trust(rider, "rider")
+        assert TrustSnapshot.objects.get(user=rider, role="rider").completion_rate == 1.0
 
 
 def test_bilateral_rating_once_after_completion(ride_flow):

@@ -2,7 +2,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django_filters import rest_framework as filters
 from drf_spectacular.utils import extend_schema
-from rest_framework import mixins, viewsets
+from rest_framework import mixins, serializers, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
@@ -41,6 +41,26 @@ class DriverProfileView(DriverMixin, APIView):
     @extend_schema(responses=DriverProfileSerializer)
     def get(self, request):
         return Response(DriverProfileSerializer(self.get_driver()).data)
+
+
+class DriverPhotoUploadSerializer(serializers.Serializer):
+    file = serializers.FileField()
+
+
+@extend_schema(tags=["driver"])
+class DriverPhotoView(DriverMixin, APIView):
+    parser_classes = [MultiPartParser, FormParser]
+
+    @extend_schema(request={"multipart/form-data": DriverPhotoUploadSerializer}, responses=DriverProfileSerializer)
+    @idempotent("driver.photo")
+    def post(self, request):
+        driver = services.set_driver_photo(self.get_driver(), request.FILES.get("file"), request)
+        return Response(DriverProfileSerializer(driver).data)
+
+    @extend_schema(responses={204: None})
+    def delete(self, request):
+        services.remove_driver_photo(self.get_driver(), request)
+        return Response(status=204)
 
 
 @extend_schema(tags=["driver"])
@@ -132,7 +152,13 @@ class AdminDriverFilter(TenantFilterSet):
 class AdminDriverViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = AdminDriverSerializer
     permission_classes = [TenantPermission]
-    required_permissions = {"list": "drivers.view", "retrieve": "drivers.view", "decide": "drivers.review"}
+    required_permissions = {
+        "list": "drivers.view",
+        "retrieve": "drivers.view",
+        "photo": "drivers.view",
+        "remove_photo": "drivers.review",
+        "decide": "drivers.review",
+    }
     filterset_class = AdminDriverFilter
     ordering_fields = ["created_at", "submitted_at", "status"]
     ordering = ["-created_at"]
@@ -140,6 +166,19 @@ class AdminDriverViewSet(viewsets.ReadOnlyModelViewSet):
     @schema_safe(DriverProfile)
     def get_queryset(self):
         return DriverProfile.objects.select_related("user").prefetch_related("vehicles", "documents")
+
+    @extend_schema(responses={(200, "application/octet-stream"): bytes})
+    @action(detail=True, methods=["get"])
+    def photo(self, request, pk=None):
+        driver = self.get_object()
+        return private_file_response(driver.photo, driver.photo_content_type)
+
+    @extend_schema(request=None, responses=AdminDriverSerializer)
+    @action(detail=True, methods=["post"], url_path="remove-photo")
+    @idempotent("admin.driver.remove_photo")
+    def remove_photo(self, request, pk=None):
+        driver = services.remove_driver_photo(self.get_object(), request, by_staff=True)
+        return Response(AdminDriverSerializer(driver).data)
 
     @extend_schema(request=DriverDecisionSerializer, responses=AdminDriverSerializer)
     @action(detail=True, methods=["post"])

@@ -2,10 +2,12 @@ from datetime import timedelta
 
 from django.db import transaction
 from django.utils import timezone
+from rest_framework.exceptions import ValidationError
 
 from apps.core import audit
 from apps.core.context import require_tenant
 from apps.core.exceptions import BusinessRuleViolation, Conflict, NotEligible
+from apps.core.files import validate_upload
 from apps.tenancy.policy import current_policy
 
 from .models import DocumentType, DriverDocument, DriverProfile, DriverStatus, ReviewStatus, Vehicle
@@ -143,6 +145,39 @@ REVIEWABLE_DRIVER_STATUSES = (DriverStatus.UNDER_REVIEW, DriverStatus.APPROVED, 
 def _assert_submitted(driver):
     if driver.status not in REVIEWABLE_DRIVER_STATUSES:
         raise Conflict("The driver has not submitted this application for review yet.", code="application_not_submitted")
+
+
+PHOTO_MAX_BYTES = 2 * 1024 * 1024
+
+
+def set_driver_photo(driver, upload, request=None):
+    """Shows to riders at once, with no review (D047). The operator can remove it."""
+    content_type, _ext, _digest = validate_upload(upload, max_bytes=PHOTO_MAX_BYTES)
+    if not content_type.startswith("image/"):
+        raise ValidationError({"file": "Only JPEG or PNG images are accepted."})
+    old = driver.photo
+    old_storage, old_name = (old.storage, old.name) if old else (None, None)
+    driver.photo = upload
+    driver.photo_content_type = content_type
+    driver.photo_updated_at = timezone.now()
+    driver.save(update_fields=["photo", "photo_content_type", "photo_updated_at", "updated_at"])
+    if old_name:
+        old_storage.delete(old_name)
+    audit.record("driver.photo_set", request=request, target=driver)
+    return driver
+
+
+def remove_driver_photo(driver, request=None, by_staff=False):
+    if not driver.photo:
+        return driver
+    storage, name = driver.photo.storage, driver.photo.name
+    driver.photo = ""
+    driver.photo_content_type = ""
+    driver.photo_updated_at = None
+    driver.save(update_fields=["photo", "photo_content_type", "photo_updated_at", "updated_at"])
+    storage.delete(name)
+    audit.record("driver.photo_removed", request=request, target=driver, data={"by_staff": by_staff})
+    return driver
 
 
 def review_document(document, approve, reviewer, note="", request=None):

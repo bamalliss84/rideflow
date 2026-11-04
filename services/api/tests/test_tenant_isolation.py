@@ -81,7 +81,7 @@ OBJECT_FOR_PREFIX = [
     ("platform-audit", "audit"),
     ("platform-tenant", "tenant"),
 ]
-PARAM_OBJECTS = {"ride_id": "ride", "bid_id": "bid", "amendment_id": "amendment", "membership_id": "membership"}
+PARAM_OBJECTS = {"driver_id": "driver", "ride_id": "ride", "bid_id": "bid", "amendment_id": "amendment", "membership_id": "membership"}
 
 
 def _object_for(name, param, objects, tenant):
