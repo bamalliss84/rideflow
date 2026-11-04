@@ -15,6 +15,10 @@ class Fix {
       Fix(lat: p.latitude, lng: p.longitude, accuracy: p.accuracy, deviceTs: p.timestamp, heading: p.heading, speed: p.speed);
 }
 
+/// Null when [fix] is too old to count as where the driver is. The server drops a sample no newer than the one it has,
+/// and refuses to go online without a recent one, so an old fix would only fail without saying why.
+Fix? freshFix(Fix? fix, {DateTime? now}) => fix != null && (now ?? DateTime.now()).difference(fix.deviceTs) < const Duration(minutes: 2) ? fix : null;
+
 /// Device location for an online driver (foreground only in this phase).
 ///
 /// Two sources feed the sender: the position stream (movement) and a heartbeat that re-sends the latest fix
@@ -39,7 +43,7 @@ class LocationService {
 
   Future<LocationAccess> ensureAccess() => access();
 
-  /// A current fix: live reading first, then the platform's last known position. Null = no fix available.
+  /// A current fix: live reading first, then a recent last known position. Null = no fix available.
   Future<Fix?> current() async {
     try {
       final p = await Geolocator.getCurrentPosition(
@@ -48,9 +52,9 @@ class LocationService {
     } catch (_) {
       try {
         final known = await Geolocator.getLastKnownPosition();
-        if (known != null) return last = Fix.fromPosition(known);
+        if (known != null) return freshFix(last = Fix.fromPosition(known));
       } catch (_) {}
-      return last;
+      return freshFix(last);
     }
   }
 

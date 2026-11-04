@@ -204,6 +204,8 @@
   },
   "estimateNote": "تقدير إرشادي غير ملزم.",
   "pickup": "الانطلاق",
+  "pickupNoteLabel": "مكان الراكب: {note}",
+  "dropoffNoteLabel": "وصف الوجهة: {note}",
   "dropoff": "الوجهة",
   "distance": "المسافة التقريبية",
   "myOffer": "عرضك: {amount}",
@@ -251,6 +253,10 @@
   "cancelReason": "سبب الإلغاء",
   "declineReason": "سبب الاعتذار (اختياري)",
   "callRider": "اتصال",
+  "startCodeTitle": "رمز بدء الرحلة",
+  "startCodeHint": "اطلب الرمز من الراكب.",
+  "startCodeWrong": "الرمز غير صحيح. تأكد منه مع الراكب.",
+  "startCodeLocked": "محاولات كثيرة. انتظر 5 دقائق ثم حاول.",
   "tripStep": "الخطوة {step} من 4",
   "@tripStep": {
     "placeholders": {

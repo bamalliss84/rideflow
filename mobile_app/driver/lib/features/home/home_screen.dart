@@ -257,7 +257,7 @@ class _OnlineHeader extends ConsumerWidget {
           child: Text(
             ready && ago != null ? t.statusOnlineLine('$ago') : t.degradedSubtitle,
             key: Key(ready ? 'statusReady' : 'statusDegraded'),
-            style: RfType.caption.copyWith(fontSize: 13),
+            style: RfType.caption.copyWith(fontSize: 12),
           ),
         ),
         if (socket != null && socket != SocketState.connected) StatusPill(t.realtimeReconnecting, tone: Tone.warning, dot: true),
@@ -576,7 +576,7 @@ class _Tabs extends StatelessWidget {
                     fit: BoxFit.scaleDown,
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 6),
-                      child: Text(label, style: RfType.bodyStrong.copyWith(fontSize: 13, color: selected == id ? RfColors.onGold : RfColors.text)),
+                      child: Text(label, style: RfType.bodyStrong.copyWith(fontSize: 12, color: selected == id ? RfColors.onGold : RfColors.text)),
                     ),
                   ),
                 ),
@@ -1148,6 +1148,8 @@ class _BidSheetState extends ConsumerState<BidSheet> {
         const SizedBox(height: RfSpace.md),
         RouteStops(pickupLabel: t.pickup, pickup: r.pickupLandmark, dropoffLabel: t.dropoff, dropoff: r.dropoffLandmark, dense: true, showLabels: false),
         if (r.riderNote.isNotEmpty) ...[const SizedBox(height: RfSpace.xs), Text(r.riderNote, style: RfType.caption)],
+        if (r.pickupNote.isNotEmpty) ...[const SizedBox(height: RfSpace.xs), Text(t.pickupNoteLabel(r.pickupNote), style: RfType.caption)],
+        if (r.dropoffNote.isNotEmpty) ...[const SizedBox(height: RfSpace.xs), Text(t.dropoffNoteLabel(r.dropoffNote), style: RfType.caption)],
         const SizedBox(height: RfSpace.md),
         Row(children: [
           if (r.riderPriceMinor != null) ...[
@@ -1172,7 +1174,7 @@ class _BidSheetState extends ConsumerState<BidSheet> {
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   textDirection: TextDirection.ltr,
                   textAlign: TextAlign.center,
-                  style: RfType.display.copyWith(fontSize: 30, color: RfColors.gold),
+                  style: RfType.display.copyWith(fontSize: 24, color: RfColors.gold),
                   inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))],
                   decoration: const InputDecoration(
                     filled: false,

@@ -100,6 +100,6 @@ class _Kv extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
         Text(label, style: const TextStyle(color: Brand.muted, fontSize: 12)),
-        Ltr(value, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+        Ltr(value, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
       ]);
 }

@@ -119,7 +119,7 @@ class _Metric extends StatelessWidget {
   Widget build(BuildContext context) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(label, style: const TextStyle(color: Brand.muted, fontSize: 12)),
         const SizedBox(height: 4),
-        Ltr(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Brand.navy)),
+        Ltr(value, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Brand.navy)),
       ]);
 }
 

@@ -66,14 +66,14 @@ abstract final class RfType {
   static const family = 'Tajawal';
   static const _base = TextStyle(fontFamily: family, color: RfColors.text, height: 1.35, letterSpacing: 0);
 
-  static final display = _base.copyWith(fontSize: 25, fontWeight: FontWeight.w800, height: 1.15);
-  static final h1 = _base.copyWith(fontSize: 20, fontWeight: FontWeight.w800, height: 1.2);
-  static final h2 = _base.copyWith(fontSize: 17, fontWeight: FontWeight.w700, height: 1.25);
-  static final h3 = _base.copyWith(fontSize: 15, fontWeight: FontWeight.w700);
-  static final body = _base.copyWith(fontSize: 14, fontWeight: FontWeight.w400);
-  static final bodyStrong = _base.copyWith(fontSize: 14, fontWeight: FontWeight.w700);
+  static final display = _base.copyWith(fontSize: 22, fontWeight: FontWeight.w800, height: 1.15);
+  static final h1 = _base.copyWith(fontSize: 17, fontWeight: FontWeight.w800, height: 1.2);
+  static final h2 = _base.copyWith(fontSize: 15, fontWeight: FontWeight.w700, height: 1.25);
+  static final h3 = _base.copyWith(fontSize: 14, fontWeight: FontWeight.w700);
+  static final body = _base.copyWith(fontSize: 13, fontWeight: FontWeight.w400);
+  static final bodyStrong = _base.copyWith(fontSize: 13, fontWeight: FontWeight.w700);
   static final label = _base.copyWith(fontSize: 12, fontWeight: FontWeight.w500, color: RfColors.textMuted);
   static final caption = _base.copyWith(fontSize: 12, fontWeight: FontWeight.w500, color: RfColors.textMuted);
-  static final cta = _base.copyWith(fontSize: 15, fontWeight: FontWeight.w700, height: 1.1);
-  static final number = _base.copyWith(fontSize: 18, fontWeight: FontWeight.w800, height: 1.1);
+  static final cta = _base.copyWith(fontSize: 14, fontWeight: FontWeight.w700, height: 1.1);
+  static final number = _base.copyWith(fontSize: 16, fontWeight: FontWeight.w800, height: 1.1);
 }

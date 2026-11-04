@@ -48,10 +48,22 @@ class _TripScreenState extends ConsumerState<TripScreen> {
     final t = AppLocalizations.of(context);
     final api = ref.read(driverApiProvider);
     Json extra = {};
-    if (action == 'driver_cancel' || action == 'decline') {
-      final reason = action == 'decline' ? await _askReason(t.declineReason) : await _askCancelReason();
+    if (action == 'decline') {
+      final reason = await _askReason(t.declineReason);
       if (reason == null) return;
       extra = {'reason': reason};
+    }
+    if (action == 'driver_cancel') {
+      final reason = await _askCancelReason();
+      if (reason == null) return;
+      extra = {'reason': reason.text, 'reason_code': reason.code};
+    }
+    var attempt = action;
+    if (action == 'start' && ride.startCodeRequired) {
+      final code = await _askStartCode();
+      if (code == null) return;
+      extra = {'start_code': code};
+      attempt = 'start:$code'; // a refused code is remembered under its key, so a different code needs a new one
     }
     if (action == 'arrive') {
       // Arrival is evidence: the backend checks the geofence and GPS accuracy from these values.
@@ -65,7 +77,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
     if (!mounted) return;
     await _runner.run(context, () async {
       try {
-        await api.transition(ride, action, actionKey: _keyFor(action, ride.version), extra: extra);
+        await api.transition(ride, action, actionKey: _keyFor(attempt, ride.version), extra: extra);
       } on ApiException catch (e) {
         if (e.status == 409) _refresh(); // state moved on (other party / timer): show the current one
         rethrow;
@@ -106,7 +118,32 @@ class _TripScreenState extends ConsumerState<TripScreen> {
     if (!opened && mounted) showToast(context, t.mapsFailed, error: true);
   }
 
-  Future<String?> _askCancelReason() => showModalBottomSheet<String>(
+  Future<String?> _askStartCode() {
+    final c = TextEditingController();
+    final t = AppLocalizations.of(context);
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(t.startCodeTitle),
+        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(t.startCodeHint, style: RfType.caption),
+          TextField(key: const Key('startCodeInput'), controller: c, maxLength: 4, autofocus: true, keyboardType: TextInputType.number, textDirection: TextDirection.ltr, textAlign: TextAlign.center),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(t.cancel)),
+          TextButton(
+            key: const Key('confirmStartCode'),
+            onPressed: () {
+              if (c.text.trim().length == 4) Navigator.pop(ctx, c.text.trim());
+            },
+            child: Text(t.confirm),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<({String code, String text})?> _askCancelReason() => showModalBottomSheet<({String code, String text})>(
         context: context,
         isScrollControlled: true,
         backgroundColor: RfColors.surface,
@@ -205,7 +242,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
           RfCard(
             child: Column(children: [
               Text(t.waitTime, style: RfType.body.copyWith(color: RfColors.textMuted)),
-              _Ticker(builder: (now) => Ltr(_clock(now.difference(ride.arrivedAt ?? now)), style: RfType.display.copyWith(fontSize: 34, color: RfColors.gold))),
+              _Ticker(builder: (now) => Ltr(_clock(now.difference(ride.arrivedAt ?? now)), style: RfType.display.copyWith(fontSize: 26, color: RfColors.gold))),
             ]),
           ),
           ..._note(ride),
@@ -214,6 +251,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
       case 3:
         return [
           _Destination(caption: t.goToDestination, place: ride.dropoffLandmark, pickup: false),
+          if (ride.dropoffNote.isNotEmpty) ...[const SizedBox(height: RfSpace.sm), Banner2(key: const Key('dropoffNote'), text: t.dropoffNoteLabel(ride.dropoffNote), tone: Tone.info, icon: Icons.sticky_note_2_outlined)],
           const SizedBox(height: RfSpace.xs),
           Text(t.tripDistance(formatDistance(ride.distanceM)), style: RfType.body.copyWith(color: RfColors.textMuted)),
           ..._mapButton(ride.dropoff, t),
@@ -225,7 +263,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
           const SizedBox(height: RfSpace.xxl),
           Text(t.collectFrom(name), key: const Key('rideStatus'), textAlign: TextAlign.center, style: RfType.h2),
           const SizedBox(height: RfSpace.sm),
-          Center(child: MoneyText(fare, style: RfType.display.copyWith(fontSize: 42, color: RfColors.gold))),
+          Center(child: MoneyText(fare, style: RfType.display.copyWith(fontSize: 32, color: RfColors.gold))),
           const SizedBox(height: RfSpace.xl),
           _route(ride, t),
         ];
@@ -289,6 +327,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
 
   List<Widget> _note(Ride ride) => [
         if (ride.riderNote.isNotEmpty) ...[const SizedBox(height: RfSpace.sm), Banner2(text: ride.riderNote, tone: Tone.info, icon: Icons.sticky_note_2_outlined)],
+        if (ride.pickupNote.isNotEmpty) ...[const SizedBox(height: RfSpace.sm), Banner2(key: const Key('pickupNote'), text: AppLocalizations.of(context).pickupNoteLabel(ride.pickupNote), tone: Tone.info, icon: Icons.sticky_note_2_outlined)],
       ];
 
   List<Widget> _mapButton(LatLng? target, AppLocalizations t) => [
@@ -460,7 +499,7 @@ class _CancelSheetState extends State<_CancelSheet> {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
-    final reasons = {'rider': t.cancelRiderAsked, 'car': t.cancelCarProblem, 'pickup': t.cancelWrongPickup, 'other': t.cancelOther};
+    final reasons = {'rider_asked': t.cancelRiderAsked, 'car_problem': t.cancelCarProblem, 'wrong_pickup': t.cancelWrongPickup, 'other': t.cancelOther};
     final isOther = _selected == 'other';
     final reason = isOther ? _other.text.trim() : reasons[_selected] ?? '';
     return Padding(
@@ -500,7 +539,7 @@ class _CancelSheetState extends State<_CancelSheet> {
                 onChanged: (_) => setState(() {}),
               ),
             const SizedBox(height: RfSpace.xs),
-            RfButton(key: const Key('confirmCancel'), label: t.action_driver_cancel, kind: RfButtonKind.danger, onPressed: reason.isEmpty ? null : () => Navigator.pop(context, reason)),
+            RfButton(key: const Key('confirmCancel'), label: t.action_driver_cancel, kind: RfButtonKind.danger, onPressed: reason.isEmpty ? null : () => Navigator.pop(context, (code: _selected!, text: reason))),
             const SizedBox(height: RfSpace.xs),
             RfButton(label: t.keepRide, kind: RfButtonKind.ghost, onPressed: () => Navigator.pop(context)),
           ]),

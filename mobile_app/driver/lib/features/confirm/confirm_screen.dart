@@ -154,7 +154,7 @@ class _ConfirmRideScreenState extends ConsumerState<ConfirmRideScreen> {
                   const SizedBox(height: RfSpace.xl),
                   Text(t.confirmTitle, key: const Key('confirmTitle'), style: RfType.display.copyWith(color: RfColors.onInk)),
                   const SizedBox(height: RfSpace.sm),
-                  MoneyText(formatMoney(fare, ride.currency, units), style: RfType.display.copyWith(color: RfColors.gold, fontSize: 42)),
+                  MoneyText(formatMoney(fare, ride.currency, units), style: RfType.display.copyWith(color: RfColors.gold, fontSize: 32)),
                   Text('${t.agreedFare} · ${t.cashSuffix}', style: RfType.body.copyWith(color: RfColors.onInkMuted)),
                   if (rider != null) ...[
                     const SizedBox(height: RfSpace.lg),
@@ -187,6 +187,14 @@ class _ConfirmRideScreenState extends ConsumerState<ConfirmRideScreen> {
                   if (ride.riderNote.isNotEmpty) ...[
                     const SizedBox(height: RfSpace.sm),
                     Text(ride.riderNote, style: RfType.body.copyWith(color: RfColors.onInkMuted)),
+                  ],
+                  if (ride.pickupNote.isNotEmpty) ...[
+                    const SizedBox(height: RfSpace.sm),
+                    Text(t.pickupNoteLabel(ride.pickupNote), key: const Key('pickupNote'), style: RfType.body.copyWith(color: RfColors.onInkMuted)),
+                  ],
+                  if (ride.dropoffNote.isNotEmpty) ...[
+                    const SizedBox(height: RfSpace.sm),
+                    Text(t.dropoffNoteLabel(ride.dropoffNote), key: const Key('dropoffNote'), style: RfType.body.copyWith(color: RfColors.onInkMuted)),
                   ],
                   if (others > 0) ...[
                     const SizedBox(height: RfSpace.sm),

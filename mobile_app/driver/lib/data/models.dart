@@ -210,6 +210,8 @@ class Ride {
         pickupLandmark = _str(json['pickup_landmark']),
         dropoffLandmark = _str(json['dropoff_landmark']),
         riderNote = _str(json['rider_note']),
+        pickupNote = _str(json['pickup_note']),
+        dropoffNote = _str(json['dropoff_note']),
         currency = _str(json['currency']),
         estimateMin = _int(_map(json['estimate'])['min_minor']),
         estimateMax = _int(_map(json['estimate'])['max_minor']),
@@ -225,12 +227,13 @@ class Ride {
         selectedAt = _date(_map(json['timestamps'])['selected_at']),
         arrivedAt = _date(_map(json['timestamps'])['arrived_at']),
         noShow = json['no_show'] is Map ? _map(json['no_show']) : null,
+        startCodeRequired = json['start_code_required'] == true,
         completedAt = _date(_map(json['timestamps'])['completed_at']),
         cancellation = json['cancellation'] is Map ? _map(json['cancellation']) : null,
         cash = json['cash'] is Map ? _map(json['cash']) : null;
 
   final Json json;
-  final String id, status, viewerRole, pickupLandmark, dropoffLandmark, riderNote, currency;
+  final String id, status, viewerRole, pickupLandmark, dropoffLandmark, riderNote, pickupNote, dropoffNote, currency;
   final int version;
   final Set<String> allowedActions;
   final LatLng? pickup, dropoff;
@@ -239,6 +242,7 @@ class Ride {
   final Bid? myBid;
   final Party? rider;
   final Json? cancellation, cash, noShow;
+  final bool startCodeRequired;
 
   static const activeStatuses = {'match_pending', 'assigned', 'en_route', 'arrived', 'in_progress'};
   bool get isActiveForDriver => viewerRole == 'driver' && activeStatuses.contains(status);

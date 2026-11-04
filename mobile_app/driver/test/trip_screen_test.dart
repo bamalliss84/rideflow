@@ -321,11 +321,69 @@ void main() {
     await settle(tester);
     expect(cancels(), isEmpty); // "another reason" still needs words
 
-    await tester.tap(find.byKey(const Key('cancelReason_pickup')));
+    await tester.tap(find.byKey(const Key('cancelReason_wrong_pickup')));
     await settle(tester);
     await tester.tap(find.byKey(const Key('confirmCancel')));
     await settle(tester);
-    expect((cancels().single.body as Map)['reason'], 'نقطة الالتقاء غير صحيحة');
+    final sent = cancels().single.body as Map;
+    expect(sent['reason'], 'نقطة الالتقاء غير صحيحة');
+    expect(sent['reason_code'], 'wrong_pickup');
+  });
+
+  group('start code', () {
+    testWidgets('each trip stage shows the rider\'s description of that stop', (tester) async {
+      await pumpApp(tester, {'GET rides/r1': (_) => (200, {...ride('arrived', 6, ['start']), 'pickup_note': 'عند البوابة', 'dropoff_note': 'خلف المستشفى'})}, '/ride/r1');
+      expect(find.byKey(const Key('pickupNote')), findsOneWidget);
+      expect(find.byKey(const Key('dropoffNote')), findsNothing);
+    });
+
+    Map<String, dynamic> waitingWithCode() => {...ride('arrived', 6, ['start']), 'start_code_required': true};
+
+    testWidgets('a wrong code explains itself, and the right one starts with a new key', (tester) async {
+      var current = waitingWithCode();
+      final backend = await pumpApp(tester, {
+        'GET rides/r1': (_) => (200, current),
+        'POST rides/r1/start': (r) {
+          if ((r.body as Map)['start_code'] != '4821') return (422, {'code': 'start_code_invalid', 'detail': 'refused'});
+          current = ride('in_progress', 7, ['complete']);
+          return (200, current);
+        },
+      }, '/ride/r1');
+      Iterable<Seen> starts() => backend.seen.where((s) => s.path == 'rides/r1/start');
+
+      await tapKey(tester, 'action_start');
+      await tester.enterText(find.byKey(const Key('startCodeInput')), '1111');
+      await tester.tap(find.byKey(const Key('confirmStartCode')));
+      await settle(tester);
+      expect(find.text('الرمز غير صحيح. تأكد منه مع الراكب.'), findsOneWidget);
+
+      await tapKey(tester, 'action_start');
+      await tester.enterText(find.byKey(const Key('startCodeInput')), '4821');
+      await tester.tap(find.byKey(const Key('confirmStartCode')));
+      await settle(tester);
+      expect(starts(), hasLength(2));
+      expect(starts().first.headers['Idempotency-Key'], isNot(starts().last.headers['Idempotency-Key']));
+      expect(find.byKey(const Key('action_complete')), findsOneWidget);
+    });
+
+    testWidgets('an incomplete code is not sent', (tester) async {
+      final backend = await pumpApp(tester, {'GET rides/r1': (_) => (200, waitingWithCode())}, '/ride/r1');
+      await tapKey(tester, 'action_start');
+      await tester.enterText(find.byKey(const Key('startCodeInput')), '12');
+      await tester.tap(find.byKey(const Key('confirmStartCode')));
+      await settle(tester);
+      expect(backend.seen.where((s) => s.path == 'rides/r1/start'), isEmpty);
+    });
+
+    testWidgets('a ride without a code starts straight away', (tester) async {
+      final backend = await pumpApp(tester, {
+        'GET rides/r1': (_) => (200, ride('arrived', 6, ['start'])),
+        'POST rides/r1/start': (_) => (200, ride('in_progress', 7, ['complete'])),
+      }, '/ride/r1');
+      await tapKey(tester, 'action_start');
+      expect(find.byKey(const Key('startCodeInput')), findsNothing);
+      expect((backend.seen.singleWhere((s) => s.path == 'rides/r1/start').body as Map).containsKey('start_code'), isFalse);
+    });
   });
 
   testWidgets('cancel: another reason sends what the driver wrote, and going back sends nothing', (tester) async {

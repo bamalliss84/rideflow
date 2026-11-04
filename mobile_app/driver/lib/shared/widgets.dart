@@ -18,6 +18,8 @@ String errorMessage(BuildContext context, Object error) {
     'service_unavailable' => t.errorUnavailable,
     'invalid' => t.errorValidation,
     'otp_invalid' || 'otp_expired' || 'otp_locked' => t.invalidCode,
+    'start_code_invalid' => t.startCodeWrong,
+    'start_code_locked' => t.startCodeLocked,
     _ when error.status == 403 => t.errorForbidden,
     _ when error.status == 409 => t.errorConflict,
     _ when error.status >= 500 => t.errorServer,

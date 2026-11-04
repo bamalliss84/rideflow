@@ -52,6 +52,15 @@ Future<(ProviderContainer, FakeBackend)> setup(FakeLocation location, {int locat
 }
 
 void main() {
+  test('a position older than two minutes does not count as the current one', () {
+    final now = DateTime(2026, 11, 4, 2, 0);
+    Fix at(Duration age) => Fix(lat: 14.5, lng: 49.1, accuracy: 8, deviceTs: now.subtract(age));
+    expect(freshFix(at(const Duration(seconds: 119)), now: now), isNotNull);
+    expect(freshFix(at(const Duration(minutes: 2)), now: now), isNull);
+    expect(freshFix(at(const Duration(minutes: 9)), now: now), isNull);
+    expect(freshFix(null, now: now), isNull);
+  });
+
   final fix = Fix(lat: 14.54, lng: 49.12, accuracy: 6, deviceTs: DateTime.utc(2026, 10, 28, 10));
 
   test('no position -> stays offline and never calls availability (no "ready" without a location)', () async {

@@ -45,7 +45,7 @@ class RfButton extends StatelessWidget {
         SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: fg))
       else ...[
         if (icon != null) ...[Icon(icon, size: 22, color: fg), const SizedBox(width: 10)],
-        Flexible(child: Text(label, style: RfType.cta.copyWith(color: fg, fontSize: large ? 16 : 15), overflow: TextOverflow.ellipsis)),
+        Flexible(child: Text(label, style: RfType.cta.copyWith(color: fg, fontSize: large ? 14 : 13), overflow: TextOverflow.ellipsis)),
       ],
     ]);
     final button = Material(
@@ -58,7 +58,7 @@ class RfButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(RfRadius.md),
         onTap: disabled ? null : onPressed,
         child: Container(
-          height: large ? 54 : 48,
+          height: large ? 50 : 44,
           padding: const EdgeInsets.symmetric(horizontal: 20),
           alignment: Alignment.center,
           child: child,
@@ -218,9 +218,9 @@ class RatingBadge extends StatelessWidget {
       child: isNew
           ? Text(newLabel, style: RfType.caption.copyWith(color: RfColors.teal, fontWeight: FontWeight.w800, fontSize: large ? 14 : 13))
           : Row(mainAxisSize: MainAxisSize.min, children: [
-              Icon(Icons.star_rounded, size: large ? 18 : 15, color: RfColors.gold),
+              Icon(Icons.star_rounded, size: large ? 16 : 14, color: RfColors.gold),
               const SizedBox(width: 4),
-              Ltr(score!.toStringAsFixed(1), style: RfType.bodyStrong.copyWith(fontSize: large ? 15 : 14)),
+              Ltr(score!.toStringAsFixed(1), style: RfType.bodyStrong.copyWith(fontSize: large ? 14 : 13)),
               const SizedBox(width: 4),
               Ltr('($count)', style: RfType.caption),
             ]),
@@ -260,7 +260,7 @@ class MetricTile extends StatelessWidget {
           Flexible(child: Text(label, style: RfType.caption.copyWith(color: onInk ? RfColors.onInkMuted : RfColors.textMuted))),
         ]),
         const SizedBox(height: 4),
-        MoneyText(value, style: RfType.number.copyWith(fontSize: 17, color: onInk ? RfColors.onInk : RfColors.text)),
+        MoneyText(value, style: RfType.number.copyWith(fontSize: 15, color: onInk ? RfColors.onInk : RfColors.text)),
       ]);
 }
 
@@ -462,7 +462,7 @@ class _CountdownRingState extends State<CountdownRing> {
       child: Stack(alignment: Alignment.center, children: [
         CustomPaint(size: Size.square(widget.size), painter: _RingPainter(frac, urgent ? RfColors.coral : RfColors.amber)),
         Column(mainAxisSize: MainAxisSize.min, children: [
-          Ltr('${r.inSeconds}', style: RfType.display.copyWith(color: RfColors.onInk, fontSize: 40)),
+          Ltr('${r.inSeconds}', style: RfType.display.copyWith(color: RfColors.onInk, fontSize: 30)),
           Text(widget.unitLabel, style: RfType.caption.copyWith(color: RfColors.onInkMuted)),
         ]),
       ]),
