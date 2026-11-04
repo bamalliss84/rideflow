@@ -1,0 +1,294 @@
+{
+  "@@locale": "ar",
+  "appTitle": "RideFlow",
+  "retry": "إعادة المحاولة",
+  "cancel": "إلغاء",
+  "save": "حفظ",
+  "back": "رجوع",
+  "errorTitle": "تعذّر إكمال الطلب",
+  "errorNetwork": "لا يوجد اتصال بالخادم. تحقق من الإنترنت.",
+  "errorServer": "حدث خطأ في الخادم. حاول لاحقًا.",
+  "errorUnavailable": "الخدمة غير متاحة مؤقتًا. حاول بعد لحظات.",
+  "errorForbidden": "لا تملك صلاحية هذا الإجراء.",
+  "errorThrottled": "محاولات كثيرة. انتظر قليلًا ثم حاول.",
+  "errorConflict": "تغيّرت الحالة. حدّث الصفحة وحاول مجددًا.",
+  "errorValidation": "تحقق من البيانات المدخلة.",
+  "errorSessionExpired": "انتهت الجلسة. سجّل الدخول مجددًا.",
+  "errorOutsideArea": "نقطة الانطلاق خارج نطاق الخدمة. اختر نقطة أخرى.",
+  "errorActiveRide": "لديك رحلة نشطة بالفعل.",
+  "errorPriceLow": "السعر أقل من المسموح.",
+  "offlineBanner": "غير متصل بالخادم، جارٍ إعادة الاتصال",
+  "signInHeadline": "وين ما تروح، نوصلك",
+  "signInSubtitle": "أدخل رقم جوالك وسنرسل لك رمز تحقق.",
+  "phoneLabel": "رقم الجوال",
+  "sendCode": "إرسال الرمز",
+  "codeTitle": "أدخل الرمز",
+  "codeSentTo": "أرسلناه إلى {phone}",
+  "@codeSentTo": {
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "codeLabel": "رمز التحقق",
+  "firstNameOnce": "اسمك (لأول مرة فقط)",
+  "confirm": "تأكيد",
+  "changeNumber": "تغيير الرقم",
+  "invalidPhone": "أدخل رقمًا صحيحًا يبدأ بـ +",
+  "invalidCode": "رمز غير صحيح أو منتهٍ.",
+  "navHome": "الرئيسية",
+  "navRides": "رحلاتي",
+  "navAccount": "حسابي",
+  "whereTo": "إلى أين تريد الذهاب؟",
+  "home_": "البيت",
+  "work": "العمل",
+  "add": "إضافة",
+  "recent": "وجهات سابقة",
+  "yourRide": "رحلتك جارية",
+  "open": "فتح",
+  "searchDestination": "ابحث عن وجهتك",
+  "searchPickup": "ابحث عن نقطة الانطلاق",
+  "searchPlaceHint": "ابحث عن حي أو معلم",
+  "destinationLabel": "الوجهة",
+  "pickupLabel": "نقطة الانطلاق",
+  "moveMapToChoose": "حرّك الخريطة أو ابحث",
+  "moveMapHint": "حرّك الخريطة، ويتحدث الاسم تلقائيًا",
+  "resolvingPlace": "نحدد اسم المكان…",
+  "pointOnMap": "نقطة على الخريطة",
+  "locating": "نحدد موقعك…",
+  "distanceAway": "تبعد عنك {distance} تقريبًا",
+  "@distanceAway": {
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "tooCloseToPickup": "الوجهة قريبة جدًا من نقطة الانطلاق",
+  "confirmDestination": "تأكيد الوجهة",
+  "confirmPickup": "تأكيد نقطة الانطلاق",
+  "searchFailed": "تعذر البحث الآن. حرّك الخريطة لتحديد المكان.",
+  "searchEmpty": "لم نجد هذا المكان. جرّب اسمًا آخر أو اختر من الخريطة.",
+  "searchOff": "البحث غير متاح الآن. اختر المكان من الخريطة.",
+  "from": "من",
+  "to": "إلى",
+  "myLocation": "موقعي الحالي",
+  "chooseOnMap": "اختر من الخريطة",
+  "pickupNoteHint": "وضّح مكانك للسائق (اختياري)",
+  "dropoffNoteHint": "صف الوجهة (اختياري)",
+  "startCodeTitle": "رمز بدء الرحلة",
+  "on_": "مفعّل",
+  "off_": "غير مفعّل",
+  "showPrice": "عرض السعر",
+  "pickPoint": "حدد النقطة",
+  "placeName": "اسم المكان أو أقرب معلم",
+  "usePoint": "اعتماد هذه النقطة",
+  "price": "السعر",
+  "distance": "المسافة",
+  "payment": "الدفع",
+  "cash": "نقدًا",
+  "estimate": "السعر التقديري",
+  "estimateNote": "يتحدد السعر النهائي من عروض السائقين.",
+  "addPrice": "أضف سعرك (اختياري)",
+  "yourPrice": "سعرك",
+  "requestOffers": "طلب عروض السائقين",
+  "howMuch": "كم تحب تدفع؟",
+  "minPrice": "أقل سعر {amount}. هذا عرضك للسائقين وليس سعرًا مضمونًا حتى يقبله سائق.",
+  "@minPrice": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "usePrice": "اعتماد {amount}",
+  "@usePrice": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "noPrice": "بدون سعر",
+  "raisePrice": "ارفع السعر",
+  "searching": "نبحث عن سائقين",
+  "searchingNote": "أرسلنا طلبك للسائقين القريبين، وستظهر عروضهم هنا.",
+  "currentPrice": "سعرك الحالي",
+  "offersTitle": "عروض السائقين ({count})",
+  "@offersTitle": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "cheapest": "الأقل سعرًا",
+  "nearest": "الأقرب",
+  "topRated": "الأعلى تقييمًا",
+  "chooseOffer": "اختر عرضًا",
+  "selectOffer": "اختيار عرض {name} · {amount}",
+  "@selectOffer": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "offerExpired": "انتهت مهلة هذا العرض.",
+  "minutes": "{n} د",
+  "@minutes": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "rideCount": "{n} رحلة",
+  "@rideCount": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "newDriver": "جديد",
+  "cancelRequest": "إلغاء الطلب",
+  "tripOptions": "الخيارات",
+  "confirming": "جاري تأكيد السائق",
+  "waitingFor": "ننتظر تأكيد {name}",
+  "@waitingFor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "notifyYou": "سنشعرك فور رده",
+  "seconds": "ثانية",
+  "stepSent": "أرسلنا اختيارك",
+  "stepReview": "السائق يراجع الطلب",
+  "stepConfirm": "تأكيد الرحلة",
+  "tripConfirmed": "تم تأكيد الرحلة",
+  "followDriver": "تابع السائق على الخريطة",
+  "etaIn": "الوصول خلال",
+  "driverOnWay": "السائق في الطريق",
+  "giveCode": "أعطه للسائق عند الركوب",
+  "share": "مشاركة الرحلة",
+  "stopShare": "إيقاف المشاركة",
+  "linkCopied": "نسخنا رابط الرحلة. أرسله لمن تريد.",
+  "shareNotReady": "صفحة مشاركة الرحلة غير جاهزة بعد.",
+  "emergency": "الطوارئ",
+  "emergencyOff": "لم يحدد المشغّل رقم الطوارئ بعد.",
+  "emergencyConfirm": "نبلغ المشغّل ونفتح الاتصال بالطوارئ. متابعة؟",
+  "call": "اتصال",
+  "callFailed": "تعذّر فتح الاتصال على هذا الجوال.",
+  "driverArrived": "وصل السائق",
+  "goToCar": "توجّه إلى السيارة",
+  "goToCarCode": "توجّه إلى السيارة وأعطه الرمز",
+  "onWayTo": "في الطريق إلى",
+  "tripTime": "مدة الرحلة",
+  "fare": "الأجرة",
+  "fareCash": "الأجرة نقدًا للسائق",
+  "reachedDestination": "وصلت إلى وجهتك",
+  "paid": "دفعت الأجرة",
+  "paidDone": "أكدت الدفع",
+  "rateTrip": "قيّم الرحلة",
+  "howWasIt": "كيف كانت رحلتك؟",
+  "extraNote": "ملاحظة إضافية (اختياري)",
+  "sendRating": "إرسال التقييم",
+  "later": "لاحقًا",
+  "rated": "شكرًا، تم التقييم.",
+  "tag_punctual": "في الموعد",
+  "tag_polite": "تعامل ممتاز",
+  "tag_clean_vehicle": "سيارة نظيفة",
+  "tag_safe_driving": "قيادة آمنة",
+  "tag_late": "تأخر",
+  "tag_rude": "تعامل سيئ",
+  "tag_unsafe": "قيادة غير آمنة",
+  "tag_price_dispute": "خلاف على السعر",
+  "receipt": "إيصال الرحلة",
+  "rideNumber": "رقم الرحلة",
+  "dateTime": "التاريخ والوقت",
+  "driver": "السائق",
+  "shareReceipt": "نسخ الإيصال",
+  "receiptCopied": "نسخنا الإيصال.",
+  "reportProblem": "الإبلاغ عن مشكلة",
+  "problemHint": "اكتب ما حدث",
+  "send": "إرسال",
+  "reportSent": "وصل بلاغك إلى المشغّل.",
+  "repeatRide": "أعد هذه الرحلة",
+  "rides": "رحلاتي",
+  "past": "السابقة",
+  "current": "الحالية",
+  "noRides": "لا توجد رحلات هنا بعد.",
+  "rateYourTrip": "قيّم رحلتك",
+  "noFare": "بدون أجرة",
+  "status_completed": "اكتملت",
+  "status_cancelled": "ملغاة",
+  "status_no_show": "لم تحضر",
+  "status_disputed": "قيد المراجعة",
+  "status_active": "جارية",
+  "noOffers": "لم تصلنا عروض هذه المرة",
+  "noOffersNote": "قد يساعدك رفع السعر قليلًا أو المحاولة بعد دقائق.",
+  "wasPrice": "كان سعرك {amount}",
+  "@wasPrice": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "requestAgain": "أعد الطلب",
+  "requestHigher": "أعد الطلب بسعر أعلى",
+  "goHome": "الرئيسية",
+  "rideEnded": "انتهى هذا الطلب",
+  "cancelTitle": "لماذا تريد الإلغاء؟",
+  "cancelFreeUntil": "الإلغاء مجاني حتى {time}.",
+  "@cancelFreeUntil": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "cancelLate": "انتهى وقت الإلغاء المجاني، وسيُسجَّل هذا الإلغاء.",
+  "reason_changed_mind": "غيّرت رأيي",
+  "reason_driver_too_far": "السائق بعيد",
+  "reason_driver_asked": "السائق طلب الإلغاء",
+  "reason_wait_too_long": "الانتظار طويل",
+  "reason_other": "سبب آخر",
+  "reasonHint": "اكتب السبب",
+  "cancelRide": "إلغاء الرحلة",
+  "account": "حسابي",
+  "edit": "تعديل",
+  "yourName": "اسمك",
+  "yourRating": "تقييمك من السائقين",
+  "myPlaces": "أماكني",
+  "alwaysCode": "رمز بدء الرحلة دائمًا",
+  "language": "اللغة",
+  "languageName": "العربية",
+  "fontKind": "نوع الخط",
+  "appearance": "المظهر",
+  "appearanceDay": "نهاري",
+  "appearanceNight": "ليلي",
+  "destinationModel": "شكل شاشة الوجهة",
+  "destinationModel1": "النموذج 1: الخريطة كاملة",
+  "destinationModel3": "النموذج 3: لوحة سفلية",
+  "fontUnavailable": "خط Cairo غير مضاف بعد.",
+  "terms": "الشروط والخصوصية",
+  "help": "المساعدة",
+  "notReady": "ستتوفر قريبًا.",
+  "logout": "تسجيل الخروج",
+  "deleteAccount": "حذف الحساب",
+  "deleteTitle": "حذف الحساب نهائيًا",
+  "deleteNote": "نحذف اسمك ورقمك وأماكنك. تبقى رحلاتك السابقة في سجلات المشغّل بلا اسم أو رقم.",
+  "sendDeleteCode": "أرسل رمز التأكيد",
+  "confirmDelete": "تأكيد الحذف",
+  "placesEmpty": "لم تحفظ أي مكان بعد.",
+  "placeLabel": "اسم يخصك (مثل: بيت أهلي)",
+  "otherPlace": "مكان آخر"
+}
