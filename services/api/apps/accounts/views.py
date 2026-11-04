@@ -1,20 +1,22 @@
+import uuid
 from datetime import timedelta
 
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiParameter, extend_schema
-from rest_framework import status
+from rest_framework import serializers, status
 from rest_framework.exceptions import PermissionDenied, Throttled, ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.core import audit
-from apps.core.context import tenant_context
-from apps.core.permissions import STAFF_ROLES, permissions_for_roles
+from apps.core.context import system_context, tenant_context
+from apps.core.permissions import STAFF_ROLES, IsRider, permissions_for_roles
 from apps.core.throttling import IPScopedThrottle, PhoneThrottle
 from apps.tenancy.models import AppType, MembershipStatus, Role, TenantMembership
 
@@ -405,6 +407,63 @@ class MeView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(self._payload(request))
+
+
+class AccountDeleteSerializer(serializers.Serializer):
+    code = serializers.CharField(max_length=10)
+
+
+class AccountDeleteView(APIView):
+    """A rider deletes their account with a fresh OTP. Finished rides stay for the operator's records, under no
+    name and no phone number; anything still active blocks it. Other roles go through the operator."""
+
+    permission_classes = [IsRider]
+
+    @extend_schema(request=AccountDeleteSerializer, responses={204: None}, tags=["auth"])
+    def post(self, request):
+        from apps.geo.models import SavedPlace
+        from apps.notifications.models import DeviceToken
+        from apps.rides.models import RIDER_ACTIVE_STATUSES, Ride
+
+        serializer = AccountDeleteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = request.user
+        tenant = request.tenant
+        if set(request.tenant_roles) != {Role.RIDER}:
+            return Response({"code": "account_has_other_roles", "detail": "Contact your operator."}, status=409)
+        with transaction.atomic():
+            if Ride.objects.filter(rider=user, status__in=RIDER_ACTIVE_STATUSES).exists():
+                return Response({"code": "active_ride_exists", "detail": "Finish or cancel your ride first."}, status=409)
+            challenge = (
+                PhoneOTP.objects.select_for_update()
+                .filter(phone=user.phone, consumed_at__isnull=True, expires_at__gt=timezone.now())
+                .order_by("-created_at")
+                .first()
+            )
+            if challenge is None:
+                return Response({"code": "otp_expired", "detail": "Request a new code first."}, status=400)
+            if challenge.attempts >= settings.OTP_MAX_ATTEMPTS:
+                raise Throttled(detail="Too many attempts; request a new code.")
+            if challenge.code_hash != otp.hash_code(user.phone, serializer.validated_data["code"]):
+                challenge.attempts += 1
+                challenge.save(update_fields=["attempts", "updated_at"])
+                # Returning (not raising) commits the attempt counter.
+                return Response({"code": "otp_invalid", "detail": "Incorrect code."}, status=400)
+            challenge.consumed_at = timezone.now()
+            challenge.save(update_fields=["consumed_at", "updated_at"])
+
+            SavedPlace.objects.filter(user=user).delete()
+            DeviceToken.objects.filter(user=user).delete()
+            TenantMembership.objects.filter(user=user).delete()
+            audit.record("account.deleted", request=request, actor=user, target=user)
+            with system_context():
+                elsewhere = TenantMembership.all_tenants.filter(user=user).exclude(tenant=tenant).exists()
+            if not elsewhere:
+                # Global identity (D022): only erased once no other operator knows this person.
+                User.objects.filter(pk=user.pk).update(full_name="", phone=f"del{uuid.uuid4().hex[:17]}", is_active=False)
+                for token in OutstandingToken.objects.filter(user=user):
+                    BlacklistedToken.objects.get_or_create(token=token)
+        return Response(status=204)
 
 
 class RecoveryCodesView(APIView):

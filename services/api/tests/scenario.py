@@ -9,6 +9,7 @@ from django.utils import timezone
 from apps.core.context import tenant_context
 from apps.core.models import AuditEvent
 from apps.drivers.models import DriverDocument, Vehicle
+from apps.geo.models import SavedPlace
 from apps.notifications.models import Notification
 from apps.rides.models import Bid, Ride, RideAmendment
 from apps.subscriptions.models import DepositClaim, DriverSubscription, SubscriptionLedgerEntry
@@ -78,6 +79,7 @@ def populate(t):
             ride=Ride.objects.get(pk=ride["id"]),
             bid=Bid.objects.get(pk=bid["id"]),
             amendment=RideAmendment.objects.get(pk=amendment["id"]),
+            saved_place=SavedPlace.objects.create(user=rider, label="Home", landmark="Near the mosque", point=t.city.center),
             driver=driver,
             vehicle=Vehicle.objects.filter(driver=driver).first(),
             document=DriverDocument.objects.filter(driver=driver).first(),

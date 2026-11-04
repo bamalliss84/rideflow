@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.gis.geos import Point
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
@@ -5,19 +6,24 @@ from django_filters import rest_framework as filters
 from drf_spectacular.utils import extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import NotFound, PermissionDenied
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.core.context import tenant_context
 from apps.core.filters import TenantFilterSet
 from apps.core.idempotency import idempotent
 from apps.core.permissions import IsDriver, IsRiderOrDriver, TenantPermission, request_roles
+from apps.core.throttling import IPScopedThrottle
 from apps.core.views import schema_safe
 from apps.drivers.services import get_driver_for_user
+from apps.tenancy.models import Tenant
+from apps.tenancy.policy import current_policy
 
 from . import services
 from . import state_machine as sm
-from .models import LocationEvidence, Ride, RideAmendment, RideEvent
+from .models import LocationEvidence, Ride, RideAmendment, RideEvent, TripShare
 from .serializers import (
     AdminRideSerializer,
     AmendmentCreateSerializer,
@@ -29,14 +35,22 @@ from .serializers import (
     CancelSerializer,
     ContactAttemptSerializer,
     DeclineSerializer,
+    DriverPositionSerializer,
+    EmergencyResponseSerializer,
+    EmergencySerializer,
     EventsQuerySerializer,
     HiddenOffersSerializer,
     OptionalVersionSerializer,
+    PublicTripSerializer,
+    RaisePriceSerializer,
     RideCreateSerializer,
     RideEventSerializer,
     RideSerializer,
     SelectBidSerializer,
+    StartSerializer,
+    TripShareSerializer,
     VersionSerializer,
+    public_trip_data,
 )
 
 
@@ -159,8 +173,56 @@ class RideViewSet(viewsets.GenericViewSet):
         role = sm.RIDER if ride.rider_id == request.user.pk else sm.DRIVER
         if role == sm.DRIVER:
             self._driver()
-        services.cancel_ride(pk, request.user, role, data["expected_version"], data["reason"], request=request)
+        services.cancel_ride(pk, request.user, role, data["expected_version"], data["reason"], data["reason_code"], request=request)
         return self._snapshot(pk)
+
+    @extend_schema(request=RaisePriceSerializer, responses=RideSerializer)
+    @action(detail=True, methods=["post"], url_path="raise-price")
+    @idempotent("ride.raise_price")
+    def raise_price(self, request, pk=None):
+        self._require_role("rider")
+        data = _valid(RaisePriceSerializer, request)
+        services.raise_price(pk, request.user, data["expected_version"], data["amount_minor"], request=request)
+        return self._snapshot(pk)
+
+    @extend_schema(responses=DriverPositionSerializer)
+    @action(detail=True, methods=["get"], url_path="driver-location")
+    def driver_location(self, request, pk=None):
+        ride = self._ride(pk)
+        if ride.rider_id != request.user.pk:
+            raise PermissionDenied("Only the rider of this ride can follow its driver.")
+        position = services.driver_position(ride, current_policy())
+        if position is None:
+            raise NotFound("No driver position is available for this ride.", code="driver_location_unavailable")
+        return Response(position)
+
+    @extend_schema(request=None, responses={201: TripShareSerializer})
+    @action(detail=True, methods=["post"])
+    @idempotent("ride.share")
+    def share(self, request, pk=None):
+        self._require_role("rider")
+        token = services.share_token(services.share_trip(pk, request.user))
+        base = settings.TRIP_SHARE_BASE_URL.rstrip("/")
+        return Response({"token": token, "url": f"{base}/{token}" if base else None}, status=status.HTTP_201_CREATED)
+
+    @extend_schema(responses={204: None})
+    @share.mapping.delete
+    def stop_sharing(self, request, pk=None):
+        self._require_role("rider")
+        services.stop_sharing(pk, request.user)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @extend_schema(request=EmergencySerializer, responses=EmergencyResponseSerializer)
+    @action(detail=True, methods=["post"])
+    @idempotent("ride.emergency")
+    def emergency(self, request, pk=None):
+        data = _valid(EmergencySerializer, request)
+        ride = self._ride(pk)
+        role = sm.RIDER if ride.rider_id == request.user.pk else sm.DRIVER
+        if role == sm.DRIVER:
+            self._driver()
+        services.record_emergency(pk, request.user, role, data["location"], request=request)
+        return Response({"recorded": True, "emergency_phone": current_policy()["safety.emergency_phone"] or None})
 
     # --- driver
 
@@ -227,12 +289,14 @@ class RideViewSet(viewsets.GenericViewSet):
         event = services.record_contact_attempt(pk, self._driver(), data["method"])
         return Response(RideEventSerializer(event).data, status=status.HTTP_201_CREATED)
 
-    @extend_schema(request=VersionSerializer, responses=RideSerializer)
+    @extend_schema(request=StartSerializer, responses=RideSerializer)
     @action(detail=True, methods=["post"])
     @idempotent("ride.start")
     def start(self, request, pk=None):
-        data = _valid(VersionSerializer, request)
-        services.start_trip(pk, self._driver(), data["expected_version"])
+        data = _valid(StartSerializer, request)
+        _, problem = services.start_trip(pk, self._driver(), data["expected_version"], data["start_code"])
+        if problem:
+            return Response({"code": problem, "detail": "The start code was refused."}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
         return self._snapshot(pk)
 
     @extend_schema(request=VersionSerializer, responses=RideSerializer)
@@ -286,6 +350,29 @@ class RideViewSet(viewsets.GenericViewSet):
 
 
 @extend_schema(tags=["driver"])
+class PublicTripView(APIView):
+    """What a shared link shows, with no sign-in: never a phone number, and nothing once the trip ends."""
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    throttle_classes = [IPScopedThrottle]
+    throttle_scope = "public_trip"
+
+    @extend_schema(responses=PublicTripSerializer, tags=["public"])
+    def get(self, request, token):
+        ids = services.read_share_token(token)
+        tenant = Tenant.objects.filter(pk=ids[0]).first() if ids else None
+        if tenant is None:
+            raise NotFound()
+        with tenant_context(tenant):
+            share = TripShare.objects.select_related("ride__driver__user").filter(pk=ids[1], revoked_at__isnull=True).first()
+            if share is None:
+                raise NotFound()
+            response = Response(public_trip_data(share.ride, services.driver_position(share.ride, current_policy())))
+        response["Cache-Control"] = "no-store"
+        return response
+
+
 class DriverOffersView(APIView):
     permission_classes = [IsDriver]
 

@@ -3604,6 +3604,62 @@ paths:
               schema:
                 $ref: '#/components/schemas/Me'
           description: ''
+  /api/v1/me/delete-account:
+    post:
+      operationId: me_delete_account_create
+      description: |-
+        A rider deletes their account with a fresh OTP. Finished rides stay for the operator's records, under no
+        name and no phone number; anything still active blocks it. Other roles go through the operator.
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountDeleteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AccountDeleteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AccountDeleteRequest'
+        required: true
+      security:
+      - BearerJWT: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/me/devices:
+    post:
+      operationId: me_devices_create
+      tags:
+      - me
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceTokenRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DeviceTokenRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeviceTokenRequest'
+        required: true
+      security:
+      - BearerJWT: []
+      responses:
+        '204':
+          description: No response body
+    delete:
+      operationId: me_devices_destroy
+      tags:
+      - me
+      security:
+      - BearerJWT: []
+      responses:
+        '204':
+          description: No response body
   /api/v1/me/disputes:
     get:
       operationId: me_disputes_list
@@ -3691,6 +3747,170 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DisputeNote'
+          description: ''
+  /api/v1/me/places:
+    get:
+      operationId: me_places_list
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      tags:
+      - rider
+      security:
+      - BearerJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SavedPlace'
+          description: ''
+    post:
+      operationId: me_places_create
+      tags:
+      - rider
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SavedPlaceRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SavedPlaceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SavedPlaceRequest'
+        required: true
+      security:
+      - BearerJWT: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedPlace'
+          description: ''
+  /api/v1/me/places/{id}:
+    get:
+      operationId: me_places_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^[0-9a-f-]{36}$
+        required: true
+      tags:
+      - rider
+      security:
+      - BearerJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedPlace'
+          description: ''
+    put:
+      operationId: me_places_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^[0-9a-f-]{36}$
+        required: true
+      tags:
+      - rider
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SavedPlaceRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SavedPlaceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SavedPlaceRequest'
+        required: true
+      security:
+      - BearerJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedPlace'
+          description: ''
+    patch:
+      operationId: me_places_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^[0-9a-f-]{36}$
+        required: true
+      tags:
+      - rider
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSavedPlaceRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedSavedPlaceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSavedPlaceRequest'
+      security:
+      - BearerJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedPlace'
+          description: ''
+    delete:
+      operationId: me_places_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^[0-9a-f-]{36}$
+        required: true
+      tags:
+      - rider
+      security:
+      - BearerJWT: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/me/recent-places:
+    get:
+      operationId: me_recent_places_list
+      tags:
+      - rider
+      security:
+      - BearerJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RecentPlace'
           description: ''
   /api/v1/me/trust:
     get:
@@ -4338,6 +4558,28 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Tenant'
+          description: ''
+  /api/v1/public/trips/{token}:
+    get:
+      operationId: public_trips_retrieve
+      description: 'What a shared link shows, with no sign-in: never a phone number,
+        and nothing once the trip ends.'
+      parameters:
+      - in: path
+        name: token
+        schema:
+          type: string
+        required: true
+      tags:
+      - public
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicTrip'
           description: ''
   /api/v1/rides:
     get:
@@ -5024,6 +5266,65 @@ paths:
               schema:
                 $ref: '#/components/schemas/Ride'
           description: ''
+  /api/v1/rides/{id}/driver-location:
+    get:
+      operationId: rides_driver_location_retrieve
+      description: |-
+        Rider and driver ride API. Every mutation requires `Idempotency-Key`; lifecycle changes also require
+        `expected_version` (optimistic concurrency, 409 on mismatch).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^[0-9a-f-]{36}$
+        required: true
+      tags:
+      - rides
+      security:
+      - BearerJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DriverPosition'
+          description: ''
+  /api/v1/rides/{id}/emergency:
+    post:
+      operationId: rides_emergency_create
+      description: |-
+        Rider and driver ride API. Every mutation requires `Idempotency-Key`; lifecycle changes also require
+        `expected_version` (optimistic concurrency, 409 on mismatch).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^[0-9a-f-]{36}$
+        required: true
+      tags:
+      - rides
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmergencyRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EmergencyRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EmergencyRequest'
+      security:
+      - BearerJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmergencyResponse'
+          description: ''
   /api/v1/rides/{id}/en-route:
     post:
       operationId: rides_en_route_create
@@ -5176,6 +5477,42 @@ paths:
               schema:
                 $ref: '#/components/schemas/Ride'
           description: ''
+  /api/v1/rides/{id}/raise-price:
+    post:
+      operationId: rides_raise_price_create
+      description: |-
+        Rider and driver ride API. Every mutation requires `Idempotency-Key`; lifecycle changes also require
+        `expected_version` (optimistic concurrency, 409 on mismatch).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^[0-9a-f-]{36}$
+        required: true
+      tags:
+      - rides
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RaisePriceRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RaisePriceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RaisePriceRequest'
+        required: true
+      security:
+      - BearerJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ride'
+          description: ''
   /api/v1/rides/{id}/select:
     post:
       operationId: rides_select_create
@@ -5212,6 +5549,49 @@ paths:
               schema:
                 $ref: '#/components/schemas/Ride'
           description: ''
+  /api/v1/rides/{id}/share:
+    post:
+      operationId: rides_share_create
+      description: |-
+        Rider and driver ride API. Every mutation requires `Idempotency-Key`; lifecycle changes also require
+        `expected_version` (optimistic concurrency, 409 on mismatch).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^[0-9a-f-]{36}$
+        required: true
+      tags:
+      - rides
+      security:
+      - BearerJWT: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TripShare'
+          description: ''
+    delete:
+      operationId: rides_share_destroy
+      description: |-
+        Rider and driver ride API. Every mutation requires `Idempotency-Key`; lifecycle changes also require
+        `expected_version` (optimistic concurrency, 409 on mismatch).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^[0-9a-f-]{36}$
+        required: true
+      tags:
+      - rides
+      security:
+      - BearerJWT: []
+      responses:
+        '204':
+          description: No response body
   /api/v1/rides/{id}/start:
     post:
       operationId: rides_start_create
@@ -5231,13 +5611,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/VersionRequest'
+              $ref: '#/components/schemas/StartRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/VersionRequest'
+              $ref: '#/components/schemas/StartRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/VersionRequest'
+              $ref: '#/components/schemas/StartRequest'
         required: true
       security:
       - BearerJWT: []
@@ -5316,6 +5696,15 @@ paths:
           description: ''
 components:
   schemas:
+    AccountDeleteRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 10
+      required:
+      - code
     ActionTypeEnum:
       enum:
       - warning
@@ -5873,6 +6262,9 @@ components:
       required:
       - amount_minor
       - eta_seconds
+    BlankEnum:
+      enum:
+      - ''
     CancelRequest:
       type: object
       properties:
@@ -5883,6 +6275,11 @@ components:
           type: string
           default: ''
           maxLength: 300
+        reason_code:
+          default: ''
+          oneOf:
+          - $ref: '#/components/schemas/ReasonCodeEnum'
+          - $ref: '#/components/schemas/BlankEnum'
       required:
       - expected_version
     CategoryEnum:
@@ -6093,6 +6490,11 @@ components:
           type: string
           default: ''
           maxLength: 300
+        reason_code:
+          default: ''
+          oneOf:
+          - $ref: '#/components/schemas/ReasonCodeEnum'
+          - $ref: '#/components/schemas/BlankEnum'
       required:
       - expected_version
     DepositAccount:
@@ -6299,6 +6701,18 @@ components:
         * `first_approved` - First approval (awaiting checker)
         * `approved` - Approved
         * `rejected` - Rejected
+    DeviceTokenRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          minLength: 1
+          maxLength: 255
+        platform:
+          $ref: '#/components/schemas/PlatformEnum'
+      required:
+      - platform
+      - token
     Dispute:
       type: object
       properties:
@@ -6570,6 +6984,29 @@ components:
       required:
       - doc_type
       - file
+    DriverPosition:
+      type: object
+      properties:
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
+        heading:
+          type: number
+          format: double
+          nullable: true
+        age_seconds:
+          type: integer
+        stale:
+          type: boolean
+      required:
+      - age_seconds
+      - heading
+      - lat
+      - lng
+      - stale
     DriverProfile:
       type: object
       properties:
@@ -6750,6 +7187,24 @@ components:
       - reasons
       - status
       - subscription_active
+    EmergencyRequest:
+      type: object
+      properties:
+        location:
+          allOf:
+          - $ref: '#/components/schemas/LatLngRequest'
+          nullable: true
+    EmergencyResponse:
+      type: object
+      properties:
+        recorded:
+          type: boolean
+        emergency_phone:
+          type: string
+          nullable: true
+      required:
+      - emergency_phone
+      - recorded
     Enforcement:
       type: object
       properties:
@@ -8143,6 +8598,21 @@ components:
           type: string
         is_active:
           type: boolean
+    PatchedSavedPlaceRequest:
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/SavedPlaceKindEnum'
+        label:
+          type: string
+          minLength: 1
+          maxLength: 60
+        landmark:
+          type: string
+          minLength: 1
+          maxLength: 200
+        point:
+          $ref: '#/components/schemas/LatLngRequest'
     PatchedServiceAreaRequest:
       type: object
       properties:
@@ -8221,6 +8691,14 @@ components:
         full_name:
           type: string
           maxLength: 120
+    PlatformEnum:
+      enum:
+      - android
+      - ios
+      type: string
+      description: |-
+        * `android` - android
+        * `ios` - ios
     PlatformLoginRequest:
       type: object
       properties:
@@ -8361,6 +8839,46 @@ components:
       - has_location
       - server_ts
       - stale_after_seconds
+    PublicTrip:
+      type: object
+      properties:
+        status:
+          type: string
+        active:
+          type: boolean
+        dropoff_landmark:
+          type: string
+          nullable: true
+        driver_name:
+          type: string
+          nullable: true
+        vehicle:
+          allOf:
+          - $ref: '#/components/schemas/VehicleBrief'
+          nullable: true
+        position:
+          allOf:
+          - $ref: '#/components/schemas/DriverPosition'
+          nullable: true
+      required:
+      - active
+      - driver_name
+      - dropoff_landmark
+      - position
+      - status
+      - vehicle
+    RaisePriceRequest:
+      type: object
+      properties:
+        expected_version:
+          type: integer
+          minimum: 1
+        amount_minor:
+          type: integer
+          minimum: 1
+      required:
+      - amount_minor
+      - expected_version
     Rating:
       type: object
       properties:
@@ -8427,6 +8945,36 @@ components:
           maxLength: 500
       required:
       - stars
+    ReasonCodeEnum:
+      enum:
+      - changed_mind
+      - driver_too_far
+      - driver_asked
+      - wait_too_long
+      - rider_asked
+      - car_problem
+      - wrong_pickup
+      - other
+      type: string
+      description: |-
+        * `changed_mind` - changed_mind
+        * `driver_too_far` - driver_too_far
+        * `driver_asked` - driver_asked
+        * `wait_too_long` - wait_too_long
+        * `rider_asked` - rider_asked
+        * `car_problem` - car_problem
+        * `wrong_pickup` - wrong_pickup
+        * `other` - other
+    RecentPlace:
+      type: object
+      properties:
+        landmark:
+          type: string
+        point:
+          $ref: '#/components/schemas/LatLng'
+      required:
+      - landmark
+      - point
     RecoveryCodes:
       type: object
       properties:
@@ -8545,6 +9093,10 @@ components:
           type: string
         rider_note:
           type: string
+        pickup_note:
+          type: string
+        dropoff_note:
+          type: string
         currency:
           type: string
         estimate:
@@ -8604,6 +9156,21 @@ components:
           type: object
           additionalProperties: {}
           nullable: true
+        free_cancel_until:
+          type: string
+          format: date-time
+          nullable: true
+        start_code_required:
+          type: boolean
+        start_code:
+          type: string
+          nullable: true
+        emergency_phone:
+          type: string
+          nullable: true
+        share_active:
+          type: boolean
+          nullable: true
         config_version:
           type: integer
       required:
@@ -8618,8 +9185,11 @@ components:
       - driver
       - dropoff
       - dropoff_landmark
+      - dropoff_note
+      - emergency_phone
       - estimate
       - event_seq
+      - free_cancel_until
       - id
       - match_deadline
       - my_bid
@@ -8628,10 +9198,14 @@ components:
       - open_bid_count
       - pickup
       - pickup_landmark
+      - pickup_note
       - price_locked_at
       - rider
       - rider_note
       - rider_price_minor
+      - share_active
+      - start_code
+      - start_code_required
       - status
       - timestamps
       - version
@@ -8659,10 +9233,21 @@ components:
           type: string
           default: ''
           maxLength: 300
+        pickup_note:
+          type: string
+          default: ''
+          maxLength: 300
+        dropoff_note:
+          type: string
+          default: ''
+          maxLength: 300
         rider_price_minor:
           type: integer
           minimum: 1
           nullable: true
+        require_start_code:
+          type: boolean
+          default: false
       required:
       - dropoff
       - dropoff_landmark
@@ -8794,6 +9379,57 @@ components:
       - status
       - trust
       - user_id
+    SavedPlace:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        kind:
+          $ref: '#/components/schemas/SavedPlaceKindEnum'
+        label:
+          type: string
+          maxLength: 60
+        landmark:
+          type: string
+          maxLength: 200
+        point:
+          $ref: '#/components/schemas/LatLng'
+      required:
+      - id
+      - label
+      - landmark
+      - point
+    SavedPlaceKindEnum:
+      enum:
+      - home
+      - work
+      - other
+      type: string
+      description: |-
+        * `home` - Home
+        * `work` - Work
+        * `other` - Other
+    SavedPlaceRequest:
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/SavedPlaceKindEnum'
+        label:
+          type: string
+          minLength: 1
+          maxLength: 60
+        landmark:
+          type: string
+          minLength: 1
+          maxLength: 200
+        point:
+          $ref: '#/components/schemas/LatLngRequest'
+      required:
+      - label
+      - landmark
+      - point
     ScopeEnum:
       enum:
       - tenant
@@ -8873,6 +9509,18 @@ components:
         * `trial` - Founder trial
         * `compensation` - No-show compensation credit
         * `manual` - Manual adjustment
+    StartRequest:
+      type: object
+      properties:
+        expected_version:
+          type: integer
+          minimum: 1
+        start_code:
+          type: string
+          default: ''
+          maxLength: 4
+      required:
+      - expected_version
     SubscriptionOverview:
       type: object
       properties:
@@ -9168,6 +9816,17 @@ components:
           minLength: 1
       required:
       - refresh
+    TripShare:
+      type: object
+      properties:
+        token:
+          type: string
+        url:
+          type: string
+          nullable: true
+      required:
+      - token
+      - url
     TrustBrief:
       type: object
       properties:

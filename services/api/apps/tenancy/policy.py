@@ -55,6 +55,8 @@ PARAMS = {
     "presence.stale_seconds": Param(120, int, 15, 3600, PROVISIONAL, ""),
     # Ratings and trust (D006 approved; D011 weights proposed)
     "ratings.window_days": Param(7, int, 1, 90, PROVISIONAL, ""),
+    "rides.start_code_required": Param(False, bool, None, None, APPROVED, "D040: every ride needs a start code"),
+    "safety.emergency_phone": Param("", str, None, None, APPROVED, "D040: number the emergency button calls; empty keeps it off"),
     "ratings.prior_mean": Param(4.5, float, 1, 5, PROVISIONAL, "Bayesian prior (BUSINESS_RULES §4)"),
     "ratings.prior_weight": Param(5, int, 0, 100, PROVISIONAL, "Bayesian prior weight"),
     "trust.min_sample": Param(5, int, 0, 1000, PROVISIONAL, "minimum completed rides before a tier is shown"),

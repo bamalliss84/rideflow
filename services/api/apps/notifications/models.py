@@ -4,6 +4,17 @@ from django.db import models
 from apps.core.models import TenantScopedModel
 
 
+class DeviceToken(TenantScopedModel):
+    """Where a user's push notifications go. A token moves to whoever signed in on that phone last."""
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="+")
+    token = models.CharField(max_length=255)
+    platform = models.CharField(max_length=8, choices=[("android", "Android"), ("ios", "iOS")])
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["tenant", "token"], name="one_owner_per_device_token")]
+
+
 class Notification(TenantScopedModel):
     """Persisted per-user hint. `id` is a monotonically increasing cursor for reconnect replay."""
 

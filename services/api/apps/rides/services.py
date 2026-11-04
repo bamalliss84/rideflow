@@ -1,22 +1,26 @@
 """Ride lifecycle services. Every mutation: row lock on the ride, expected-version check, state-machine
 validation, version bump, append-only event, and post-commit notifications (ADR-0004, T6/T7)."""
 
+import secrets
 from datetime import timedelta
 
+from django.core import signing
 from django.db import IntegrityError, transaction
 from django.http import Http404
 from django.utils import timezone
+from django.utils.crypto import constant_time_compare
 
 from apps.core import audit
 from apps.core.context import require_tenant
 from apps.core.exceptions import BusinessRuleViolation, Conflict, NotEligible, VersionConflict
 from apps.drivers import services as driver_services
 from apps.geo import services as geo
-from apps.notifications.services import notify
+from apps.notifications.services import notify, notify_staff
 from apps.tenancy.policy import current_policy
 
 from . import state_machine as sm
 from .models import (
+    ACTIVE_CONTACT_STATUSES,
     DRIVER_ACTIVE_STATUSES,
     AmendmentStatus,
     Bid,
@@ -29,7 +33,12 @@ from .models import (
     RideAmendment,
     RideEvent,
     RideStatus,
+    TripShare,
 )
+
+START_CODE_MAX_ATTEMPTS = 5
+START_CODE_LOCK_SECONDS = 300
+SHARE_TOKEN_SALT = "rideflow.trip-share"
 
 # ---------------------------------------------------------------- helpers
 
@@ -158,7 +167,19 @@ def process_all_timeouts():
 
 
 def create_ride(
-    rider, *, pickup, pickup_landmark, dropoff, dropoff_landmark, city_id=None, rider_note="", rider_price_minor=None, request=None
+    rider,
+    *,
+    pickup,
+    pickup_landmark,
+    dropoff,
+    dropoff_landmark,
+    city_id=None,
+    rider_note="",
+    pickup_note="",
+    dropoff_note="",
+    rider_price_minor=None,
+    require_start_code=False,
+    request=None,
 ):
     from apps.trust.services import active_restriction
 
@@ -173,6 +194,7 @@ def create_ride(
     estimate = geo.fare_estimate(pickup, dropoff, policy)
     if rider_price_minor is not None and rider_price_minor < estimate["rider_price_min_minor"]:
         raise BusinessRuleViolation("The proposed price is below the minimum for this trip.", code="rider_price_too_low")
+    start_code_required = require_start_code or policy["rides.start_code_required"]
     try:
         with transaction.atomic():
             ride = Ride.objects.create(
@@ -183,11 +205,15 @@ def create_ride(
                 dropoff=dropoff,
                 dropoff_landmark=dropoff_landmark,
                 rider_note=rider_note,
+                pickup_note=pickup_note,
+                dropoff_note=dropoff_note,
                 currency=tenant.currency,
                 estimate_min_minor=estimate["min_minor"],
                 estimate_max_minor=estimate["max_minor"],
                 estimated_distance_m=estimate["distance_m"],
                 rider_price_minor=rider_price_minor,
+                start_code_required=start_code_required,
+                start_code=f"{secrets.randbelow(10000):04d}" if start_code_required else "",
                 config_version=policy.version,
             )
     except IntegrityError:
@@ -206,6 +232,29 @@ def create_ride(
     )
     _dispatch_wave(ride, policy, actor=rider)
     audit.record("ride.requested", request=request, target=ride)
+    return ride
+
+
+def raise_price(ride_id, rider, expected_version, amount_minor, request=None):
+    """While waiting for offers the rider may only go up (D040 amends D035); open offers stay as they are."""
+    policy = current_policy()
+    with transaction.atomic():
+        ride = _lock(ride_id)
+        _assert_rider(ride, rider)
+        _check_version(ride, expected_version)
+        if ride.status not in (RideStatus.REQUESTED, RideStatus.BIDDING):
+            raise Conflict("The price can only change while waiting for offers.", code="invalid_transition")
+        floor = geo.fare_estimate(ride.pickup, ride.dropoff, policy)["rider_price_min_minor"]
+        if amount_minor < floor or (ride.rider_price_minor is not None and amount_minor <= ride.rider_price_minor):
+            raise BusinessRuleViolation("The new price must be higher than the current one.", code="rider_price_too_low")
+        previous = ride.rider_price_minor
+        ride.rider_price_minor = amount_minor
+        ride.version += 1
+        ride.save()
+        _event(ride, "price_raised", actor=rider, role=sm.RIDER, data={"from": previous, "to": amount_minor})
+        for candidate in DispatchCandidate.objects.filter(ride=ride).select_related("driver__user"):
+            _hint(candidate.driver.user, "ride.price_raised", ride)
+        audit.record("ride.price_raised", request=request, target=ride, data={"from": previous, "to": amount_minor})
     return ride
 
 
@@ -524,10 +573,36 @@ def record_contact_attempt(ride_id, driver, method):
     return event
 
 
-def start_trip(ride_id, driver, expected_version):
-    ride = _driver_action(ride_id, driver, expected_version, "start", started_at=timezone.now())
+def _start_code_problem(ride, code):
+    """Returns an error code, or None when the trip may start. Failures are counted, so callers return them
+    instead of raising: raising would roll the counter back."""
+    if not ride.start_code_required:
+        return None
+    now = timezone.now()
+    attempts = ride.start_code_attempts
+    if attempts >= START_CODE_MAX_ATTEMPTS:
+        if now < ride.start_code_failed_at + timedelta(seconds=START_CODE_LOCK_SECONDS):
+            return "start_code_locked"
+        attempts = 0
+    if constant_time_compare(code, ride.start_code):
+        return None
+    Ride.objects.filter(pk=ride.pk).update(start_code_attempts=attempts + 1, start_code_failed_at=now)
+    return "start_code_invalid"
+
+
+def start_trip(ride_id, driver, expected_version, start_code=""):
+    """Returns (ride, None), or (None, error code) when the start code was refused."""
+    with transaction.atomic():
+        ride = _lock(ride_id)
+        _assert_assigned_driver(ride, driver)
+        _check_version(ride, expected_version)
+        sm.target_for(ride.status, "start", sm.DRIVER)
+        problem = _start_code_problem(ride, start_code)
+        if problem:
+            return None, problem
+        _transition(ride, "start", actor=driver.user, role=sm.DRIVER, started_at=timezone.now())
     _hint(ride.rider, "ride.started", ride)
-    return ride
+    return ride, None
 
 
 def complete_trip(ride_id, driver, expected_version):
@@ -592,7 +667,7 @@ def mark_no_show(ride_id, driver, expected_version, request=None):
     return ride
 
 
-def cancel_ride(ride_id, user, role, expected_version, reason="", request=None):
+def cancel_ride(ride_id, user, role, expected_version, reason="", reason_code="", request=None):
     policy = current_policy()
     with transaction.atomic():
         ride = _lock(ride_id)
@@ -615,11 +690,12 @@ def cancel_ride(ride_id, user, role, expected_version, reason="", request=None):
             action,
             actor=user,
             role=role,
-            data={"reason": reason, "late": late},
+            data={"reason": reason, "reason_code": reason_code, "late": late},
             cancelled_at=now,
             cancelled_by=user,
             cancelled_by_role=role,
             cancel_reason=reason,
+            cancel_reason_code=reason_code,
             cancellation_late=late,
         )
         if late:
@@ -780,3 +856,80 @@ def mark_disputed(ride, user, role):
     previous = ride.status
     _transition(ride, "dispute", actor=user, role=role, status_before_dispute=previous)
     return ride
+
+
+# ---------------------------------------------------------------- trip safety
+
+
+def free_cancel_until(ride, policy):
+    if ride.assigned_at is None or ride.status not in ACTIVE_CONTACT_STATUSES:
+        return None
+    return ride.assigned_at + timedelta(seconds=policy["cancellation.free_after_match_seconds"])
+
+
+def driver_position(ride, policy):
+    """The matched driver's latest position, or None. `stale` tells the viewer not to trust it."""
+    from apps.geo.models import DriverLocation
+
+    if ride.driver_id is None or ride.status not in ACTIVE_CONTACT_STATUSES:
+        return None
+    location = DriverLocation.objects.filter(driver_id=ride.driver_id).first()
+    if location is None:
+        return None
+    age = max(0, int((timezone.now() - location.server_ts).total_seconds()))
+    return {
+        "lat": location.point.y,
+        "lng": location.point.x,
+        "heading": location.heading,
+        "age_seconds": age,
+        "stale": age > policy["presence.stale_seconds"],
+    }
+
+
+def record_emergency(ride_id, user, role, location=None, request=None):
+    """Evidence and an alert to the operator's staff. The call itself is made from the phone."""
+    with transaction.atomic():
+        ride = _lock(ride_id)
+        if role == sm.RIDER:
+            _assert_rider(ride, user)
+        else:
+            _assert_assigned_driver(ride, driver_services.get_driver_for_user(user))
+        if ride.status not in ACTIVE_CONTACT_STATUSES:
+            raise Conflict("Emergency alerts are recorded during an active trip.", code="invalid_transition")
+        data = {"by": role}
+        if location is not None:
+            data.update(lat=location.y, lng=location.x)
+        _event(ride, "emergency", actor=user, role=role, data=data)
+        notify_staff("rides.view", "ride.emergency", {"ride_id": str(ride.pk), "by": role})
+        audit.record("ride.emergency", request=request, target=ride, data=data)
+    return ride
+
+
+def share_token(share):
+    return signing.dumps({"t": str(share.tenant_id), "s": str(share.pk)}, salt=SHARE_TOKEN_SALT)
+
+
+def read_share_token(token):
+    """(tenant id, share id), or None when the token isn't one of ours."""
+    try:
+        data = signing.loads(token, salt=SHARE_TOKEN_SALT)
+    except signing.BadSignature:
+        return None
+    return data["t"], data["s"]
+
+
+def share_trip(ride_id, rider):
+    with transaction.atomic():
+        ride = _lock(ride_id)
+        _assert_rider(ride, rider)
+        if ride.status not in ACTIVE_CONTACT_STATUSES:
+            raise Conflict("A trip can be shared once a driver is assigned.", code="invalid_transition")
+        share = TripShare.objects.filter(ride=ride, revoked_at__isnull=True).first()
+        return share or TripShare.objects.create(ride=ride)
+
+
+def stop_sharing(ride_id, rider):
+    with transaction.atomic():
+        ride = _lock(ride_id)
+        _assert_rider(ride, rider)
+        TripShare.objects.filter(ride=ride, revoked_at__isnull=True).update(revoked_at=timezone.now())

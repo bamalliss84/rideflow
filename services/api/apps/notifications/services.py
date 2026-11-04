@@ -13,6 +13,7 @@ from django.db import transaction
 from apps.core.context import require_tenant
 
 from .models import Notification
+from .push import send_push
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +51,7 @@ def notify(user, kind, payload):
     group = user_group(tenant.pk, user.pk)
     message = serialize(notification)
     transaction.on_commit(lambda: _send(group, message))
+    transaction.on_commit(lambda: send_push(user, kind, payload))
     return notification
 
 

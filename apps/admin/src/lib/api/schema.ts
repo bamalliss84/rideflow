@@ -1597,6 +1597,42 @@ export interface paths {
         patch: operations["me_partial_update"];
         trace?: never;
     };
+    "/api/v1/me/delete-account": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description A rider deletes their account with a fresh OTP. Finished rides stay for the operator's records, under no
+         *     name and no phone number; anything still active blocks it. Other roles go through the operator.
+         */
+        post: operations["me_delete_account_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["me_devices_create"];
+        delete: operations["me_devices_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/disputes": {
         parameters: {
             query?: never;
@@ -1639,6 +1675,54 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["me_disputes_notes_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/places": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["me_places_list"];
+        put?: never;
+        post: operations["me_places_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/places/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["me_places_retrieve"];
+        put: operations["me_places_update"];
+        post?: never;
+        delete: operations["me_places_destroy"];
+        options?: never;
+        head?: never;
+        patch: operations["me_places_partial_update"];
+        trace?: never;
+    };
+    "/api/v1/me/recent-places": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["me_recent_places_list"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1910,6 +1994,23 @@ export interface paths {
         put?: never;
         /** @description Tenant provisioning only. No endpoint here exposes tenant operational data (T2). */
         post: operations["platform_tenants_suspend_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/trips/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description What a shared link shows, with no sign-in: never a phone number, and nothing once the trip ends. */
+        get: operations["public_trips_retrieve"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2208,6 +2309,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/rides/{id}/driver-location": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Rider and driver ride API. Every mutation requires `Idempotency-Key`; lifecycle changes also require
+         *     `expected_version` (optimistic concurrency, 409 on mismatch).
+         */
+        get: operations["rides_driver_location_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rides/{id}/emergency": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Rider and driver ride API. Every mutation requires `Idempotency-Key`; lifecycle changes also require
+         *     `expected_version` (optimistic concurrency, 409 on mismatch).
+         */
+        post: operations["rides_emergency_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/rides/{id}/en-route": {
         parameters: {
             query?: never;
@@ -2268,6 +2409,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/rides/{id}/raise-price": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Rider and driver ride API. Every mutation requires `Idempotency-Key`; lifecycle changes also require
+         *     `expected_version` (optimistic concurrency, 409 on mismatch).
+         */
+        post: operations["rides_raise_price_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/rides/{id}/select": {
         parameters: {
             query?: never;
@@ -2283,6 +2444,30 @@ export interface paths {
          */
         post: operations["rides_select_create"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rides/{id}/share": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Rider and driver ride API. Every mutation requires `Idempotency-Key`; lifecycle changes also require
+         *     `expected_version` (optimistic concurrency, 409 on mismatch).
+         */
+        post: operations["rides_share_create"];
+        /**
+         * @description Rider and driver ride API. Every mutation requires `Idempotency-Key`; lifecycle changes also require
+         *     `expected_version` (optimistic concurrency, 409 on mismatch).
+         */
+        delete: operations["rides_share_destroy"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2344,6 +2529,9 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AccountDeleteRequest: {
+            code: string;
+        };
         /**
          * @description * `warning` - Warning
          *     * `commitment_effect` - Commitment score effect
@@ -2549,10 +2737,14 @@ export interface components {
             amount_minor: number;
             eta_seconds: number;
         };
+        /** @enum {unknown} */
+        BlankEnum: "";
         CancelRequest: {
             expected_version: number;
             /** @default  */
             reason: string;
+            /** @default  */
+            reason_code: components["schemas"]["ReasonCodeEnum"] | components["schemas"]["BlankEnum"];
         };
         /**
          * @description * `fare` - Fare / agreed price
@@ -2648,6 +2840,8 @@ export interface components {
             expected_version: number;
             /** @default  */
             reason: string;
+            /** @default  */
+            reason_code: components["schemas"]["ReasonCodeEnum"] | components["schemas"]["BlankEnum"];
         };
         DepositAccount: {
             /** Format: uuid */
@@ -2719,6 +2913,10 @@ export interface components {
          * @enum {string}
          */
         DepositClaimStatusEnum: "submitted" | "first_approved" | "approved" | "rejected";
+        DeviceTokenRequest: {
+            token: string;
+            platform: components["schemas"]["PlatformEnum"];
+        };
         Dispute: {
             readonly opened_by_name: string | null;
             readonly against_name: string | null;
@@ -2818,6 +3016,16 @@ export interface components {
             /** Format: uuid */
             vehicle_id?: string | null;
         };
+        DriverPosition: {
+            /** Format: double */
+            lat: number;
+            /** Format: double */
+            lng: number;
+            /** Format: double */
+            heading: number | null;
+            age_seconds: number;
+            stale: boolean;
+        };
         DriverProfile: {
             /** Format: uuid */
             readonly id: string;
@@ -2882,6 +3090,13 @@ export interface components {
             is_online: boolean;
             presence: components["schemas"]["Presence"];
             max_open_bids: number;
+        };
+        EmergencyRequest: {
+            location?: components["schemas"]["LatLngRequest"] | null;
+        };
+        EmergencyResponse: {
+            recorded: boolean;
+            emergency_phone: string | null;
         };
         Enforcement: {
             readonly subject_name: string | null;
@@ -3573,6 +3788,12 @@ export interface components {
             instructions?: string;
             is_active?: boolean;
         };
+        PatchedSavedPlaceRequest: {
+            kind?: components["schemas"]["SavedPlaceKindEnum"];
+            label?: string;
+            landmark?: string;
+            point?: components["schemas"]["LatLngRequest"];
+        };
         PatchedServiceAreaRequest: {
             /** Format: uuid */
             city_id?: string;
@@ -3603,6 +3824,12 @@ export interface components {
         PatchedUserRequest: {
             full_name?: string;
         };
+        /**
+         * @description * `android` - android
+         *     * `ios` - ios
+         * @enum {string}
+         */
+        PlatformEnum: "android" | "ios";
         PlatformLoginRequest: {
             phone: string;
             password: string;
@@ -3657,6 +3884,18 @@ export interface components {
             accuracy_m: number | null;
             stale_after_seconds: number;
         };
+        PublicTrip: {
+            status: string;
+            active: boolean;
+            dropoff_landmark: string | null;
+            driver_name: string | null;
+            vehicle: components["schemas"]["VehicleBrief"] | null;
+            position: components["schemas"]["DriverPosition"] | null;
+        };
+        RaisePriceRequest: {
+            expected_version: number;
+            amount_minor: number;
+        };
         Rating: {
             readonly rater_name: string | null;
             readonly ratee_name: string | null;
@@ -3677,6 +3916,22 @@ export interface components {
             tags?: components["schemas"]["TagsEnum"][];
             /** @default  */
             comment: string;
+        };
+        /**
+         * @description * `changed_mind` - changed_mind
+         *     * `driver_too_far` - driver_too_far
+         *     * `driver_asked` - driver_asked
+         *     * `wait_too_long` - wait_too_long
+         *     * `rider_asked` - rider_asked
+         *     * `car_problem` - car_problem
+         *     * `wrong_pickup` - wrong_pickup
+         *     * `other` - other
+         * @enum {string}
+         */
+        ReasonCodeEnum: "changed_mind" | "driver_too_far" | "driver_asked" | "wait_too_long" | "rider_asked" | "car_problem" | "wrong_pickup" | "other";
+        RecentPlace: {
+            landmark: string;
+            point: components["schemas"]["LatLng"];
         };
         RecoveryCodes: {
             remaining: number;
@@ -3731,6 +3986,8 @@ export interface components {
             dropoff: components["schemas"]["LatLng"];
             dropoff_landmark: string;
             rider_note: string;
+            pickup_note: string;
+            dropoff_note: string;
             currency: string;
             estimate: components["schemas"]["Estimate"];
             rider_price_minor: number | null;
@@ -3759,6 +4016,12 @@ export interface components {
             no_show: {
                 [key: string]: unknown;
             } | null;
+            /** Format: date-time */
+            free_cancel_until: string | null;
+            start_code_required: boolean;
+            start_code: string | null;
+            emergency_phone: string | null;
+            share_active: boolean | null;
             config_version: number;
         };
         RideCreateRequest: {
@@ -3770,7 +4033,13 @@ export interface components {
             dropoff_landmark: string;
             /** @default  */
             rider_note: string;
+            /** @default  */
+            pickup_note: string;
+            /** @default  */
+            dropoff_note: string;
             rider_price_minor?: number | null;
+            /** @default false */
+            require_start_code: boolean;
         };
         RideEvent: {
             readonly seq: number;
@@ -3827,6 +4096,27 @@ export interface components {
                 [key: string]: unknown;
             }[];
         };
+        SavedPlace: {
+            /** Format: uuid */
+            readonly id: string;
+            kind?: components["schemas"]["SavedPlaceKindEnum"];
+            label: string;
+            landmark: string;
+            point: components["schemas"]["LatLng"];
+        };
+        /**
+         * @description * `home` - Home
+         *     * `work` - Work
+         *     * `other` - Other
+         * @enum {string}
+         */
+        SavedPlaceKindEnum: "home" | "work" | "other";
+        SavedPlaceRequest: {
+            kind?: components["schemas"]["SavedPlaceKindEnum"];
+            label: string;
+            landmark: string;
+            point: components["schemas"]["LatLngRequest"];
+        };
         /**
          * @description * `tenant` - tenant
          *     * `platform` - platform
@@ -3868,6 +4158,11 @@ export interface components {
          * @enum {string}
          */
         SourceEnum: "deposit" | "trial" | "compensation" | "manual";
+        StartRequest: {
+            expected_version: number;
+            /** @default  */
+            start_code: string;
+        };
         SubscriptionOverview: {
             entitled: boolean;
             current: components["schemas"]["DriverSubscription"] | null;
@@ -3974,6 +4269,10 @@ export interface components {
         };
         TokenRefreshRequest: {
             refresh: string;
+        };
+        TripShare: {
+            token: string;
+            url: string | null;
         };
         TrustBrief: {
             /** Format: double */
@@ -7070,6 +7369,72 @@ export interface operations {
             };
         };
     };
+    me_delete_account_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountDeleteRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["AccountDeleteRequest"];
+                "multipart/form-data": components["schemas"]["AccountDeleteRequest"];
+            };
+        };
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    me_devices_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeviceTokenRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["DeviceTokenRequest"];
+                "multipart/form-data": components["schemas"]["DeviceTokenRequest"];
+            };
+        };
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    me_devices_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     me_disputes_list: {
         parameters: {
             query?: {
@@ -7142,6 +7507,167 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DisputeNote"];
+                };
+            };
+        };
+    };
+    me_places_list: {
+        parameters: {
+            query?: {
+                /** @description أي حقل يجب استخدامه عند ترتيب النتائج. */
+                ordering?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedPlace"][];
+                };
+            };
+        };
+    };
+    me_places_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SavedPlaceRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SavedPlaceRequest"];
+                "multipart/form-data": components["schemas"]["SavedPlaceRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedPlace"];
+                };
+            };
+        };
+    };
+    me_places_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedPlace"];
+                };
+            };
+        };
+    };
+    me_places_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SavedPlaceRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SavedPlaceRequest"];
+                "multipart/form-data": components["schemas"]["SavedPlaceRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedPlace"];
+                };
+            };
+        };
+    };
+    me_places_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    me_places_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedSavedPlaceRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedSavedPlaceRequest"];
+                "multipart/form-data": components["schemas"]["PatchedSavedPlaceRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedPlace"];
+                };
+            };
+        };
+    };
+    me_recent_places_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecentPlace"][];
                 };
             };
         };
@@ -7662,6 +8188,27 @@ export interface operations {
             };
         };
     };
+    public_trips_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicTrip"];
+                };
+            };
+        };
+    };
     rides_list: {
         parameters: {
             query?: {
@@ -8146,6 +8693,54 @@ export interface operations {
             };
         };
     };
+    rides_driver_location_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DriverPosition"];
+                };
+            };
+        };
+    };
+    rides_emergency_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["EmergencyRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["EmergencyRequest"];
+                "multipart/form-data": components["schemas"]["EmergencyRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmergencyResponse"];
+                };
+            };
+        };
+    };
     rides_en_route_create: {
         parameters: {
             query?: never;
@@ -8243,6 +8838,33 @@ export interface operations {
             };
         };
     };
+    rides_raise_price_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RaisePriceRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["RaisePriceRequest"];
+                "multipart/form-data": components["schemas"]["RaisePriceRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Ride"];
+                };
+            };
+        };
+    };
     rides_select_create: {
         parameters: {
             query?: never;
@@ -8270,6 +8892,47 @@ export interface operations {
             };
         };
     };
+    rides_share_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TripShare"];
+                };
+            };
+        };
+    };
+    rides_share_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     rides_start_create: {
         parameters: {
             query?: never;
@@ -8281,9 +8944,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["VersionRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["VersionRequest"];
-                "multipart/form-data": components["schemas"]["VersionRequest"];
+                "application/json": components["schemas"]["StartRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["StartRequest"];
+                "multipart/form-data": components["schemas"]["StartRequest"];
             };
         };
         responses: {

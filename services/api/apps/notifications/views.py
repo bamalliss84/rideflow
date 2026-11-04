@@ -6,7 +6,7 @@ from rest_framework.views import APIView
 
 from apps.core.permissions import IsTenantMember
 
-from .models import Notification
+from .models import DeviceToken, Notification
 from .services import serialize
 
 
@@ -77,3 +77,31 @@ class NotificationMarkReadView(APIView):
         rows = rows.filter(id=data["cursor"]) if "cursor" in data else rows.filter(id__lte=data["up_to"])
         rows.update(read_at=timezone.now())
         return Response(serializer.validated_data)
+
+
+class DeviceTokenSerializer(serializers.Serializer):
+    token = serializers.CharField(max_length=255)
+    platform = serializers.ChoiceField(choices=["android", "ios"])
+
+
+class DeviceTokenRemoveSerializer(serializers.Serializer):
+    token = serializers.CharField(max_length=255)
+
+
+class DeviceTokenView(APIView):
+    permission_classes = [IsTenantMember]
+
+    @extend_schema(request=DeviceTokenSerializer, responses={204: None})
+    def post(self, request):
+        serializer = DeviceTokenSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        DeviceToken.objects.update_or_create(token=data["token"], defaults={"user": request.user, "platform": data["platform"]})
+        return Response(status=204)
+
+    @extend_schema(request=DeviceTokenRemoveSerializer, responses={204: None})
+    def delete(self, request):
+        serializer = DeviceTokenRemoveSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        DeviceToken.objects.filter(user=request.user, token=serializer.validated_data["token"]).delete()
+        return Response(status=204)

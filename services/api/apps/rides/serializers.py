@@ -4,7 +4,18 @@ from apps.core.fields import PointField
 from apps.tenancy.policy import current_policy
 
 from . import state_machine as sm
-from .models import ACTIVE_CONTACT_STATUSES, Bid, RideAmendment, RideEvent
+from .models import ACTIVE_CONTACT_STATUSES, Bid, RideAmendment, RideEvent, TripShare
+
+CANCEL_REASON_CODES = [
+    "changed_mind",
+    "driver_too_far",
+    "driver_asked",
+    "wait_too_long",
+    "rider_asked",
+    "car_problem",
+    "wrong_pickup",
+    "other",
+]
 
 COARSE = 3  # ~110 m
 
@@ -19,11 +30,44 @@ class RideCreateSerializer(serializers.Serializer):
     dropoff = PointField()
     dropoff_landmark = serializers.CharField(max_length=200)
     rider_note = serializers.CharField(max_length=300, required=False, allow_blank=True, default="")
+    pickup_note = serializers.CharField(max_length=300, required=False, allow_blank=True, default="")
+    dropoff_note = serializers.CharField(max_length=300, required=False, allow_blank=True, default="")
     rider_price_minor = serializers.IntegerField(min_value=1, required=False, allow_null=True)
+    require_start_code = serializers.BooleanField(required=False, default=False)
 
 
 class VersionSerializer(serializers.Serializer):
     expected_version = serializers.IntegerField(min_value=1)
+
+
+class StartSerializer(VersionSerializer):
+    start_code = serializers.CharField(max_length=4, required=False, allow_blank=True, default="")
+
+
+class RaisePriceSerializer(VersionSerializer):
+    amount_minor = serializers.IntegerField(min_value=1)
+
+
+class EmergencySerializer(serializers.Serializer):
+    location = PointField(required=False, allow_null=True, default=None)
+
+
+class EmergencyResponseSerializer(serializers.Serializer):
+    recorded = serializers.BooleanField()
+    emergency_phone = serializers.CharField(allow_null=True)
+
+
+class TripShareSerializer(serializers.Serializer):
+    token = serializers.CharField()
+    url = serializers.CharField(allow_null=True)
+
+
+class DriverPositionSerializer(serializers.Serializer):
+    lat = serializers.FloatField()
+    lng = serializers.FloatField()
+    heading = serializers.FloatField(allow_null=True)
+    age_seconds = serializers.IntegerField()
+    stale = serializers.BooleanField()
 
 
 class OptionalVersionSerializer(serializers.Serializer):
@@ -36,6 +80,7 @@ class SelectBidSerializer(VersionSerializer):
 
 class CancelSerializer(VersionSerializer):
     reason = serializers.CharField(max_length=300, required=False, allow_blank=True, default="")
+    reason_code = serializers.ChoiceField(choices=CANCEL_REASON_CODES, required=False, allow_blank=True, default="")
 
 
 class DeclineSerializer(CancelSerializer):
@@ -219,6 +264,8 @@ class RideSerializer(serializers.Serializer):
     dropoff = PointField()
     dropoff_landmark = serializers.CharField()
     rider_note = serializers.CharField()
+    pickup_note = serializers.CharField()
+    dropoff_note = serializers.CharField()
     currency = serializers.CharField()
     estimate = EstimateSerializer()
     rider_price_minor = serializers.IntegerField(allow_null=True)
@@ -235,6 +282,11 @@ class RideSerializer(serializers.Serializer):
     cancellation = serializers.DictField(allow_null=True)
     cash = serializers.DictField(allow_null=True)
     no_show = serializers.DictField(allow_null=True)
+    free_cancel_until = serializers.DateTimeField(allow_null=True)
+    start_code_required = serializers.BooleanField()
+    start_code = serializers.CharField(allow_null=True)
+    emergency_phone = serializers.CharField(allow_null=True)
+    share_active = serializers.BooleanField(allow_null=True)
     config_version = serializers.IntegerField()
 
     def to_representation(self, ride):
@@ -273,6 +325,8 @@ class RideSerializer(serializers.Serializer):
             "dropoff": point.to_representation(ride.dropoff),
             "dropoff_landmark": ride.dropoff_landmark,
             "rider_note": ride.rider_note if exact else "",
+            "pickup_note": ride.pickup_note if exact else "",
+            "dropoff_note": ride.dropoff_note if exact else "",
             "currency": ride.currency,
             "estimate": {
                 "min_minor": ride.estimate_min_minor,
@@ -313,7 +367,12 @@ class RideSerializer(serializers.Serializer):
             }
             if ride.arrived_at and exact
             else None,
-            "cancellation": {"by_role": ride.cancelled_by_role, "reason": ride.cancel_reason, "late": ride.cancellation_late}
+            "cancellation": {
+                "by_role": ride.cancelled_by_role,
+                "reason": ride.cancel_reason,
+                "reason_code": ride.cancel_reason_code,
+                "late": ride.cancellation_late,
+            }
             if ride.cancelled_at
             else None,
             "cash": {
@@ -324,9 +383,26 @@ class RideSerializer(serializers.Serializer):
             if ride.completed_at and exact
             else None,
             "no_show": _no_show_state(ride) if viewer == "driver" and ride.status == "arrived" else None,
+            "free_cancel_until": _free_cancel_until(ride) if exact else None,
+            "start_code_required": ride.start_code_required if exact else False,
+            "start_code": ride.start_code
+            if viewer == "rider" and ride.start_code_required and ride.status in ("assigned", "en_route", "arrived")
+            else None,
+            "emergency_phone": _emergency_phone() if contact else None,
+            "share_active": TripShare.objects.filter(ride=ride, revoked_at__isnull=True).exists() if viewer == "rider" else None,
             "config_version": ride.config_version,
         }
         return _jsonable_deep(data)
+
+
+def _free_cancel_until(ride):
+    from .services import free_cancel_until
+
+    return free_cancel_until(ride, current_policy())
+
+
+def _emergency_phone():
+    return current_policy()["safety.emergency_phone"] or None
 
 
 def _no_show_state(ride):
@@ -349,6 +425,35 @@ def _jsonable_deep(value):
     if value.__class__.__name__ == "UUID":
         return str(value)
     return value
+
+
+class PublicTripSerializer(serializers.Serializer):
+    status = serializers.CharField()
+    active = serializers.BooleanField()
+    dropoff_landmark = serializers.CharField(allow_null=True)
+    driver_name = serializers.CharField(allow_null=True)
+    vehicle = VehicleBriefSerializer(allow_null=True)
+    position = DriverPositionSerializer(allow_null=True)
+
+
+def public_trip_data(ride, position):
+    if ride.status not in ACTIVE_CONTACT_STATUSES:
+        return {
+            "status": ride.status,
+            "active": False,
+            "dropoff_landmark": None,
+            "driver_name": None,
+            "vehicle": None,
+            "position": None,
+        }
+    return {
+        "status": ride.status,
+        "active": True,
+        "dropoff_landmark": ride.dropoff_landmark,
+        "driver_name": _first_name(ride.driver.user),
+        "vehicle": _vehicle(ride.driver, True),
+        "position": position,
+    }
 
 
 class RideEventSerializer(serializers.ModelSerializer):

@@ -54,6 +54,8 @@ class Ride(TenantScopedModel):
     dropoff = models.PointField(srid=4326)
     dropoff_landmark = models.CharField(max_length=200)
     rider_note = models.CharField(max_length=300, blank=True)
+    pickup_note = models.CharField(max_length=300, blank=True)
+    dropoff_note = models.CharField(max_length=300, blank=True)
 
     status = models.CharField(max_length=16, choices=RideStatus.choices, default=RideStatus.REQUESTED)
     version = models.PositiveIntegerField(default=1)
@@ -91,6 +93,7 @@ class Ride(TenantScopedModel):
     cancelled_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+")
     cancelled_by_role = models.CharField(max_length=16, blank=True)
     cancel_reason = models.CharField(max_length=300, blank=True)
+    cancel_reason_code = models.CharField(max_length=24, blank=True)
     cancellation_late = models.BooleanField(null=True, blank=True)
     no_show_evidence = models.JSONField(null=True, blank=True)
 
@@ -98,6 +101,12 @@ class Ride(TenantScopedModel):
     cash_driver_confirmed_at = models.DateTimeField(null=True, blank=True)
     cash_rider_confirmed_at = models.DateTimeField(null=True, blank=True)
     status_before_dispute = models.CharField(max_length=16, blank=True)
+
+    # The rider gives this to the driver at pickup; only the rider's snapshot carries it.
+    start_code_required = models.BooleanField(default=False)
+    start_code = models.CharField(max_length=4, blank=True)
+    start_code_attempts = models.PositiveSmallIntegerField(default=0)
+    start_code_failed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-created_at"]
@@ -175,6 +184,18 @@ class RideEvent(AppendOnlyMixin, TenantScopedModel):
     class Meta:
         ordering = ["seq"]
         constraints = [models.UniqueConstraint(fields=["ride", "seq"], name="uniq_ride_event_seq")]
+
+
+class TripShare(TenantScopedModel):
+    """A rider's live link for people they trust. One active link per ride; it shows nothing once the trip ends."""
+
+    ride = models.ForeignKey(Ride, on_delete=models.CASCADE, related_name="shares")
+    revoked_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["tenant", "ride"], condition=Q(revoked_at__isnull=True), name="one_active_share_per_ride"),
+        ]
 
 
 class HiddenRideOffer(TenantScopedModel):

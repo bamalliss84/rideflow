@@ -3,7 +3,7 @@ from rest_framework import serializers
 
 from apps.core.fields import GeoJSONField, PointField
 
-from .models import City, ServiceArea
+from .models import City, SavedPlace, ServiceArea
 
 
 class CitySerializer(serializers.ModelSerializer):
@@ -107,3 +107,17 @@ class NearbyAdminItemSerializer(serializers.Serializer):
     location = CoarsePointSerializer()
     accuracy_m = serializers.FloatField()
     server_ts = serializers.DateTimeField()
+
+
+class SavedPlaceSerializer(serializers.ModelSerializer):
+    point = PointField()
+
+    class Meta:
+        model = SavedPlace
+        fields = ["id", "kind", "label", "landmark", "point"]
+        read_only_fields = ["id"]
+
+
+class RecentPlaceSerializer(serializers.Serializer):
+    landmark = serializers.CharField()
+    point = PointField()

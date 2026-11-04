@@ -157,6 +157,9 @@ CHANNEL_LAYERS = {
     }
 }
 
+PUSH_PROVIDER = env("PUSH_PROVIDER", "none")
+TRIP_SHARE_BASE_URL = env("TRIP_SHARE_BASE_URL", "")
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ["apps.accounts.authentication.TenantJWTAuthentication"],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
@@ -181,6 +184,7 @@ REST_FRAMEWORK = {
         "platform_login": env("THROTTLE_PLATFORM_LOGIN", "10/hour"),  # per account (phone)
         "platform_login_ip": env("THROTTLE_PLATFORM_LOGIN_IP", "30/hour"),
         "location": env("THROTTLE_LOCATION", "120/min"),
+        "public_trip_ip": env("THROTTLE_PUBLIC_TRIP_IP", "120/min"),
         "mfa_ip": env("THROTTLE_MFA_IP", "60/hour"),
     },
     # Client IP for throttling: X-Forwarded-For is only trusted for this many proxy hops (0 = REMOTE_ADDR only).

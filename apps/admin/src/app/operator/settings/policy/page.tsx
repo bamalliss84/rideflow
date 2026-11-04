@@ -30,7 +30,7 @@ const SECTIONS = [
   { id: "cases", groups: ["enforcement", "appeals", "disputes"] },
   { id: "drivers", groups: ["drivers", "subscriptions"] },
   { id: "rewards", groups: ["rewards", "compensation"] },
-  { id: "operator", groups: ["tenant"] },
+  { id: "operator", groups: ["tenant", "safety"] },
 ] as const;
 type SectionId = (typeof SECTIONS)[number]["id"];
 
@@ -177,6 +177,17 @@ export default function PolicyPage() {
               = <bdi>{fmt.money(value)}</bdi>
             </span> : null}
         </div>
+      );
+    }
+    if (param.type === "str") {
+      return (
+        <input
+          dir="ltr"
+          aria-label={name}
+          className="w-full max-w-xs rounded-lg border border-line bg-surface px-3 py-2 text-sm"
+          value={typeof value === "string" ? value : ""}
+          onChange={(e) => set(param.key, e.target.value)}
+        />
       );
     }
     if (param.key === "drivers.required_documents" && Array.isArray(value)) {

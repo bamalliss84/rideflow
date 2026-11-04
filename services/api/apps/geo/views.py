@@ -1,10 +1,12 @@
 from django.contrib.gis.geos import Point
+from django.db import IntegrityError, transaction
 from drf_spectacular.utils import extend_schema
 from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.core import audit
+from apps.core.exceptions import Conflict
 from apps.core.permissions import IsDriver, IsRider, IsTenantMember, TenantPermission
 from apps.core.throttling import ScopedTenantThrottle
 from apps.core.views import schema_safe
@@ -12,7 +14,7 @@ from apps.drivers.services import get_driver_for_user
 from apps.tenancy.policy import current_policy
 
 from . import services
-from .models import City, ServiceArea
+from .models import City, SavedPlace, ServiceArea
 from .serializers import (
     CityPublicSerializer,
     CitySerializer,
@@ -23,6 +25,8 @@ from .serializers import (
     NearbyAdminItemSerializer,
     NearbyPublicSerializer,
     NearbyQuerySerializer,
+    RecentPlaceSerializer,
+    SavedPlaceSerializer,
     ServiceAreaSerializer,
 )
 
@@ -165,3 +169,51 @@ class AdminNearbyDriversView(APIView):
                 for loc in locations
             ]
         )
+
+
+MAX_SAVED_PLACES = 20
+RECENT_PLACES = 5
+
+
+@extend_schema(tags=["rider"])
+class SavedPlaceViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsRider]
+    serializer_class = SavedPlaceSerializer
+    pagination_class = None
+    lookup_value_regex = "[0-9a-f-]{36}"
+
+    @schema_safe(SavedPlace)
+    def get_queryset(self):
+        return SavedPlace.objects.filter(user=self.request.user)
+
+    def _save(self, serializer):
+        try:
+            with transaction.atomic():
+                serializer.save(user=self.request.user)
+        except IntegrityError:
+            raise Conflict("You already saved a place of this kind.", code="place_kind_exists")
+
+    def perform_create(self, serializer):
+        if self.get_queryset().count() >= MAX_SAVED_PLACES:
+            raise Conflict("You reached the limit of saved places.", code="places_limit")
+        self._save(serializer)
+
+    def perform_update(self, serializer):
+        self._save(serializer)
+
+
+@extend_schema(tags=["rider"])
+class RecentPlacesView(APIView):
+    permission_classes = [IsRider]
+
+    @extend_schema(responses=RecentPlaceSerializer(many=True))
+    def get(self, request):
+        from apps.rides.models import Ride
+
+        places = {}
+        for ride in Ride.objects.filter(rider=request.user).order_by("-created_at")[:30]:
+            places.setdefault(ride.dropoff_landmark, ride.dropoff)
+            if len(places) == RECENT_PLACES:
+                break
+        rows = [{"landmark": landmark, "point": point} for landmark, point in places.items()]
+        return Response(RecentPlaceSerializer(rows, many=True).data)

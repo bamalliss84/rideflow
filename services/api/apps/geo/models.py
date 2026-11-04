@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.gis.db import models
 
 from apps.core.models import TenantScopedModel
@@ -29,6 +30,30 @@ class ServiceArea(TenantScopedModel):
 
     class Meta:
         ordering = ["name"]
+
+
+class PlaceKind(models.TextChoices):
+    HOME = "home", "Home"
+    WORK = "work", "Work"
+    OTHER = "other", "Other"
+
+
+class SavedPlace(TenantScopedModel):
+    """A rider's own places. Addresses here are landmarks in words, so the rider's wording is what gets kept."""
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="+")
+    kind = models.CharField(max_length=8, choices=PlaceKind.choices, default=PlaceKind.OTHER)
+    label = models.CharField(max_length=60)
+    landmark = models.CharField(max_length=200)
+    point = models.PointField(srid=4326)
+
+    class Meta:
+        ordering = ["created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tenant", "user", "kind"], condition=~models.Q(kind="other"), name="one_home_and_work_per_rider"
+            ),
+        ]
 
 
 class DriverLocation(TenantScopedModel):
