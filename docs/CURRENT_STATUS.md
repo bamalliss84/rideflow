@@ -84,8 +84,9 @@ Left unchanged in this review:
 
 ## Next steps, in order
 
-1. Owner chooses the rider home screen: canvas board `Rider-Home-Options` (model 1, dark, is the recommendation).
+0. Owner picks a layout model from the canvas (`Apps-Layout-Options`, both apps), then apply it to every screen. Smaller type and the one search screen are built (D043), and day and night colours (D042); the layout isn't changed yet.
+1. Owner checks the map-first destination screen (D041) on the phone. A full trip already ran there on 2026-11-04, with the demo driver played through the API. Before that, the phone test found and fixed: a stale pickup location, and requests that never widened past the first wave. Known gap: `dispatch.max_waves` is 3, spent in about a minute, so a driver who comes online later doesn't see a request that stays open for 15 minutes. `mobile_app/rider` is built from the approved boards (`Rider-Flow-V3`, `Rider-Account-V2`, `Rider-Style-V2`), uncommitted. 20 widget tests and a live trip against the local stack pass; a debug APK built. Not run on a device. Waiting: Cairo font file (only Tajawal ships for now), map tile source.
 2. Commit and push the D040 work when asked, then read CI. Restart `worker`.
-3. Continue rider designs screen by screen: destination and price, offers, active trip, end of trip.
-4. Build `mobile_app/rider` after the designs are approved, including the share-link page and a map provider.
+3. Decide the production map and search provider. Also decide the demo service area: Fuwah (`14.4864, 49.0410`) lies just outside its western edge, so a ride can't start there.
+4. Build the share-link page.
 5. The owner supplies Mukalla's emergency numbers and SMS and Firebase accounts.

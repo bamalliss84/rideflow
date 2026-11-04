@@ -3,7 +3,7 @@
 | Folder | Status |
 |---|---|
 | `driver/` | Flutter **driver** app (Android). Phase 4. |
-| `rider/` | Reserved for the passenger app. Not started. |
+| `rider/` | Flutter **rider** app (Android). Built from the approved boards (D040); run it like the driver app, with `APP_CLIENT_ID=demo-mukalla-rider` as its default. Optional `MAP_TILE_URL` sets the map tiles and `GEOCODER_URL` a Photon place search (D041). Without them stops draw on a plain ground and the rider names each place. |
 | `shared/` | Reserved for shared Dart packages, created only when a second app genuinely needs shared code. |
 
 The apps talk only to the RideFlow REST API (`/api/v1`, contract in `packages/contracts/openapi.yaml`) and the event WebSocket (`/ws/v1/events/`). The backend decides every permission, eligibility rule and ride-state transition; the app renders `allowed_actions` and never re-implements business rules.

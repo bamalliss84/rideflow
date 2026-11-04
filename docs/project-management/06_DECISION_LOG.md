@@ -125,4 +125,55 @@ D039 APPROVED by owner 2026-11-02: The driver's active trip screen is model 1, o
 - Impact: driver app, with the new `url_launcher` dependency, plus the read-only `no_show` field on the ride.
 - Linked tests: `mobile_app/driver/test/trip_screen_test.dart`, `services/api/tests/test_rides.py`.
 
+D040 APPROVED by owner 2026-11-02: Rider app scope, safety features and the backend they need. Amends D035 on raising the price.
+- Order: backend additions, then design models approved screen by screen, then the rider app. The app isn't built until its design is approved.
+- Design: Souq family (Tajawal, route icons), one main fact and one main button per screen, more breathing room than the driver app, map as the base with one panel over it, works without a map. Dark first, with a light model shown for comparison.
+- Rider home screen approved by the owner, 2026-11-02: canvas artboard `Rider-Home-Options`, model 1, dark: map on top, one panel with the destination button, saved places and recent destinations.
+- Rider request screens approved by the owner, 2026-11-02: canvas artboard `Rider-Request-Options`: the destination step, then model 1: route map, estimate, and an optional price one tap away.
+- Rider style approved by the owner, 2026-11-02: canvas artboard `Rider-Style-V2`, redrawn from the owner's reference image. It covers home, destination, request, offers and driver on the way, and replaces the look of the earlier rider boards while keeping their approved structure. Main buttons are green, prices and ratings gold; the driver app stays as approved. Offers: tap a card to select, one fixed button below, no card selected at first. The driver's initial shows when there is no photo; driver photos are not built. The map route is illustrative until a routing service exists.
+- Rider trip screens approved by the owner, 2026-11-02: canvas artboard `Rider-Flow-V2`: setting or raising the price, waiting for offers, driver confirmation, driver arrived, on the trip, end of trip.
+- Owner's 16-screen reference, 2026-11-02: the owner asked to adopt its features, data layout, font and sizes. Drawn on canvas artboard `Rider-Flow-V3`, approved by the owner 2026-11-02 together with `Rider-Account-V2`; it supersedes `Rider-Flow-V2` for layout. Adopted: from and to with swap, stats strips, offer sort tabs, a confirmation checklist, a confirmed screen, fuller-width pill buttons, a rating note, a receipt, current and past trip tabs. Left out because they conflict with approved rules or the backend: chat, scheduled rides, a separate booking confirmation, editing the price down, rider-pressed boarding and trip completion (the driver does these), remaining time and distance (no routing service). Font, decided by the owner 2026-11-02: the rider chooses Cairo or Tajawal in the account settings. The choice is kept on the device and both fonts ship with the app. Cairo, the closest match to the image (not an exact identification), is proposed as the default. The driver app stays on Tajawal. Prices stay gold.
+- Live driver position goes to the rider of the matched ride only. Riders still see coarse positions before a match.
+- Start code: optional, chosen by the rider per ride; `rides.start_code_required` lets an operator require it. Only the rider sees it. 5 wrong tries lock it for 5 minutes.
+- Trip sharing: a signed link per ride, with no sign-in. It shows the destination, driver's first name, car and position, never a phone number, and nothing once the trip ends or the rider stops sharing. The viewing page isn't built yet.
+- Emergency button: stays off until the operator sets `safety.emergency_phone`; the owner must supply approved numbers for Mukalla. Pressing it records evidence and alerts staff, and the phone makes the call.
+- Raising the price: while waiting for offers the rider may only raise it. Open offers stay as they are.
+- Cancellation: the ride says when free cancelling ends, and reasons have codes.
+- Phone numbers stay visible to both sides at first; masking needs a calling provider that isn't confirmed for Yemen.
+- Maps: MapLibre or similar with OpenStreetMap data. Real operation needs a suitable tile server. Not chosen in code yet.
+- Account deletion: riders only, with a fresh OTP and no active ride. Finished rides stay for the operator's records under no name or phone. Drivers go through the operator.
+- Providers not connected yet: Push (Firebase, adapter and device tokens exist, sends nothing) and SMS (the owner must choose a provider that works in Yemen).
+- Not now: wallet and card payment, surge pricing, audio recording, in-app chat.
+- Rationale: safety and a clear wait are what riders judge first; the rest follows comparison with Uber and inDrive.
+- Impact: backend, API contract, portal settings, driver app (start code entry, cancel codes).
+- Linked tests: `services/api/tests/test_rider_additions.py`, `services/api/tests/test_tenant_isolation.py`, `mobile_app/driver/test/trip_screen_test.dart`.
+
+D041 APPROVED by owner 2026-11-04: The rider chooses stops on a live map, and both the point and the name come from the map. Amends D040's "a stop is a map point plus the rider's own words".
+- Design: canvas artboard `Rider-Destination-Options`, model 1: full map with a fixed centre pin, a search pill on top, one panel below with the pickup, the live place name, the distance and the main button.
+- Model 3 (a sheet under the map) was also built on the owner's request, 2026-11-04, so both can be compared on the phone. Account settings switch between them, and model 1 is the default until the owner picks one.
+- Search and reverse lookup use OpenStreetMap data through the Photon API. Tested on Mukalla names: both `فوة` and `شعب البادية` were found with coordinates.
+- A pin the rider hasn't moved can't be confirmed, and neither can a destination under 100 m from the pickup. Words typed by the rider remain only as the fallback when the map can't name a point.
+- The start code moved to the price screen. Approved the same day: two optional descriptions there, one for where the rider is and one for the destination. They replace the single driver note in the rider app. The driver sees them only after the match, like the note, and old rides keep their note.
+- Open: the production map and search provider. Public OpenStreetMap and Photon servers are for development only. A paid provider's key must not ship in the app, so that needs a backend proxy.
+- Rationale: on the phone, a typed name such as `فوه` with an unmoved pin gave a wrong distance and price with no warning.
+- Impact: rider app only.
+- Linked tests: `mobile_app/rider/test/rider_screens_test.dart`.
+
+D042 APPROVED by owner 2026-11-04: The rider app has a day and a night appearance, and the rider switches between them in the account settings. Amends the dark-only rider style in D040.
+- Day is the default. Night keeps the approved `Rider-Style-V2` colours unchanged. The choice is saved on the phone.
+- In night, map tiles are darkened; in day they show as they are.
+- Day colours: ground `#F2F5F2`, cards `#FFFFFF`, text `#12211A`, muted `#4F6157`, line `#DDE3DD`, green `#0A7D46`, gold `#9A6700`, red `#B3261E`. The darker green, gold and red keep their contrast on white.
+- Open: the layout. Canvas artboard `Rider-Day-Options` has two models for separating the data on each screen, and the owner hasn't picked one. This decision changes colours only.
+- Rationale: the owner asked for a daytime app and for the choice between the two.
+- Impact: rider app only. The driver app stays dark.
+- Linked tests: `mobile_app/rider/test/rider_screens_test.dart`.
+
+D043 APPROVED by owner 2026-11-04: Smaller type in both apps, and "where to" is one screen you type in. Amends D041's search pill and the earlier type sizes.
+- Type: body 13, titles 14-18, captions 12, main buttons 50 high and others 44 (rider and driver). Large prices and codes shrink with them.
+- Search: tapping "where to" opens the destination screen with the keyboard ready and the pickup shown. Results open over the map on that screen, and there is no separate search page. The same field stays on the map to search again.
+- Open: how the data is laid out on each screen. That still follows the canvas models and the owner's choice.
+- Rationale: on the phone, the owner found the type too large and the two search screens one too many.
+- Impact: rider and driver apps.
+- Linked tests: `mobile_app/rider/test/rider_screens_test.dart`.
+
 Rule: New decisions get sequential ID, date, approver, rationale, impact and linked task. Never silently reinterpret proposals as approved.

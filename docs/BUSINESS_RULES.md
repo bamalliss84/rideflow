@@ -23,6 +23,9 @@ States: REQUESTED → BIDDING → MATCH_PENDING → ASSIGNED → EN_ROUTE → AR
 - After departure / at arrival: recorded; repeated proven late cancellations affect commitment.
 - Rider no-show only if: wait ≥ 5 min, arrival inside geofence (200 m adjusted for accuracy), contact/notification attempt evidence; appealable. Never a single GPS fix.
 - Symmetric protections for driver no-arrival or abandonment.
+- The rider and driver are told when free cancelling ends; reasons have codes [D040].
+- Trip start code: optional per ride, or required by the operator. Only the rider sees it; 5 wrong tries lock it for 5 minutes [D040].
+- While waiting for offers, a rider may raise their price but not lower it; open offers stay as they are [D040, amends D035].
 
 ## 4. Ratings, Trust Score, tiers [APPROVED D006; weights PROPOSED D011]
 - Bilateral 1–5 stars with reason tags; Bayesian smoothing, minimum sample, show sample count.

@@ -7,7 +7,7 @@ Read this first, then `docs/CURRENT_STATUS.md` (where work stands) and `docs/pro
 - Reply in Arabic, concisely. The owner tests on a real phone and approves designs screen by screen.
 - Designs come before code. Show several models on the canvas, wait for approval, then build. The owner's "don't start" means report and wait.
 - Commit or push only when asked. Push to `main` only after checks pass, then report the CI result.
-- New decisions get the next ID in the decision log (latest: D040). Never rewrite an approved decision or treat a proposal as approved.
+- New decisions get the next ID in the decision log (latest: D043). Never rewrite an approved decision or treat a proposal as approved.
 - Don't invent test results. Say what wasn't run or seen.
 - Never log OTP codes or tokens beyond the existing dev-only behaviour. Never weaken TLS, authentication or test assertions to make checks pass.
 - Don't delete test data, reset databases, or remove SDKs, caches, Docker volumes, emulator data or user files without approval.
@@ -26,7 +26,7 @@ Tenancy (D017, D021-D023, ADR-0001): one shared database with strict isolation. 
 | `services/api` | Django 5.2, DRF, Channels, PostGIS, Redis. Apps in `apps/`: `core`, `tenancy`, `accounts`, `drivers`, `geo`, `rides`, `subscriptions`, `trust`, `notifications`, `backoffice` |
 | `apps/admin` | Next.js operator and platform portal, behind a BFF with HttpOnly cookies (ADR-0005). `/login`, `/platform/login`, `/operator/*` |
 | `mobile_app/driver` | Flutter 3.24.5 driver app, Riverpod and go_router. Screens in `lib/features/`, design system in `lib/design/` |
-| `mobile_app/rider` | Doesn't exist yet |
+| `mobile_app/rider` | Flutter rider app, same stack. Copied the driver's `core`, `design` and `shared` foundations; there is no shared package yet. `test/live` runs a whole trip against the local stack |
 | `packages/contracts/openapi.yaml` | API contract, generated from the backend |
 | `scripts/` | `dev-up.ps1`, `test.ps1`, `export-openapi.ps1`, `rider_flow.mjs` (rider side of a test trip) |
 | `docs/` | `BUSINESS_RULES.md`, `ARCHITECTURE.md`, `DATA_MODEL.md`, `ADR/`, `project-management/`, `reports/` |
@@ -77,6 +77,8 @@ adb reverse tcp:8010 tcp:8010
 flutter run -d <device> --dart-define=API_BASE_URL=http://127.0.0.1:8010
 ```
 
+The rider app's map and search need two more defines for development: `MAP_TILE_URL=https://tile.openstreetmap.org/{z}/{x}/{y}.png` and `GEOCODER_URL=https://photon.komoot.io`. Both are public servers meant for light testing, not production.
+
 The address is compiled in, so changing it needs a full `flutter run`, not `R`. A new plugin also needs a full run. `adb reverse` is lost when the connection changes. Don't add the PC's LAN IP to `DJANGO_ALLOWED_HOSTS`: see "Security" below.
 
 ## Testing a full trip
@@ -93,10 +95,11 @@ The emulator AVD has an unknown lock credential and a hung snapshot boot; don't 
 Canvas: https://claude.ai/artifact/5vXMvWdh6gw6TSQupomxfi (keep using this one; files live under `project/`).
 
 - "Souq" dark palette: ground `#0F2419`, card `#183426`, raised `#27493A`, text `#F3F6F3`, muted `#B8CABE`, gold `#F5B83D` (text on it `#18261E`), live green `#5FD09A`.
-- Font: Tajawal, bundled in the app. The owner asked for smaller type: body 14, titles 15-20, buttons 48/54 high. See `lib/design/tokens.dart`.
+- Font: Tajawal, bundled in the app. The owner asked for smaller type twice: body 13, titles 14-18, captions 12, buttons 44/50 high (D043). See `lib/design/tokens.dart`.
 - Connected-route icons: green ring for "from", gold pin for "to", dashed line between.
 - Driver screens: requests with tap-to-reveal cards (`Requests-Final`), one offer sheet (`Offer-Options` option 1), status bar after sending (`After-Send` model 3), confirmation (`Confirm-Options` model 1), trip one step at a time (`Trip-Options` model 1, `Trip-Stages`).
 - Rider app (D040): same family, one main fact and one main button per screen, more breathing room than the driver app, map as the base with one panel over it, and it must work without a map.
+- Rider style (approved): `Rider-Style-V2`. Ground `#07120D`, panel `#0D1913`, card `#14241C`, line `#1C3024`, text `#F2F7F3`, muted `#B8CABE`, green main buttons `#27D17C` (text `#06170E`), gold `#F5B83D` for prices and ratings. The rider picks Cairo or Tajawal in settings, so layouts must hold in both. Those are the night colours: the rider also has a day appearance, the default, switched in account settings (D042; palettes in `mobile_app/rider/lib/design/tokens.dart`). Colours are read while building, so a widget using them can't be `const`. Later rider screens: see `docs/CURRENT_STATUS.md`. Destination screen: `Rider-Destination-Options`, models 1 and 3 both built and switched in account settings until the owner picks one (D041).
 - Not redesigned yet: onboarding, subscription, history, earnings, notifications, account (they only inherit the colours).
 
 ## Pricing, offers and confirmation
@@ -126,10 +129,10 @@ Done:
 - Rider backend additions (D040): live driver position, free-cancel deadline and reason codes, start code, trip sharing API, emergency alert, raising the price, saved and recent places, device tokens, rider account deletion.
 
 Not done:
-- Rider app, and approval of its first design.
+- Rider app: a full trip ran on the owner's phone. Stops come from a live map with search (D041), on development servers only. Cairo font not added, driver photos absent.
 - Share-link viewing page.
 - Push sending (Firebase): adapter only, sends nothing. SMS provider: dev only.
-- Map provider for the rider app, and emergency numbers for Mukalla (the owner must supply them).
+- Production map and search provider for the rider app (a paid key needs a backend proxy), and emergency numbers for Mukalla (the owner must supply them).
 - Android verification of camera, GPS and permissions; Flutter in CI; release signing.
 - Rating extras: retaliation detection, delayed updates, required low-rating reason, reminders.
 - Confirmation sound and vibration. Currency shows `YER` and distance `km` in Arabic text.
