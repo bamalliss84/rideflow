@@ -1,31 +1,33 @@
 # RideFlow current status
 
-Checked on 2026-11-02 at about 09:40 Yemen time, from the repository, Git, the running containers, adb and the GitHub API. Update this file whenever the state changes. Decisions live in `project-management/06_DECISION_LOG.md`.
+The Git and test sections were last updated on 2026-11-05. The sections on the environment problem, the server and out-of-date documents were last checked on 2026-11-02. Update this file whenever the state changes. Decisions live in `project-management/06_DECISION_LOG.md`.
 
 ## Git
 
 | | |
 |---|---|
-| Branch | `main`, level with `origin/main` |
-| Last commit | `39b75a6` Driver app: one-step trip screen with call, maps, cancel reasons and rate later (D039) |
-| Uncommitted | The D040 rider backend additions, across the backend, portal settings, driver app and docs (33 modified files, plus migrations, `push.py` and `tests/test_rider_additions.py`), and these two documentation files |
+| Branch | `main`, ahead of `origin/main` by the commits since the last push (`git log origin/main..HEAD`); not pushed |
+| Last commits | D040-D047: rider additions, rider app, layout models, arrival without location, driver photo |
+| Uncommitted | Nothing, apart from the two files below |
 | Must stay out of commits | `rider_login.json` (dev token, untracked), `.env` (ignored) |
 
 ## Tests and CI
 
 | Check | Result | Covers |
 |---|---|---|
-| CI run 41397706197 | Success: backend, admin, secret-scan | `39b75a6` only, not the uncommitted work. CI doesn't run Flutter |
-| Backend `pytest` | 191 passed | Working tree, with D040 |
-| `ruff check` and `ruff format --check` | Passed | Working tree |
-| OpenAPI contract | Regenerated and matches the backend | Working tree |
-| Portal `typecheck` and `lint` | Passed | Working tree |
-| Driver `flutter analyze` | Clean | Working tree |
-| Driver `flutter test` | 50 passed, 1 skipped (the live backend test) | Working tree |
+| CI | Not run on the unpushed commits. CI doesn't run Flutter | Last read on `39b75a6` |
+| Backend `pytest` | Passed, 210 tests | D047 included |
+| `ruff check`, `ruff format --check`, `makemigrations --check` | Passed | D047 included |
+| OpenAPI contract and portal types | Regenerated | D047 included |
+| Portal `typecheck` and `lint` | Passed | D047 included |
+| Driver `flutter analyze` and `flutter test` | Clean; 79 passed, 1 skipped | D047 included |
+| Rider `flutter analyze` and `flutter test` | Clean; 40 passed, 1 skipped | D047 included |
 
 Not run on the current work: `next build`, Playwright e2e (`apps/admin/e2e`), `integration_test/ride_flow_test.dart` (not run since trip model 1), `test/live`.
 
-Seen only in tests, not on a screen: the driver's start code dialog, and the two new portal settings fields.
+Seen on the phone by the owner: a driver photo appearing (D047). Which screens were checked wasn't stated.
+
+Seen only in tests, not on a screen: the portal's photo preview and remove buttons (D047).
 
 ## Android on the real phone
 
@@ -84,9 +86,9 @@ Left unchanged in this review:
 
 ## Next steps, in order
 
-0. Owner picks a layout model from the canvas (`Apps-Layout-Options`, both apps), then apply it to every screen. Smaller type and the one search screen are built (D043), and day and night colours (D042); the layout isn't changed yet.
+0. Owner compares layout models A, B and C on the phones (account settings, "ترتيب الشاشات"; D044) and keeps one. Then remove the other two and the switch. Smaller type and the one search screen are built (D043), and day and night colours (D042).
 1. Owner checks the map-first destination screen (D041) on the phone. A full trip already ran there on 2026-11-04, with the demo driver played through the API. Before that, the phone test found and fixed: a stale pickup location, and requests that never widened past the first wave. Known gap: `dispatch.max_waves` is 3, spent in about a minute, so a driver who comes online later doesn't see a request that stays open for 15 minutes. `mobile_app/rider` is built from the approved boards (`Rider-Flow-V3`, `Rider-Account-V2`, `Rider-Style-V2`), uncommitted. 20 widget tests and a live trip against the local stack pass; a debug APK built. Not run on a device. Waiting: Cairo font file (only Tajawal ships for now), map tile source.
-2. Commit and push the D040 work when asked, then read CI. Restart `worker`.
+2. Owner tries arrival without location and the stale location warning (D045) and the three edits (D046) on the phone. Push when asked, then read CI. Restart `worker`.
 3. Decide the production map and search provider. Also decide the demo service area: Fuwah (`14.4864, 49.0410`) lies just outside its western edge, so a ride can't start there.
 4. Build the share-link page.
 5. The owner supplies Mukalla's emergency numbers and SMS and Firebase accounts.

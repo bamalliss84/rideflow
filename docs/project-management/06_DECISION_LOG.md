@@ -176,4 +176,43 @@ D043 APPROVED by owner 2026-11-04: Smaller type in both apps, and "where to" is 
 - Impact: rider and driver apps.
 - Linked tests: `mobile_app/rider/test/rider_screens_test.dart`.
 
+D044 APPROVED by owner 2026-11-04: Three layout models are built in both apps, and the owner compares them on the phone before keeping one. Answers what D043 left open, until the choice is made.
+- Model A: separate cards. Model B: one page, sections and thin lines. Model C: borderless cards and shorter rows. Canvas: `Apps-Layout-Options`.
+- Every screen follows the same rules: one kind of data per line, a small label above each value, no card inside a card, one main button at the bottom. Main buttons have 12 corners in every model.
+- The switch is in account settings on each phone ("ترتيب الشاشات"), model A by default. It is kept per device, not per account.
+- Rider price screen: the trip's stops and facts replace the small map, as on the canvas.
+- Open: which model stays. The other two and the switch are then removed.
+- Not built: the driver's trip map shown on the canvas. The driver app has no in-app map; it still opens the phone's maps app.
+- Rationale: on seeing the three models the owner asked to try them all on the phone.
+- Impact: rider and driver apps.
+- Linked tests: `mobile_app/rider/test/rider_screens_test.dart`, `mobile_app/driver/test/layout_test.dart`.
+
+D045 APPROVED by owner 2026-11-04: "Arrived" never gets stuck on GPS. The driver's tap is recorded even when no location can be read in time.
+- The phone first uses a location from the last 45 seconds, or tries for up to 5 seconds. If it has none, it records the arrival without a location.
+- The phone keeps looking for up to 3 minutes. A location it finds is saved on the phone with its true time and sent once the server can be reached, kept for up to 3 days.
+- A location read within `noshow.late_location_seconds` (default 60, proposed) of the arrival counts as the arrival's location, and the geofence check applies to it. A later one is kept as evidence only. An existing location is never replaced.
+- No-show: an arrival with no counted location can't support a no-show. Wait, geofence and contact rules are unchanged (D010).
+- Not covered: the arrival request itself still needs internet. With none, the driver sees the error and taps again, and the retry repeats the same request.
+- Rationale: on the phone, "Arrived" waited and then returned to the button when GPS had stopped updating. The owner chose to try the location first, then save without it, buffering the location until it can be sent.
+- Impact: API (`arrive`, new `arrival-location`), driver app, portal parameter labels.
+- Linked tests: `services/api/tests/test_rides.py`, `mobile_app/driver/test/trip_screen_test.dart`.
+
+D046 APPROVED by owner 2026-11-05: Three design changes from the phone, model B of each on the canvas (`Driver-Rider-Edits`).
+- Rider price: a large field the rider can type in, with quick amounts (one, two and four price steps up, one down). A price below the minimum, or none, can't be used. Used wherever the rider sets or raises a price; D035 and D040 rules are unchanged.
+- Driver offer sheet: the rider in one card with rating, trips and commitment as labelled numbers, the trip in a second, and prices in a third. Below `trust.min_sample` ratings "new" replaces the numbers (D038).
+- Driver offer tracking: the time left inside a large ring at the top of the card, above the price.
+- The driver's photo, also on that artboard, is D047.
+- Rationale: the owner found + and - alone too slow, the rider and trip data mixed, and the counter crowding the price.
+- Impact: rider and driver apps.
+- Linked tests: `mobile_app/rider/test/rider_screens_test.dart`, `mobile_app/driver/test/requests_test.dart`.
+
+D047 APPROVED by owner 2026-11-05: The driver adds their own photo. It shows to riders at once, with no review. Answers what D046 left open.
+- The driver takes or picks a photo in the account screen, changes it or removes it. The phone crops it to a square and re-encodes it, which drops location and camera data. A new photo replaces the old file.
+- Riders see it on the driver's offers and on the trip. Only the driver and riders who have an offer or a ride from that driver can open it. It isn't on share links.
+- The operator sees it on the driver's page and can remove it, which is recorded in the audit log. This is the safeguard for having no review.
+- Separate from the `driver_photo` identity document, which the operator still reviews.
+- Rationale: the owner asked for a driver photo in the profile, shown to the rider and held on the server, and chose no approval step.
+- Impact: API (`driver/photo`, `drivers/<id>/photo`, `admin/drivers/<id>/photo`, `remove-photo`), driver and rider apps, portal driver page.
+- Linked tests: `services/api/tests/test_driver_photo.py`, `mobile_app/driver/test/driver_photo_test.dart`, `mobile_app/rider/test/rider_screens_test.dart`.
+
 Rule: New decisions get sequential ID, date, approver, rationale, impact and linked task. Never silently reinterpret proposals as approved.

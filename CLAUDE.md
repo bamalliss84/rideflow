@@ -7,7 +7,7 @@ Read this first, then `docs/CURRENT_STATUS.md` (where work stands) and `docs/pro
 - Reply in Arabic, concisely. The owner tests on a real phone and approves designs screen by screen.
 - Designs come before code. Show several models on the canvas, wait for approval, then build. The owner's "don't start" means report and wait.
 - Commit or push only when asked. Push to `main` only after checks pass, then report the CI result.
-- New decisions get the next ID in the decision log (latest: D043). Never rewrite an approved decision or treat a proposal as approved.
+- New decisions get the next ID in the decision log (latest: D047). Never rewrite an approved decision or treat a proposal as approved.
 - Don't invent test results. Say what wasn't run or seen.
 - Never log OTP codes or tokens beyond the existing dev-only behaviour. Never weaken TLS, authentication or test assertions to make checks pass.
 - Don't delete test data, reset databases, or remove SDKs, caches, Docker volumes, emulator data or user files without approval.
@@ -100,7 +100,8 @@ Canvas: https://claude.ai/artifact/5vXMvWdh6gw6TSQupomxfi (keep using this one; 
 - Driver screens: requests with tap-to-reveal cards (`Requests-Final`), one offer sheet (`Offer-Options` option 1), status bar after sending (`After-Send` model 3), confirmation (`Confirm-Options` model 1), trip one step at a time (`Trip-Options` model 1, `Trip-Stages`).
 - Rider app (D040): same family, one main fact and one main button per screen, more breathing room than the driver app, map as the base with one panel over it, and it must work without a map.
 - Rider style (approved): `Rider-Style-V2`. Ground `#07120D`, panel `#0D1913`, card `#14241C`, line `#1C3024`, text `#F2F7F3`, muted `#B8CABE`, green main buttons `#27D17C` (text `#06170E`), gold `#F5B83D` for prices and ratings. The rider picks Cairo or Tajawal in settings, so layouts must hold in both. Those are the night colours: the rider also has a day appearance, the default, switched in account settings (D042; palettes in `mobile_app/rider/lib/design/tokens.dart`). Colours are read while building, so a widget using them can't be `const`. Later rider screens: see `docs/CURRENT_STATUS.md`. Destination screen: `Rider-Destination-Options`, models 1 and 3 both built and switched in account settings until the owner picks one (D041).
-- Not redesigned yet: onboarding, subscription, history, earnings, notifications, account (they only inherit the colours).
+- Layout (D044): three models built in both apps and switched in account settings until the owner keeps one. `RfLayout` in `lib/design/tokens.dart`; build screens from `RfGroup`, `RfRow`, `RfFacts`, `RfStops` and `RfFoot` in `lib/design/components.dart`.
+- Not redesigned yet in the driver app: onboarding, subscription, history, earnings, notifications (they only inherit the colours and the card shape).
 
 ## Pricing, offers and confirmation
 
@@ -111,7 +112,7 @@ Canvas: https://claude.ai/artifact/5vXMvWdh6gw6TSQupomxfi (keep using this one; 
 - A driver may hold several open offers (`bids.max_open_per_driver`) but runs one trip at a time. Confirming withdraws the driver's other offers; declining keeps them (D037). A driver may hide a request from their own list, without penalty.
 - Ratings appear before the offer and after confirmation; below `trust.min_sample` ratings, "new" replaces the number (D038).
 - Cash only: no wallet, stored cards or platform custody.
-- Late cancels: free before match and for `cancellation.free_after_match_seconds` after. No-show needs the wait, a valid arrival and a contact attempt (D010, proposed values).
+- Late cancels: free before match and for `cancellation.free_after_match_seconds` after. No-show needs the wait, a valid arrival and a contact attempt (D010, proposed values). "Arrived" is recorded even with no location, and a location that follows in time can still count (D045).
 
 ## Security
 
@@ -129,7 +130,7 @@ Done:
 - Rider backend additions (D040): live driver position, free-cancel deadline and reason codes, start code, trip sharing API, emergency alert, raising the price, saved and recent places, device tokens, rider account deletion.
 
 Not done:
-- Rider app: a full trip ran on the owner's phone. Stops come from a live map with search (D041), on development servers only. Cairo font not added, driver photos absent.
+- Rider app: a full trip ran on the owner's phone. Stops come from a live map with search (D041), on development servers only. Cairo font not added.
 - Share-link viewing page.
 - Push sending (Firebase): adapter only, sends nothing. SMS provider: dev only.
 - Production map and search provider for the rider app (a paid key needs a backend proxy), and emergency numbers for Mukalla (the owner must supply them).
