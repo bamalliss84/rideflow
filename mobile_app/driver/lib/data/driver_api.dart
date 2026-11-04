@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 
 import '../core/api/api_client.dart';
+import '../core/location/location_service.dart';
 import 'models.dart';
 
 /// Every driver-side call the app makes. Endpoints and payloads mirror packages/contracts/openapi.yaml;
@@ -50,6 +51,10 @@ class DriverApi {
                   },
                   actionKey: actionKey)) as Map)
           .cast<String, dynamic>());
+  Future<DriverProfile> setPhoto(Uint8List bytes, {required String actionKey}) async => DriverProfile(
+      ((await client.upload('driver/photo', {'file': MultipartFile.fromBytes(bytes, filename: 'photo.png')}, actionKey: actionKey)) as Map).cast<String, dynamic>());
+  Future<void> removePhoto() => client.delete('driver/photo');
+
   Future<DriverProfile> submit({String? actionKey}) async =>
       DriverProfile(((await client.post('driver/submit', actionKey: actionKey)) as Map).cast<String, dynamic>());
 
@@ -128,6 +133,9 @@ class DriverApi {
     final body = {'expected_version': ride.version, ...extra};
     return Ride(((await client.post('rides/${ride.id}/$path', data: body, actionKey: actionKey)) as Map).cast<String, dynamic>());
   }
+
+  Future<void> addArrivalLocation(String rideId, Fix fix, {required String actionKey}) => client.post('rides/$rideId/arrival-location',
+      data: {'lat': fix.lat, 'lng': fix.lng, 'accuracy_m': fix.accuracy, 'device_ts': fix.deviceTs.toUtc().toIso8601String()}, actionKey: actionKey);
 
   Future<void> contactAttempt(String rideId, String method) => client.post('rides/$rideId/contact-attempts', data: {'method': method});
   Future<Ride> confirmCash(String rideId, {required String actionKey}) async =>

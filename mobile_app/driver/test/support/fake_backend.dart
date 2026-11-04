@@ -35,6 +35,7 @@ class FakeBackend implements HttpClientAdapter {
     if (delay != null) await Future<void>.delayed(delay);
     final handler = routes['${options.method} $path'];
     final (status, payload) = handler == null ? (404, {'code': 'not_found'}) : handler(req);
+    if (payload is Uint8List) return ResponseBody.fromBytes(payload, status);
     return ResponseBody.fromString(jsonEncode(payload), status, headers: {
       Headers.contentTypeHeader: ['application/json'],
     });

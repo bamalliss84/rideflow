@@ -295,6 +295,8 @@ void main() {
       await tester.tap(find.byKey(const Key('offersBar')));
       await _settle(tester, 3);
       expect(find.byKey(const Key('myOffer_r3')), findsOneWidget);
+      expect(find.descendant(of: find.byKey(const Key('offerClock_r3')), matching: find.byType(CircularProgressIndicator)), findsOneWidget);
+      expect(find.descendant(of: find.byKey(const Key('myOffer_r3')), matching: find.byType(LinearProgressIndicator)), findsNothing);
       expect(find.byKey(const Key('offersBar')), findsNothing);
       expect(find.text('1 من 5'), findsOneWidget);
 

@@ -28,16 +28,16 @@ ThemeData buildRideFlowTheme() {
     labelMedium: RfType.label,
     labelSmall: RfType.caption,
   );
-  final inputBorder = OutlineInputBorder(borderRadius: BorderRadius.circular(RfRadius.md), borderSide: const BorderSide(color: RfColors.line));
+  final inputBorder = OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: RfColors.line));
   return ThemeData(
     useMaterial3: true,
     fontFamily: RfType.family,
     colorScheme: scheme,
     textTheme: text,
-    scaffoldBackgroundColor: RfColors.canvas,
+    scaffoldBackgroundColor: RfLayout.page,
     splashFactory: InkSparkle.splashFactory,
     appBarTheme: AppBarTheme(
-      backgroundColor: RfColors.canvas,
+      backgroundColor: RfLayout.page,
       foregroundColor: RfColors.text,
       elevation: 0,
       scrolledUnderElevation: 0,
@@ -47,7 +47,7 @@ ThemeData buildRideFlowTheme() {
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: RfColors.surfaceSunken,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       floatingLabelBehavior: FloatingLabelBehavior.always,
       labelStyle: RfType.label,
       floatingLabelStyle: RfType.label.copyWith(color: RfColors.tealDeep, fontWeight: FontWeight.w700),
@@ -59,11 +59,11 @@ ThemeData buildRideFlowTheme() {
       focusedBorder: inputBorder.copyWith(borderSide: const BorderSide(color: RfColors.teal, width: 2)),
       errorBorder: inputBorder.copyWith(borderSide: const BorderSide(color: RfColors.coral)),
     ),
-    bottomSheetTheme: const BottomSheetThemeData(
-      backgroundColor: RfColors.surface,
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: RfLayout.page,
       surfaceTintColor: Colors.transparent,
       showDragHandle: true,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(RfRadius.xl))),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(RfRadius.xl))),
     ),
     dialogTheme: DialogTheme(
       backgroundColor: RfColors.surface,
@@ -71,6 +71,13 @@ ThemeData buildRideFlowTheme() {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(RfRadius.lg)),
       titleTextStyle: RfType.h2,
       contentTextStyle: RfType.body,
+    ),
+    cardTheme: CardTheme(
+      elevation: 0,
+      margin: EdgeInsets.only(bottom: RfLayout.listGap),
+      color: RfLayout.ruled ? Colors.transparent : RfColors.surface,
+      surfaceTintColor: Colors.transparent,
+      shape: RfLayout.ruled ? const Border(bottom: BorderSide(color: RfColors.line)) : RoundedRectangleBorder(borderRadius: BorderRadius.circular(RfLayout.radius), side: RfLayout.compact ? BorderSide.none : const BorderSide(color: RfColors.line)),
     ),
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: RfColors.surface,

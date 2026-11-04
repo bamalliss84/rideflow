@@ -17,7 +17,7 @@ class Fix {
 
 /// Null when [fix] is too old to count as where the driver is. The server drops a sample no newer than the one it has,
 /// and refuses to go online without a recent one, so an old fix would only fail without saying why.
-Fix? freshFix(Fix? fix, {DateTime? now}) => fix != null && (now ?? DateTime.now()).difference(fix.deviceTs) < const Duration(minutes: 2) ? fix : null;
+Fix? freshFix(Fix? fix, {DateTime? now, Duration maxAge = const Duration(minutes: 2)}) => fix != null && (now ?? DateTime.now()).difference(fix.deviceTs) < maxAge ? fix : null;
 
 /// Device location for an online driver (foreground only in this phase).
 ///
@@ -44,10 +44,15 @@ class LocationService {
   Future<LocationAccess> ensureAccess() => access();
 
   /// A current fix: live reading first, then a recent last known position. Null = no fix available.
-  Future<Fix?> current() async {
+  Future<Fix?> current() => _read(const Duration(seconds: 20));
+
+  /// A fix for a button the driver just tapped, which shouldn't wait on a new GPS reading. While online the position
+  /// stream and the heartbeat keep [last] within 20 m and 30 seconds of the driver, so that is used, with its true time.
+  Future<Fix?> now() async => freshFix(last, maxAge: const Duration(seconds: 45)) ?? await _read(const Duration(seconds: 5));
+
+  Future<Fix?> _read(Duration limit) async {
     try {
-      final p = await Geolocator.getCurrentPosition(
-          locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, timeLimit: Duration(seconds: 20)));
+      final p = await Geolocator.getCurrentPosition(locationSettings: LocationSettings(accuracy: LocationAccuracy.high, timeLimit: limit));
       return last = Fix.fromPosition(p);
     } catch (_) {
       try {

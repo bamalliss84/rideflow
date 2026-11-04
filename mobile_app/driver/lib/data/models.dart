@@ -71,6 +71,7 @@ class DriverProfile {
       : id = _str(j['id']),
         fullName = _str(j['full_name']),
         phone = _str(j['phone']),
+        photoUrl = j['photo_url'] as String?,
         status = _str(j['status']),
         isOnline = j['is_online'] == true,
         reviewNote = _str(j['review_note']),
@@ -79,6 +80,7 @@ class DriverProfile {
         vehicles = _list(j['vehicles']).map(Vehicle.new).toList(),
         documents = _list(j['documents']).map(DriverDocument.new).toList();
   final String id, fullName, phone, status, reviewNote;
+  final String? photoUrl;
   final bool isOnline;
   final DateTime? submittedAt, reviewedAt;
   final List<Vehicle> vehicles;
@@ -252,6 +254,7 @@ class Ride {
   int get contactAttempts => _int(noShow?['contact_attempts']) ?? 0;
   bool get contactRequired => noShow?['contact_required'] == true;
   bool get arrivedOutsidePickup => _map(json['arrival'])['within_geofence'] == false;
+  bool get arrivedWithoutLocation => _map(json['arrival']).containsKey('within_geofence') && _map(json['arrival'])['within_geofence'] == null;
 }
 
 class NotificationItem {

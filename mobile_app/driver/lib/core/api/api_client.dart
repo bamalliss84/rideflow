@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:uuid/uuid.dart';
@@ -38,6 +39,9 @@ class ApiClient {
 
   Future<dynamic> get(String path, {Map<String, dynamic>? query}) => _send('GET', path, query: query);
 
+  /// A private file, read with the signed-in session.
+  Future<Uint8List> bytes(String path) async => Uint8List.fromList((await _send('GET', path, responseType: ResponseType.bytes)) as List<int>);
+
   Future<dynamic> post(String path, {Object? data, String? actionKey, bool auth = true}) =>
       _send('POST', path, data: data, actionKey: actionKey ?? newActionKey(), auth: auth);
 
@@ -49,7 +53,7 @@ class ApiClient {
       _send('POST', path, data: FormData.fromMap(fields), actionKey: actionKey ?? newActionKey());
 
   Future<dynamic> _send(String method, String path,
-      {Object? data, Map<String, dynamic>? query, String? actionKey, bool auth = true, bool retried = false}) async {
+      {Object? data, Map<String, dynamic>? query, String? actionKey, bool auth = true, bool retried = false, ResponseType? responseType}) async {
     final tokens = auth ? await session.read() : null;
     final headers = <String, dynamic>{
       'X-RideFlow-App': appClientId,
@@ -63,7 +67,7 @@ class ApiClient {
       res = await dio.request<dynamic>(path,
           data: data is FormData && retried ? data.clone() : data,
           queryParameters: query,
-          options: Options(method: method, headers: headers));
+          options: Options(method: method, headers: headers, responseType: responseType));
     } on DioException catch (e) {
       throw ApiException(0, 'network', detail: e.message);
     }
@@ -71,7 +75,7 @@ class ApiClient {
     if (status == 401 && auth && tokens != null && !retried) {
       final renewed = await _refreshOnce(tokens);
       if (renewed != null) {
-        return _send(method, path, data: data, query: query, actionKey: actionKey, auth: auth, retried: true);
+        return _send(method, path, data: data, query: query, actionKey: actionKey, auth: auth, retried: true, responseType: responseType);
       }
       onSessionExpired?.call();
     }

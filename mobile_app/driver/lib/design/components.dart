@@ -51,11 +51,11 @@ class RfButton extends StatelessWidget {
     final button = Material(
       color: disabled && kind != RfButtonKind.ghost ? bg.withOpacity(0.45) : bg,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(RfRadius.md),
+        borderRadius: BorderRadius.circular(12),
         side: border == null ? BorderSide.none : BorderSide(color: border),
       ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(RfRadius.md),
+        borderRadius: BorderRadius.circular(12),
         onTap: disabled ? null : onPressed,
         child: Container(
           height: large ? 50 : 44,
@@ -72,25 +72,37 @@ class RfButton extends StatelessWidget {
 // ---------------------------------------------------------------- surfaces
 
 class RfCard extends StatelessWidget {
-  const RfCard({super.key, required this.child, this.padding = const EdgeInsets.all(RfSpace.md), this.onTap, this.color, this.border});
+  const RfCard({super.key, required this.child, this.padding, this.onTap, this.color, this.border, this.inList = false});
   final Widget child;
-  final EdgeInsets padding;
+  final EdgeInsets? padding;
   final VoidCallback? onTap;
   final Color? color;
   final Color? border;
+
+  /// One of several cards in a row: in the ruled model they share a single line between them.
+  final bool inList;
   @override
-  Widget build(BuildContext context) => Material(
-        color: color ?? RfColors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(RfRadius.lg),
-          side: BorderSide(color: border ?? RfColors.line),
-        ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(RfRadius.lg),
-          onTap: onTap,
-          child: Padding(padding: padding, child: child),
-        ),
-      );
+  Widget build(BuildContext context) {
+    final accent = border;
+    final model = RfLayout.model;
+    final tint = color ?? (accent != null && model != RfLayoutModel.a ? accent.withOpacity(0.09) : null);
+    const line = BorderSide(color: RfColors.line);
+    final ShapeBorder shape = switch (model) {
+      RfLayoutModel.a => RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: accent == null ? line : BorderSide(color: accent, width: 2)),
+      RfLayoutModel.b => tint != null ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)) : Border(top: inList ? BorderSide.none : line, bottom: line),
+      RfLayoutModel.c => RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+    };
+    Widget content = Padding(padding: padding ?? RfLayout.box, child: child);
+    if (model == RfLayoutModel.c && accent != null) {
+      content = DecoratedBox(decoration: BoxDecoration(border: BorderDirectional(start: BorderSide(color: accent, width: 3))), child: content);
+    }
+    return Material(
+      color: tint ?? (RfLayout.ruled ? Colors.transparent : RfColors.surface),
+      shape: shape,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(onTap: onTap, child: content),
+    );
+  }
 }
 
 class SectionHeader extends StatelessWidget {
@@ -538,4 +550,178 @@ void showToast(BuildContext context, String text, {bool error = false}) {
         Expanded(child: Text(text, style: RfType.body.copyWith(color: RfColors.onInk))),
       ]),
     ));
+}
+
+// ---------------------------------------------------------------- layout models (D044)
+
+/// A small title above a group of data.
+class RfSectionTitle extends StatelessWidget {
+  const RfSectionTitle(this.title, {super.key, this.trailing});
+  final String title;
+  final Widget? trailing;
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: RfLayout.titlePad,
+        child: Row(children: [
+          Expanded(child: Text(title, style: RfType.caption.copyWith(fontWeight: FontWeight.w700, color: RfColors.textMuted))),
+          if (trailing != null) trailing!,
+        ]),
+      );
+}
+
+/// One group of data, drawn by the chosen layout model: a card, a ruled section or a borderless card.
+class RfGroup extends StatelessWidget {
+  const RfGroup({super.key, this.title, this.trailing, required this.children, this.plain = false, this.border, this.color, this.onTap});
+  final String? title;
+  final Widget? trailing;
+  final List<Widget> children;
+
+  /// No box: for what draws its own, such as tiles or choice buttons.
+  final bool plain;
+  final Color? border, color;
+  final VoidCallback? onTap;
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: EdgeInsets.only(bottom: RfLayout.groupGap),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          if (title != null) RfSectionTitle(title!, trailing: trailing),
+          if (plain)
+            ...children
+          else
+            RfCard(
+              padding: EdgeInsets.zero,
+              border: border,
+              color: color,
+              onTap: onTap,
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                for (final (i, child) in children.indexed) ...[
+                  if (i > 0) Container(height: 1, color: RfLayout.softLine),
+                  child,
+                ],
+              ]),
+            ),
+        ]),
+      );
+}
+
+/// One line of data: an optional small label above the value, an optional detail below it.
+class RfRow extends StatelessWidget {
+  const RfRow({super.key, this.title, this.titleChild, this.over, this.sub, this.subChild, this.leading, this.trailing, this.onTap, this.titleStyle, this.maxLines});
+  final String? title, over, sub;
+  final Widget? titleChild, subChild, leading, trailing;
+  final VoidCallback? onTap;
+  final TextStyle? titleStyle;
+  final int? maxLines;
+  @override
+  Widget build(BuildContext context) {
+    final body = ConstrainedBox(
+      constraints: BoxConstraints(minHeight: RfLayout.rowHeight),
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: RfLayout.inset, vertical: RfLayout.rowPad),
+        child: Row(children: [
+          if (leading != null) ...[leading!, const SizedBox(width: 10)],
+          Expanded(
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+              if (over != null) Text(over!, style: RfType.caption),
+              titleChild ?? Text(title ?? '', style: titleStyle ?? RfType.bodyStrong, maxLines: maxLines, overflow: maxLines == null ? null : TextOverflow.ellipsis),
+              if (sub != null) Text(sub!, style: RfType.caption, maxLines: maxLines, overflow: maxLines == null ? null : TextOverflow.ellipsis),
+              if (subChild != null) subChild!,
+            ]),
+          ),
+          if (trailing != null) ...[const SizedBox(width: 10), trailing!],
+        ]),
+      ),
+    );
+    return onTap == null ? body : InkWell(onTap: onTap, child: body);
+  }
+}
+
+class RfRowIcon extends StatelessWidget {
+  const RfRowIcon(this.icon, {super.key, this.color});
+  final IconData icon;
+  final Color? color;
+  @override
+  Widget build(BuildContext context) => Container(
+        width: RfLayout.iconBox,
+        height: RfLayout.iconBox,
+        decoration: const BoxDecoration(color: RfColors.surfaceSunken, shape: BoxShape.circle),
+        child: Icon(icon, size: RfLayout.iconBox * 0.56, color: color ?? RfColors.text),
+      );
+}
+
+class RfCircleButton extends StatelessWidget {
+  const RfCircleButton({super.key, required this.icon, required this.tooltip, required this.onPressed});
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback? onPressed;
+  @override
+  Widget build(BuildContext context) => IconButton(
+        tooltip: tooltip,
+        onPressed: onPressed,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+        icon: Container(
+          width: 38,
+          height: 38,
+          decoration: const BoxDecoration(color: RfColors.tealSoft, shape: BoxShape.circle),
+          child: Icon(icon, size: 19, color: RfColors.teal),
+        ),
+      );
+}
+
+class RfFact {
+  const RfFact(this.label, this.value, {this.color, this.ltr = false, this.child});
+  final String label;
+  final String? value;
+  final Color? color;
+  final bool ltr;
+  final Widget? child;
+}
+
+/// Two or three short facts side by side, each with its label above its value.
+class RfFacts extends StatelessWidget {
+  const RfFacts(this.items, {super.key});
+  final List<RfFact> items;
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: RfLayout.box,
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          for (final (i, f) in items.indexed) ...[
+            if (i > 0) const SizedBox(width: 8),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(f.label, style: RfType.caption, maxLines: 1, overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 1),
+                f.child ?? (f.ltr ? Ltr(f.value ?? '—', style: RfType.bodyStrong.copyWith(color: f.color)) : Text(f.value ?? '—', style: RfType.bodyStrong.copyWith(color: f.color))),
+              ]),
+            ),
+          ],
+        ]),
+      );
+}
+
+/// Pickup, dashed line, destination, inside a group.
+class RfStops extends StatelessWidget {
+  const RfStops({super.key, required this.fromLabel, required this.from, required this.toLabel, required this.to, this.showLabels = true});
+  final String fromLabel, from, toLabel, to;
+  final bool showLabels;
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: RfLayout.box,
+        child: RouteStops(pickupLabel: fromLabel, pickup: from, dropoffLabel: toLabel, dropoff: to, dense: true, showLabels: showLabels),
+      );
+}
+
+/// The main action, pinned at the bottom of a screen.
+class RfFoot extends StatelessWidget {
+  const RfFoot({super.key, required this.child});
+  final Widget child;
+  @override
+  Widget build(BuildContext context) => Container(
+        decoration: const BoxDecoration(color: RfColors.surface, border: Border(top: BorderSide(color: RfColors.line))),
+        child: SafeArea(
+          top: false,
+          child: Padding(padding: const EdgeInsets.fromLTRB(16, 10, 16, 12), child: child),
+        ),
+      );
 }

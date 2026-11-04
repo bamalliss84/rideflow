@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,10 +8,13 @@ import '../core/api/api_client.dart';
 import '../core/api/api_exception.dart';
 import '../core/auth/session_store.dart';
 import '../core/external_apps.dart';
+import '../core/photo_picker.dart';
+import '../core/location/arrival_fix_queue.dart';
 import '../core/location/location_service.dart';
 import '../core/realtime/events_socket.dart';
 import '../data/driver_api.dart';
 import '../data/models.dart';
+import '../design/tokens.dart';
 
 final sessionStoreProvider = Provider<SessionStore>((ref) => SessionStore());
 
@@ -24,7 +28,63 @@ final driverApiProvider = Provider<DriverApi>((ref) => DriverApi(ref.watch(apiCl
 final locationServiceProvider = Provider<LocationService>((ref) => LocationService());
 final externalAppsProvider = Provider<ExternalApps>((ref) => const ExternalApps());
 
+final photoPickerProvider = Provider<PhotoPicker>((ref) => const PhotoPicker());
+
+/// A photo on the server, by its address. Kept once read, and tried again if reading it failed.
+final photoBytesProvider = FutureProvider.autoDispose.family<Uint8List, String>((ref, path) async {
+  final bytes = await ref.read(apiClientProvider).bytes(path);
+  ref.keepAlive();
+  return bytes;
+});
+
+/// Arrival locations still to be read or sent (D045).
+final arrivalFixQueueProvider = Provider<ArrivalFixQueue>((ref) => ArrivalFixQueue(
+      kv: ref.read(prefsProvider),
+      location: ref.read(locationServiceProvider),
+      send: (rideId, fix, actionKey) => ref.read(driverApiProvider).addArrivalLocation(rideId, fix, actionKey: actionKey),
+      onSent: (rideId) => ref.invalidate(rideProvider(rideId)),
+    ));
+
 final localeProvider = StateProvider<Locale>((ref) => const Locale('ar'));
+
+// ---------------------------------------------------------------- device settings
+
+final prefsProvider = Provider<SecureKV>((ref) => const KeystoreKV());
+
+/// A choice kept on this device. A store that can't be read just leaves the default.
+class DevicePref<T> extends Notifier<T> {
+  DevicePref(this.key, this.fallback, this.decode, this.encode);
+  final String key;
+  final T fallback;
+  final T? Function(String) decode;
+  final String Function(T) encode;
+
+  @override
+  T build() {
+    unawaited(_load());
+    return fallback;
+  }
+
+  Future<void> _load() async {
+    try {
+      final saved = await ref.read(prefsProvider).read(key);
+      final value = saved == null ? null : decode(saved);
+      if (value != null) state = value;
+    } catch (_) {}
+  }
+
+  Future<void> set(T value) async {
+    state = value;
+    try {
+      await ref.read(prefsProvider).write(key, encode(value));
+    } catch (_) {}
+  }
+}
+
+const layoutKey = 'rf_layout_model';
+
+/// Which layout model the screens use (D044). main() has already applied the saved choice.
+final layoutProvider = NotifierProvider<DevicePref<RfLayoutModel>, RfLayoutModel>(() => DevicePref<RfLayoutModel>(layoutKey, RfLayout.model, RfLayout.decode, (m) => m.name));
 
 // ---------------------------------------------------------------- authentication
 
@@ -257,6 +317,18 @@ class OnlineState {
 /// Going online = permission + a real fix accepted by the server + backend eligibility (`POST driver/availability`,
 /// which also refuses without a fresh location). While online, movement updates plus a 30 s heartbeat keep the
 /// presence fresh; every failure is kept in state and shown, never swallowed.
+/// The heartbeat sends every 30 seconds and a read takes up to 20: this long without an accepted sample means it stopped,
+/// before the server's own limit (`presence.stale_seconds`, 120) drops the driver from new requests.
+const locationStoppedAfter = Duration(seconds: 75);
+
+/// True while online with no location accepted lately. Worked out here, each second, because the server's "fresh" flag
+/// is only as new as the last time it was read.
+bool locationStopped(OnlineState online, Eligibility? eligibility, DateTime now) {
+  if (!online.online) return false;
+  final last = online.lastSentAt ?? eligibility?.locationServerTs;
+  return last != null && now.difference(last) > locationStoppedAfter;
+}
+
 class OnlineController extends Notifier<OnlineState> {
   @override
   OnlineState build() {
@@ -353,10 +425,11 @@ class OnlineController extends Notifier<OnlineState> {
 
   Future<void> _send(Fix fix) async {
     try {
-      await ref
+      final applied = await ref
           .read(driverApiProvider)
           .sendLocation(lat: fix.lat, lng: fix.lng, accuracy: fix.accuracy, heading: fix.heading, speed: fix.speed, deviceTs: fix.deviceTs);
-      state = state.copy(lastSentAt: DateTime.now(), clearLocationError: true, noFix: false);
+      // Not applied: the phone repeated an old reading, so the location hasn't moved on.
+      state = applied ? state.copy(lastSentAt: DateTime.now(), clearLocationError: true, noFix: false) : state.copy(clearLocationError: true);
     } catch (e) {
       state = state.copy(locationError: e);
       rethrow;

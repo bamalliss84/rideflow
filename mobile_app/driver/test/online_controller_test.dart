@@ -61,6 +61,19 @@ void main() {
     expect(freshFix(null, now: now), isNull);
   });
 
+  group('location stopped', () {
+    final now = DateTime(2026, 11, 5, 12);
+    OnlineState sent(int secondsAgo, {bool online = true}) => OnlineState(online: online, lastSentAt: now.subtract(Duration(seconds: secondsAgo)));
+
+    test('a normal gap between samples is not a warning', () => expect(locationStopped(sent(50), null, now), isFalse));
+    test('warns before the server drops the driver', () {
+      expect(locationStopped(sent(76), null, now), isTrue);
+      expect(locationStoppedAfter.inSeconds, lessThan(120));
+    });
+    test('never while offline', () => expect(locationStopped(sent(500, online: false), null, now), isFalse));
+    test('nothing sent yet says nothing', () => expect(locationStopped(const OnlineState(online: true), null, now), isFalse));
+  });
+
   final fix = Fix(lat: 14.54, lng: 49.12, accuracy: 6, deviceTs: DateTime.utc(2026, 10, 28, 10));
 
   test('no position -> stays offline and never calls availability (no "ready" without a location)', () async {

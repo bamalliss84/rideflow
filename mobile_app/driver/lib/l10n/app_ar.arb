@@ -131,6 +131,12 @@
   "docNumber": "رقم الوثيقة",
   "docExpiry": "تاريخ الانتهاء",
   "pickImage": "اختيار صورة",
+  "myPhoto": "صورتي",
+  "addMyPhoto": "إضافة صورتي",
+  "pickFromGallery": "من المعرض",
+  "removePhoto": "إزالة الصورة",
+  "photoAddHint": "أضف صورة واضحة لوجهك، يراها الراكب عند عرضك وفي الرحلة.",
+  "photoShownHint": "تظهر للراكب عند عرضك وفي الرحلة.",
   "takePhoto": "التقاط صورة",
   "imageSelected": "تم اختيار الصورة",
   "doc_national_id": "الهوية الوطنية",
@@ -311,6 +317,10 @@
     }
   },
   "noShowCallFirst": "اتصل بالراكب أولًا لتسجيل عدم حضوره.",
+  "locationStoppedDriver": "موقعك توقف عن التحديث، فقد لا تصلك طلبات. تأكد من تشغيل GPS.",
+  "locationStoppedTrip": "موقعك توقف عن التحديث. قد يُسجَّل وصولك بدون موقع. تأكد من تشغيل GPS.",
+  "arrivedNoLocation": "سُجّل وصولك. موقعك سيُرسل عند توفره.",
+  "noShowNoLocation": "سُجّل وصولك بدون موقع، فلا يمكن تسجيل عدم الحضور.",
   "noShowOutside": "سُجّل وصولك خارج نطاق نقطة الالتقاء، فلا يمكن تسجيل عدم الحضور.",
   "agreedFare": "الأجرة المتفق عليها",
   "fareCash": "الأجرة نقدًا",
@@ -383,6 +393,20 @@
   "violationsTitle": "المخالفات",
   "violationsEmpty": "لا توجد مخالفات.",
   "language": "اللغة",
+  "layoutModel": "ترتيب الشاشات",
+  "layoutA": "النموذج أ: بطاقات منفصلة",
+  "layoutB": "النموذج ب: أقسام بخطوط",
+  "layoutC": "النموذج ج: صفوف مدمجة",
+  "sectionSettings": "الإعدادات",
+  "sectionPrices": "الأسعار",
+  "sectionOffer": "عرضك",
+  "sectionTrip": "المشوار",
+  "sectionMyAccount": "حسابي وعملي",
+  "fareFact": "الأجرة",
+  "sectionRider": "الراكب",
+  "ratingFact": "التقييم",
+  "commitmentFact": "الالتزام",
+  "tripsFact": "الرحلات",
   "switchLanguage": "English",
   "profileTitle": "الملف الشخصي",
   "nameSaved": "تم حفظ الاسم.",
@@ -716,22 +740,6 @@
   "rateWhat": "ما السبب؟",
   "sendRating": "إرسال التقييم",
   "ratePrivacy": "لا يرى الراكب تقييمك بشكل منفرد، ويظهر له المعدل العام فقط.",
-  "ridesDoneLine": "{n} رحلة مكتملة",
-  "@ridesDoneLine": {
-    "placeholders": {
-      "n": {
-        "type": "String"
-      }
-    }
-  },
-  "completionLine": "التزام {p}%",
-  "@completionLine": {
-    "placeholders": {
-      "p": {
-        "type": "String"
-      }
-    }
-  },
   "tag_punctual": "في الموعد",
   "tag_polite": "محترم",
   "tag_paid_smoothly": "دفع بدون مشكلة",

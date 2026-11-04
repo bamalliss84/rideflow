@@ -153,8 +153,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         actionLabel: t.turnOnLocation,
         onAction: () => ref.read(locationServiceProvider).openLocationSettings(),
       ));
-    } else if (online.online && eligibility.hasValue && !eligibility.value!.locationFresh) {
-      final detail = online.locationError != null && online.locationError is! StateError ? errorMessage(context, online.locationError!) : t.noLocationFix;
+    } else if (online.online && eligibility.hasValue && (!eligibility.value!.locationFresh || locationStopped(online, eligibility.value, DateTime.now()))) {
+      final detail = online.locationError != null && online.locationError is! StateError ? errorMessage(context, online.locationError!) : t.locationStoppedDriver;
       add(Banner2(
         key: const Key('locationNotUpdating'),
         tone: Tone.warning,
@@ -221,7 +221,7 @@ class _OnlineHeader extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final t = AppLocalizations.of(context);
     final me = ref.watch(authProvider).valueOrNull;
-    final ready = eligibility?.locationFresh ?? false;
+    final ready = (eligibility?.locationFresh ?? false) && !locationStopped(online, eligibility, DateTime.now());
     final socket = ref.watch(socketStateProvider).valueOrNull;
     final unread = ref.watch(notificationsProvider).valueOrNull?.where((n) => !n.read).length ?? 0;
     final lastSent = online.lastSentAt ?? eligibility?.locationServerTs;
@@ -336,7 +336,7 @@ class _AvailabilityHero extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = AppLocalizations.of(context);
-    final ready = online.online && (eligibility?.locationFresh ?? false);
+    final ready = online.online && (eligibility?.locationFresh ?? false) && !locationStopped(online, eligibility, DateTime.now());
     final degraded = online.online && !ready;
     final socket = ref.watch(socketStateProvider).valueOrNull;
     final lastSent = online.lastSentAt ?? eligibility?.locationServerTs;
@@ -538,16 +538,13 @@ class _TodaySummary extends ConsumerWidget {
     final now = DateTime.now();
     final s = summarize(rides, DateTime(now.year, now.month, now.day));
     return Padding(
-      padding: const EdgeInsets.only(top: RfSpace.md),
-      child: RfCard(
-        onTap: () => context.go('/earnings'),
-        child: Row(children: [
-          Expanded(child: MetricTile(label: t.todayRides, value: '${s.count}', icon: Icons.route_rounded)),
-          Container(width: 1, height: 40, color: RfColors.line),
-          const SizedBox(width: RfSpace.md),
-          Expanded(child: MetricTile(label: t.todayFares, value: formatMoney(s.total, me?.currency ?? '', me?.minorUnits ?? 2), icon: Icons.payments_rounded)),
+      padding: const EdgeInsets.only(top: RfSpace.xs),
+      child: RfGroup(onTap: () => context.go('/earnings'), children: [
+        RfFacts([
+          RfFact(t.todayRides, '${s.count}', ltr: true),
+          RfFact(t.todayFares, formatMoney(s.total, me?.currency ?? '', me?.minorUnits ?? 2), ltr: true, color: RfColors.gold),
         ]),
-      ),
+      ]),
     );
   }
 }
@@ -563,7 +560,7 @@ class _Tabs extends StatelessWidget {
     Widget tab(String id, String label, int flex) => Expanded(
           flex: flex,
           child: Material(
-            color: selected == id ? RfColors.gold : RfColors.surface,
+            color: selected == id ? RfColors.gold : RfColors.surfaceSunken,
             borderRadius: BorderRadius.circular(RfRadius.md),
             child: InkWell(
               key: Key('tab_$id'),
@@ -696,59 +693,54 @@ class _RequestCard extends StatelessWidget {
     final range = _rangeText(ride, minorUnits);
     final name = rider == null || rider.displayName.isEmpty ? t.rider : rider.displayName;
     return Padding(
-      padding: const EdgeInsets.only(bottom: RfSpace.sm),
+      padding: EdgeInsets.only(bottom: RfLayout.listGap),
       child: RfCard(
         padding: EdgeInsets.zero,
+        inList: true,
         border: open ? RfColors.gold : null,
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           InkWell(
             key: Key('toggleCard_${ride.id}'),
-            borderRadius: BorderRadius.circular(RfRadius.lg),
             onTap: onToggle,
-            child: Padding(
-              padding: const EdgeInsets.all(RfSpace.md),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                Row(children: [
-                  CircleAvatar(radius: 16, backgroundColor: RfColors.surfaceSunken, child: Text(name.characters.first, style: RfType.caption.copyWith(color: RfColors.text, fontWeight: FontWeight.w800))),
-                  const SizedBox(width: RfSpace.xs),
-                  Expanded(child: Text(name, style: RfType.bodyStrong, maxLines: 1, overflow: TextOverflow.ellipsis)),
-                  RatingBadge(score: rider?.ratingAvg, count: rider?.ratingCount ?? 0, provisional: rider?.ratingProvisional ?? true, newLabel: t.newUser),
-                ]),
-                const SizedBox(height: RfSpace.sm),
-                RouteStops(pickupLabel: t.pickup, pickup: ride.pickupLandmark, dropoffLabel: t.dropoff, dropoff: ride.dropoffLandmark, dense: true, showLabels: false),
-                const SizedBox(height: RfSpace.sm),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: RfSpace.sm, vertical: RfSpace.xs),
-                  decoration: BoxDecoration(color: RfColors.surfaceSunken, borderRadius: BorderRadius.circular(RfRadius.sm)),
-                  child: Row(children: [
-                    if (price != null) ...[
-                      Expanded(
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text(t.riderPriceLabel, style: RfType.caption.copyWith(color: RfColors.gold, fontWeight: FontWeight.w700)),
-                          MoneyText(formatMoney(price, ride.currency, minorUnits), style: RfType.h3.copyWith(color: RfColors.gold)),
-                        ]),
-                      ),
-                      const SizedBox(width: RfSpace.xs),
-                    ],
-                    Expanded(
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text('${t.estimateShort(ride.currency)} · ${formatDistance(ride.distanceM)}', style: RfType.caption, maxLines: 1, overflow: TextOverflow.ellipsis),
-                        Ltr(range, style: RfType.h3),
-                      ]),
-                    ),
-                    AnimatedRotation(
-                      turns: open ? 0.5 : 0,
-                      duration: const Duration(milliseconds: 150),
-                      child: const Icon(Icons.expand_more_rounded, color: RfColors.text),
-                    ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              RfRow(
+                leading: CircleAvatar(radius: RfLayout.avatar, backgroundColor: RfColors.surfaceSunken, child: Text(name.characters.first, style: RfType.caption.copyWith(color: RfColors.text, fontWeight: FontWeight.w800))),
+                title: name,
+                maxLines: 1,
+                trailing: RatingBadge(score: rider?.ratingAvg, count: rider?.ratingCount ?? 0, provisional: rider?.ratingProvisional ?? true, newLabel: t.newUser),
+              ),
+              Container(height: 1, color: RfLayout.softLine),
+              RfStops(fromLabel: t.pickup, from: ride.pickupLandmark, toLabel: t.dropoff, to: ride.dropoffLandmark),
+              Container(height: 1, color: RfLayout.softLine),
+              Row(children: [
+                Expanded(
+                  child: RfFacts([
+                    RfFact(t.distanceLabel, formatDistance(ride.distanceM), ltr: true),
+                    RfFact(t.estimateShort(ride.currency), range, ltr: true),
                   ]),
                 ),
+                AnimatedRotation(
+                  turns: open ? 0.5 : 0,
+                  duration: const Duration(milliseconds: 150),
+                  child: const Icon(Icons.expand_more_rounded, color: RfColors.text),
+                ),
+                SizedBox(width: RfLayout.inset),
               ]),
-            ),
+              if (price != null) ...[
+                Container(height: 1, color: RfLayout.softLine),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: RfLayout.inset, vertical: 6),
+                  child: Row(children: [
+                    Expanded(child: Text(t.riderPriceLabel, style: RfType.caption)),
+                    MoneyText(formatMoney(price, ride.currency, minorUnits), style: RfLayout.priceSmall),
+                  ]),
+                ),
+              ],
+            ]),
           ),
           if (open)
             Padding(
-              padding: const EdgeInsets.fromLTRB(RfSpace.md, 0, RfSpace.md, RfSpace.xs),
+              padding: EdgeInsets.fromLTRB(RfLayout.inset, RfSpace.xs, RfLayout.inset, RfSpace.xxs),
               child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 RfButton(
                   key: Key('makeOffer_${ride.id}'),
@@ -806,25 +798,28 @@ class _MyOffersState extends ConsumerState<_MyOffers> {
     final t = AppLocalizations.of(context);
     final max = widget.maxOpen;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      RfCard(
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Row(children: [
-            Expanded(child: Text(t.openOffersTitle, style: RfType.bodyStrong)),
-            Ltr(max == null ? '${widget.offers.length}' : t.offersOfMax('${widget.offers.length}', '$max'), style: RfType.bodyStrong),
+      RfGroup(children: [
+        Padding(
+          padding: RfLayout.box,
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Row(children: [
+              Expanded(child: Text(t.openOffersTitle, style: RfType.bodyStrong)),
+              Ltr(max == null ? '${widget.offers.length}' : t.offersOfMax('${widget.offers.length}', '$max'), style: RfType.bodyStrong),
+            ]),
+            if (max != null && max > 0) ...[
+              const SizedBox(height: RfSpace.xs),
+              LinearProgressIndicator(
+                value: (widget.offers.length / max).clamp(0.0, 1.0),
+                minHeight: 6,
+                borderRadius: BorderRadius.circular(RfRadius.pill),
+                backgroundColor: RfColors.surfaceSunken,
+                color: RfColors.gold,
+              ),
+            ],
           ]),
-          if (max != null && max > 0) ...[
-            const SizedBox(height: RfSpace.xs),
-            LinearProgressIndicator(
-              value: (widget.offers.length / max).clamp(0.0, 1.0),
-              minHeight: 8,
-              borderRadius: BorderRadius.circular(RfRadius.pill),
-              backgroundColor: RfColors.surfaceSunken,
-              color: RfColors.gold,
-            ),
-          ],
-        ]),
-      ),
-      const SizedBox(height: RfSpace.sm),
+        ),
+      ]),
+
       if (widget.offers.isEmpty) EmptyState(icon: Icons.local_offer_outlined, title: t.noOpenOffers),
       for (final r in widget.offers) _myOffer(context, r),
     ]);
@@ -837,26 +832,25 @@ class _MyOffersState extends ConsumerState<_MyOffers> {
     final total = bid.expiresAt != null && bid.createdAt != null ? bid.expiresAt!.difference(bid.createdAt!) : const Duration(seconds: 120);
     final urgent = left.inSeconds <= 30;
     return Padding(
-      padding: const EdgeInsets.only(bottom: RfSpace.sm),
+      padding: EdgeInsets.only(bottom: RfLayout.listGap),
       child: RfCard(
         key: Key('myOffer_${r.id}'),
+        inList: true,
         border: urgent ? RfColors.gold : null,
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Row(children: [
-            Expanded(child: MoneyText(formatMoney(bid.amountMinor, r.currency, widget.minorUnits), style: RfType.h1)),
-            Ltr(_clock(left), style: RfType.bodyStrong.copyWith(color: urgent ? RfColors.gold : RfColors.text)),
-          ]),
-          const SizedBox(height: 4),
-          Text('${r.pickupLandmark} ← ${r.dropoffLandmark}', style: RfType.bodyStrong),
-          Text(urgent ? t.endingSoon : t.waitingRider, style: RfType.caption),
-          const SizedBox(height: RfSpace.xs),
-          LinearProgressIndicator(
-            value: total.inSeconds <= 0 ? 0 : (left.inSeconds / total.inSeconds).clamp(0.0, 1.0),
-            minHeight: 6,
-            borderRadius: BorderRadius.circular(RfRadius.pill),
-            backgroundColor: RfColors.surfaceSunken,
-            color: urgent ? RfColors.gold : RfColors.teal,
+          Center(
+            child: _CountdownRing(
+              key: Key('offerClock_${r.id}'),
+              text: _clock(left),
+              part: total.inSeconds <= 0 ? 0 : (left.inSeconds / total.inSeconds).clamp(0.0, 1.0),
+              urgent: urgent,
+            ),
           ),
+          const SizedBox(height: RfSpace.xs),
+          Center(child: MoneyText(formatMoney(bid.amountMinor, r.currency, widget.minorUnits), style: RfLayout.price)),
+          const SizedBox(height: 2),
+          Text('${r.pickupLandmark} ← ${r.dropoffLandmark}', style: RfType.bodyStrong, textAlign: TextAlign.center),
+          Text(urgent ? t.endingSoon : t.waitingRider, style: RfType.caption, textAlign: TextAlign.center),
           const SizedBox(height: RfSpace.xs),
           Row(children: [
             Expanded(
@@ -880,6 +874,24 @@ class _MyOffersState extends ConsumerState<_MyOffers> {
       ),
     );
   }
+}
+
+/// The time an open offer has left, inside a ring that empties with it.
+class _CountdownRing extends StatelessWidget {
+  const _CountdownRing({super.key, required this.text, required this.part, required this.urgent});
+  final String text;
+  final double part;
+  final bool urgent;
+  @override
+  Widget build(BuildContext context) => SizedBox.square(
+        dimension: 96,
+        child: Stack(alignment: Alignment.center, children: [
+          Positioned.fill(
+            child: CircularProgressIndicator(value: part, strokeWidth: 6, strokeCap: StrokeCap.round, backgroundColor: RfColors.surfaceSunken, color: urgent ? RfColors.gold : RfColors.teal),
+          ),
+          Ltr(text, style: RfLayout.price.copyWith(color: urgent ? RfColors.gold : RfColors.text)),
+        ]),
+      );
 }
 
 /// Always-visible follow-up of open offers while the driver browses other requests.
@@ -1108,116 +1120,91 @@ class _BidSheetState extends ConsumerState<BidSheet> {
         ),
     };
 
-    Widget tile(String label, String value, {Color? color}) => Expanded(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: RfSpace.sm, vertical: 10),
-            decoration: BoxDecoration(color: RfColors.surfaceSunken, borderRadius: BorderRadius.circular(RfRadius.md)),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(label, style: RfType.caption),
-              const SizedBox(height: 2),
-              Ltr(value, style: RfType.bodyStrong.copyWith(color: color ?? RfColors.text)),
-            ]),
-          ),
-        );
-
     return RfSheet(
       title: r.myBid?.status == 'open' ? t.editOffer : t.bidTitle,
       body: [
-        Container(
-          padding: const EdgeInsets.all(RfSpace.sm),
-          decoration: BoxDecoration(color: RfColors.surfaceSunken, borderRadius: BorderRadius.circular(RfRadius.md)),
-          child: Row(children: [
-            CircleAvatar(radius: 18, backgroundColor: RfColors.canvas, child: Text(name.characters.first, style: RfType.bodyStrong)),
-            const SizedBox(width: RfSpace.sm),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(name, style: RfType.bodyStrong),
-                if (rider != null && !rider.ratingProvisional)
-                  Text(
-                    [
-                      t.ridesDoneLine('${rider.completedRides}'),
-                      if (rider.completionRate != null) t.completionLine('${(rider.completionRate! * 100).round()}'),
-                    ].join(' · '),
-                    style: RfType.caption,
-                  ),
-              ]),
-            ),
-            RatingBadge(score: rider?.ratingAvg, count: rider?.ratingCount ?? 0, provisional: rider?.ratingProvisional ?? true, newLabel: t.newUser, large: true),
-          ]),
-        ),
-        const SizedBox(height: RfSpace.md),
-        RouteStops(pickupLabel: t.pickup, pickup: r.pickupLandmark, dropoffLabel: t.dropoff, dropoff: r.dropoffLandmark, dense: true, showLabels: false),
-        if (r.riderNote.isNotEmpty) ...[const SizedBox(height: RfSpace.xs), Text(r.riderNote, style: RfType.caption)],
-        if (r.pickupNote.isNotEmpty) ...[const SizedBox(height: RfSpace.xs), Text(t.pickupNoteLabel(r.pickupNote), style: RfType.caption)],
-        if (r.dropoffNote.isNotEmpty) ...[const SizedBox(height: RfSpace.xs), Text(t.dropoffNoteLabel(r.dropoffNote), style: RfType.caption)],
-        const SizedBox(height: RfSpace.md),
-        Row(children: [
-          if (r.riderPriceMinor != null) ...[
-            tile(t.riderPriceLabel, formatMoney(r.riderPriceMinor, r.currency, widget.minorUnits), color: RfColors.gold),
-            const SizedBox(width: RfSpace.xs),
-          ],
-          tile('${t.estimateLabel} · ${formatDistance(r.distanceM)}', '${_rangeText(r, widget.minorUnits)} ${r.currency}'),
+        RfGroup(key: const Key('offerRider'), title: t.sectionRider, children: [
+          RfRow(
+            leading: CircleAvatar(radius: RfLayout.avatar, backgroundColor: RfColors.surfaceSunken, child: Text(name.characters.first, style: RfType.bodyStrong)),
+            title: name,
+            trailing: rider == null || rider.ratingProvisional ? RatingBadge(score: rider?.ratingAvg, count: rider?.ratingCount ?? 0, provisional: true, newLabel: t.newUser, large: true) : null,
+          ),
+          if (rider != null && !rider.ratingProvisional)
+            RfFacts([
+              RfFact(t.ratingFact, null, child: RatingBadge(score: rider.ratingAvg, count: rider.ratingCount, provisional: false, newLabel: t.newUser)),
+              RfFact(t.tripsFact, '${rider.completedRides}', ltr: true),
+              RfFact(t.commitmentFact, rider.completionRate == null ? '—' : '${(rider.completionRate! * 100).round()}%', ltr: true),
+            ]),
         ]),
-        if (banner != null) ...[const SizedBox(height: RfSpace.md), banner],
-        const SizedBox(height: RfSpace.md),
-        Container(
-          padding: const EdgeInsets.all(RfSpace.sm),
-          decoration: BoxDecoration(color: RfColors.canvas, borderRadius: BorderRadius.circular(RfRadius.lg)),
-          child: Row(children: [
-            _StepButton(key: const Key('pricePlus'), icon: Icons.add_rounded, primary: true, onTap: () => _step(1)),
-            Expanded(
-              child: Column(children: [
-                Text(t.yourPrice, style: RfType.caption),
-                TextField(
-                  key: const Key('bidAmount'),
-                  controller: _amount,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  textDirection: TextDirection.ltr,
-                  textAlign: TextAlign.center,
-                  style: RfType.display.copyWith(fontSize: 24, color: RfColors.gold),
-                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))],
-                  decoration: const InputDecoration(
-                    filled: false,
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    isCollapsed: true,
-                    contentPadding: EdgeInsets.symmetric(vertical: 4),
-                  ),
-                  onChanged: (_) => setState(() => _error = null),
-                ),
-                Text(_hint(t), key: const Key('priceHint'), style: RfType.caption.copyWith(color: RfColors.text), textAlign: TextAlign.center),
-              ]),
-            ),
-            _StepButton(key: const Key('priceMinus'), icon: Icons.remove_rounded, onTap: () => _step(-1)),
+        RfGroup(key: const Key('offerTrip'), title: t.sectionTrip, children: [
+          RfStops(fromLabel: t.pickup, from: r.pickupLandmark, toLabel: t.dropoff, to: r.dropoffLandmark, showLabels: false),
+          if (r.riderNote.isNotEmpty) RfRow(title: r.riderNote, titleStyle: RfType.caption),
+          if (r.pickupNote.isNotEmpty) RfRow(title: t.pickupNoteLabel(r.pickupNote), titleStyle: RfType.caption),
+          if (r.dropoffNote.isNotEmpty) RfRow(title: t.dropoffNoteLabel(r.dropoffNote), titleStyle: RfType.caption),
+        ]),
+        RfGroup(title: t.sectionPrices, children: [
+          RfFacts([
+            if (r.riderPriceMinor != null) RfFact(t.riderPriceLabel, formatMoney(r.riderPriceMinor, r.currency, widget.minorUnits), ltr: true, color: RfColors.gold),
+            RfFact('${t.estimateLabel} · ${formatDistance(r.distanceM)}', '${_rangeText(r, widget.minorUnits)} ${r.currency}', ltr: true),
           ]),
-        ),
-        if (_error != null) ...[const SizedBox(height: RfSpace.xs), Text(_error!, style: RfType.caption.copyWith(color: RfColors.coral))],
-        const SizedBox(height: RfSpace.md),
-        Text(t.etaLabel, style: RfType.bodyStrong),
-        const SizedBox(height: RfSpace.xs),
-        Row(children: [
-          for (final m in _etaChoices)
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 3),
-                child: Material(
-                  color: _eta == m ? RfColors.text : RfColors.surfaceSunken,
-                  borderRadius: BorderRadius.circular(RfRadius.sm),
-                  child: InkWell(
-                    key: Key('eta_$m'),
+        ]),
+        if (banner != null) ...[const SizedBox(height: RfSpace.xs), banner, const SizedBox(height: RfSpace.xs)],
+        RfGroup(title: t.sectionOffer, children: [
+          Padding(
+            padding: RfLayout.box,
+            child: Row(children: [
+              _StepButton(key: const Key('pricePlus'), icon: Icons.add_rounded, primary: true, onTap: () => _step(1)),
+              Expanded(
+                child: Column(children: [
+                  TextField(
+                    key: const Key('bidAmount'),
+                    controller: _amount,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    textDirection: TextDirection.ltr,
+                    textAlign: TextAlign.center,
+                    style: RfLayout.price,
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))],
+                    decoration: const InputDecoration(
+                      filled: false,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      isCollapsed: true,
+                      contentPadding: EdgeInsets.symmetric(vertical: 4),
+                    ),
+                    onChanged: (_) => setState(() => _error = null),
+                  ),
+                  Text(_hint(t), key: const Key('priceHint'), style: RfType.caption.copyWith(color: RfColors.text), textAlign: TextAlign.center),
+                ]),
+              ),
+              _StepButton(key: const Key('priceMinus'), icon: Icons.remove_rounded, onTap: () => _step(-1)),
+            ]),
+          ),
+        ]),
+        if (_error != null) ...[Text(_error!, style: RfType.caption.copyWith(color: RfColors.coral)), const SizedBox(height: RfSpace.xs)],
+        RfGroup(title: t.etaLabel, plain: true, children: [
+          Row(children: [
+            for (final m in _etaChoices)
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 3),
+                  child: Material(
+                    color: _eta == m ? RfColors.text : RfColors.surfaceSunken,
                     borderRadius: BorderRadius.circular(RfRadius.sm),
-                    onTap: () => setState(() => _eta = m),
-                    child: SizedBox(
-                      height: 44,
-                      child: Center(child: Text(t.minutesShort('$m'), style: RfType.bodyStrong.copyWith(color: _eta == m ? RfColors.canvas : RfColors.text))),
+                    child: InkWell(
+                      key: Key('eta_$m'),
+                      borderRadius: BorderRadius.circular(RfRadius.sm),
+                      onTap: () => setState(() => _eta = m),
+                      child: SizedBox(
+                        height: 44,
+                        child: Center(child: Text(t.minutesShort('$m'), style: RfType.bodyStrong.copyWith(color: _eta == m ? RfColors.canvas : RfColors.text))),
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
+          ]),
         ]),
-        const SizedBox(height: RfSpace.sm),
         Text(t.bindingNote, style: RfType.caption),
       ],
       action: action,

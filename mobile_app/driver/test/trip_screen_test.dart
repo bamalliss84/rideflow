@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -8,6 +10,8 @@ import 'package:rideflow_driver/app/providers.dart';
 import 'package:rideflow_driver/core/api/api_client.dart';
 import 'package:rideflow_driver/core/auth/session_store.dart';
 import 'package:rideflow_driver/core/external_apps.dart';
+import 'package:rideflow_driver/core/location/arrival_fix_queue.dart';
+import 'package:rideflow_driver/core/location/location_service.dart';
 import 'package:rideflow_driver/design/components.dart';
 import 'package:rideflow_driver/design/theme.dart';
 import 'package:rideflow_driver/features/confirm/confirm_screen.dart';
@@ -32,6 +36,31 @@ Map<String, dynamic> ride(String status, int version, List<String> actions, {Dat
       'timestamps': {},
     };
 
+class _SlowLocation extends LocationService {
+  final answer = Completer<Fix?>();
+  int reads = 0;
+  @override
+  Future<Fix?> now() {
+    reads++;
+    return answer.future;
+  }
+}
+
+/// Answers each read from a list, then has nothing.
+class _Reads extends LocationService {
+  _Reads(this.answers);
+  final List<Fix?> answers;
+  @override
+  Future<Fix?> now() async => answers.isEmpty ? null : answers.removeAt(0);
+}
+
+class _OnlineSince extends OnlineController {
+  _OnlineSince(this.ago);
+  final Duration ago;
+  @override
+  OnlineState build() => OnlineState(online: true, lastSentAt: DateTime.now().subtract(ago));
+}
+
 class FakeApps extends ExternalApps {
   FakeApps({this.opens = true});
   final bool opens;
@@ -50,7 +79,7 @@ class FakeApps extends ExternalApps {
   }
 }
 
-Future<FakeBackend> pumpApp(WidgetTester tester, Map<String, Handler> routes, String initial, {ExternalApps apps = const ExternalApps()}) async {
+Future<FakeBackend> pumpApp(WidgetTester tester, Map<String, Handler> routes, String initial, {ExternalApps apps = const ExternalApps(), LocationService? location, SecureKV? prefs, OnlineController Function()? online}) async {
   final backend = FakeBackend({
     'GET rides': (_) => (200, {'results': []}),
     'GET driver/ride-offers': (_) => (200, []),
@@ -70,6 +99,9 @@ Future<FakeBackend> pumpApp(WidgetTester tester, Map<String, Handler> routes, St
     overrides: [
       sessionStoreProvider.overrideWithValue(store),
       externalAppsProvider.overrideWithValue(apps),
+      prefsProvider.overrideWithValue(prefs ?? MemoryKV()),
+      if (online != null) onlineControllerProvider.overrideWith(online),
+      if (location != null) locationServiceProvider.overrideWithValue(location),
       apiClientProvider.overrideWith((ref) => ApiClient(session: store, dio: backend.dio(), appClientId: 'test-driver')),
     ],
     child: MaterialApp.router(
@@ -246,6 +278,144 @@ void main() {
     expect(find.byKey(const Key('rated')), findsOneWidget);
     expect(find.byKey(const Key('rate_1')), findsNothing);
     expect(find.byKey(const Key('confirmCash')), findsNothing);
+  });
+
+  group('arrived button', () {
+    Fix fixAged(int seconds) => Fix(lat: 14.5, lng: 49.1, accuracy: 7, deviceTs: DateTime.now().subtract(Duration(seconds: seconds)));
+
+    test('a fix from the last 45 seconds is used without a new reading', () async {
+      final fix = fixAged(30);
+      expect(await (LocationService()..last = fix).now(), same(fix));
+      expect(freshFix(fixAged(50), maxAge: const Duration(seconds: 45)), isNull);
+    });
+
+    testWidgets('sends the recent fix with its true time', (tester) async {
+      Object? sent;
+      final fix = fixAged(20);
+      await pumpApp(tester, {
+        'GET rides/r1': (_) => (200, ride('en_route', 5, ['arrive'])),
+        'POST rides/r1/arrive': (r) {
+          sent = r.body;
+          return (200, ride('arrived', 6, ['start']));
+        },
+      }, '/ride/r1', location: LocationService()..last = fix);
+      await tester.tap(find.byKey(const Key('action_arrive')));
+      await settle(tester);
+      final body = sent! as Map;
+      expect(body['lat'], 14.5);
+      expect(body['accuracy_m'], 7);
+      expect(body['device_ts'], fix.deviceTs.toUtc().toIso8601String());
+    });
+
+    testWidgets('shows it is working while the location is read, and a second tap does nothing', (tester) async {
+      final reading = _SlowLocation();
+      var posts = 0;
+      await pumpApp(tester, {
+        'GET rides/r1': (_) => (200, ride('en_route', 5, ['arrive'])),
+        'POST rides/r1/arrive': (_) {
+          posts++;
+          return (200, ride('arrived', 6, ['start']));
+        },
+      }, '/ride/r1', location: reading);
+      await tester.tap(find.byKey(const Key('action_arrive')));
+      await tester.pump();
+      expect(find.descendant(of: find.byKey(const Key('action_arrive')), matching: find.byType(CircularProgressIndicator)), findsOneWidget);
+      await tester.tap(find.byKey(const Key('action_arrive')), warnIfMissed: false);
+      await tester.pump();
+      expect(reading.reads, 1);
+      expect(posts, 0);
+
+      reading.answer.complete(fixAged(0));
+      await settle(tester);
+      expect(posts, 1);
+    });
+  });
+
+  group('location stopped on the way to the rider', () {
+    final enRoute = {'GET rides/r1': (_) => (200, ride('en_route', 5, ['arrive']))};
+
+    testWidgets('warns that the arrival may have no location', (tester) async {
+      await pumpApp(tester, enRoute, '/ride/r1', online: () => _OnlineSince(const Duration(minutes: 3)));
+      await settle(tester);
+      expect(find.byKey(const Key('tripLocationStopped')), findsOneWidget);
+    });
+
+    testWidgets('says nothing while it updates', (tester) async {
+      await pumpApp(tester, enRoute, '/ride/r1', online: () => _OnlineSince(const Duration(seconds: 10)));
+      await settle(tester);
+      expect(find.byKey(const Key('tripLocationStopped')), findsNothing);
+    });
+  });
+
+  group('arrived with no location', () {
+    Fix fixNow() => Fix(lat: 14.5, lng: 49.1, accuracy: 7, deviceTs: DateTime.now());
+
+    testWidgets('records the arrival at once and sends the location when it comes', (tester) async {
+      Object? arrive;
+      Object? late;
+      var current = ride('en_route', 5, ['arrive']);
+      final location = _Reads([null, null]);
+      final prefs = MemoryKV();
+      await pumpApp(tester, {
+        'GET rides/r1': (_) => (200, current),
+        'POST rides/r1/arrive': (r) {
+          arrive = r.body;
+          current = ride('arrived', 6, ['start']);
+          return (200, current);
+        },
+        'POST rides/r1/arrival-location': (r) {
+          late = r.body;
+          return (200, {'recorded': true, 'counted': true});
+        },
+      }, '/ride/r1', location: location, prefs: prefs);
+      await tester.tap(find.byKey(const Key('action_arrive')));
+      await settle(tester);
+      expect(arrive, {'expected_version': 5});
+      expect(find.byKey(const Key('action_start')), findsOneWidget);
+      expect(late, isNull, reason: 'there is still no location');
+      expect(prefs.values[ArrivalFixQueue.storageKey], isNotNull);
+
+      location.answers.add(fixNow());
+      final scope = ProviderScope.containerOf(tester.element(find.byType(TripScreen)));
+      unawaited(scope.read(arrivalFixQueueProvider).pump()); // awaiting it here would stall the test's fake clock
+      await settle(tester);
+      expect((late! as Map)['lat'], 14.5);
+      expect(prefs.values[ArrivalFixQueue.storageKey], isNull);
+    });
+
+    testWidgets('a retried tap repeats the same request, so its key stays valid', (tester) async {
+      final bodies = <Object?>[];
+      var fail = true;
+      await pumpApp(tester, {
+        'GET rides/r1': (_) => (200, ride('en_route', 5, ['arrive'])),
+        'POST rides/r1/arrive': (r) {
+          bodies.add(r.body);
+          if (fail) return (503, {'detail': 'down'});
+          return (200, ride('arrived', 6, ['start']));
+        },
+      }, '/ride/r1', location: _Reads([fixNow(), Fix(lat: 15, lng: 50, accuracy: 7, deviceTs: DateTime.now())]));
+      await tester.tap(find.byKey(const Key('action_arrive')));
+      await settle(tester);
+      fail = false;
+      await tester.tap(find.byKey(const Key('action_arrive')));
+      await settle(tester);
+      expect(bodies, hasLength(2));
+      expect(bodies[1], bodies[0]);
+    });
+
+    testWidgets('no-show says why it is not available', (tester) async {
+      await pumpApp(tester, {
+        'GET rides/r1': (_) => (200, {
+              ...ride('arrived', 6, ['start', 'no_show']),
+              'timestamps': {'arrived_at': DateTime.now().subtract(const Duration(minutes: 10)).toUtc().toIso8601String()},
+              'arrival': {'distance_m': null, 'accuracy_m': null, 'within_geofence': null},
+              'no_show': {'wait_seconds': 300, 'contact_attempts': 1, 'contact_required': true},
+            }),
+      }, '/ride/r1');
+      await settle(tester);
+      expect(find.textContaining('بدون موقع'), findsOneWidget);
+      expect(tester.widget<RfButton>(find.byKey(const Key('action_no_show'))).onPressed, isNull);
+    });
   });
 
   testWidgets('call before arrival: dials the rider and records nothing', (tester) async {

@@ -115,7 +115,6 @@ class _ConfirmRideScreenState extends ConsumerState<ConfirmRideScreen> {
     final units = ref.watch(authProvider).valueOrNull?.minorUnits ?? 2;
     final value = ref.watch(rideProvider(widget.rideId));
     return Scaffold(
-      backgroundColor: RfColors.ink,
       body: SafeArea(
         child: value.when(
           loading: () => const Center(child: CircularProgressIndicator(color: RfColors.teal)),
@@ -143,87 +142,58 @@ class _ConfirmRideScreenState extends ConsumerState<ConfirmRideScreen> {
                 .where((r) => r.id != ride.id && r.myBid?.status == 'open')
                 .length;
             final rider = ride.rider;
+            final canConfirm = ride.allowedActions.contains('confirm');
+            final canDecline = ride.allowedActions.contains('decline');
             return Column(children: [
               Expanded(
-                child: ListView(padding: const EdgeInsets.fromLTRB(RfSpace.lg, RfSpace.lg, RfSpace.lg, 0), children: [
+                child: ListView(padding: const EdgeInsets.fromLTRB(RfSpace.md, RfSpace.sm, RfSpace.md, RfSpace.sm), children: [
+                  Text(t.confirmTitle, key: const Key('confirmTitle'), style: RfType.h1),
+                  const SizedBox(height: RfSpace.xs),
                   _ConfirmTimer(
                     deadline: deadline,
                     total: total.isNegative || total == Duration.zero ? const Duration(seconds: 60) : total,
                     onExpired: _refreshOutcome,
                   ),
-                  const SizedBox(height: RfSpace.xl),
-                  Text(t.confirmTitle, key: const Key('confirmTitle'), style: RfType.display.copyWith(color: RfColors.onInk)),
-                  const SizedBox(height: RfSpace.sm),
-                  MoneyText(formatMoney(fare, ride.currency, units), style: RfType.display.copyWith(color: RfColors.gold, fontSize: 32)),
-                  Text('${t.agreedFare} · ${t.cashSuffix}', style: RfType.body.copyWith(color: RfColors.onInkMuted)),
-                  if (rider != null) ...[
-                    const SizedBox(height: RfSpace.lg),
-                    Container(
-                      padding: const EdgeInsets.all(RfSpace.md),
-                      decoration: BoxDecoration(color: RfColors.ink2, borderRadius: BorderRadius.circular(RfRadius.lg)),
-                      child: Row(children: [
-                        const CircleAvatar(backgroundColor: RfColors.ink3, child: Icon(Icons.person_rounded, color: RfColors.onInk)),
-                        const SizedBox(width: RfSpace.sm),
-                        Expanded(child: Text(rider.displayName.isEmpty ? t.rider : rider.displayName, style: RfType.bodyStrong.copyWith(color: RfColors.onInk))),
-                        RatingBadge(score: rider.ratingAvg, count: rider.ratingCount, provisional: rider.ratingProvisional, newLabel: t.newUser),
+                  RfGroup(title: t.agreedFare, children: [
+                    Padding(
+                      padding: RfLayout.box,
+                      child: Column(children: [
+                        MoneyText(formatMoney(fare, ride.currency, units), style: RfLayout.priceBig),
+                        Text(t.cashSuffix, style: RfType.caption),
                       ]),
                     ),
-                  ],
-                  const SizedBox(height: RfSpace.sm),
-                  Container(
-                    padding: const EdgeInsets.all(RfSpace.md),
-                    decoration: BoxDecoration(color: RfColors.ink2, borderRadius: BorderRadius.circular(RfRadius.lg)),
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                      RouteStops(pickupLabel: t.pickup, pickup: ride.pickupLandmark, dropoffLabel: t.dropoff, dropoff: ride.dropoffLandmark, onInk: true, dense: true, showLabels: false),
-                      const SizedBox(height: RfSpace.sm),
-                      const Divider(color: RfColors.ink3),
-                      const SizedBox(height: RfSpace.sm),
-                      Row(children: [
-                        Expanded(child: _InkFact(label: t.distanceLabel, value: formatDistance(ride.distanceM))),
-                        Expanded(child: _InkFact(label: t.etaLabel, value: ride.myBid == null ? '—' : t.minutesShort('${(ride.myBid!.etaSeconds / 60).round()}'))),
-                      ]),
+                  ]),
+                  if (rider != null)
+                    RfGroup(title: t.rider, children: [
+                      RfRow(
+                        title: rider.displayName.isEmpty ? t.rider : rider.displayName,
+                        trailing: RatingBadge(score: rider.ratingAvg, count: rider.ratingCount, provisional: rider.ratingProvisional, newLabel: t.newUser),
+                      ),
                     ]),
-                  ),
-                  if (ride.riderNote.isNotEmpty) ...[
-                    const SizedBox(height: RfSpace.sm),
-                    Text(ride.riderNote, style: RfType.body.copyWith(color: RfColors.onInkMuted)),
-                  ],
-                  if (ride.pickupNote.isNotEmpty) ...[
-                    const SizedBox(height: RfSpace.sm),
-                    Text(t.pickupNoteLabel(ride.pickupNote), key: const Key('pickupNote'), style: RfType.body.copyWith(color: RfColors.onInkMuted)),
-                  ],
-                  if (ride.dropoffNote.isNotEmpty) ...[
-                    const SizedBox(height: RfSpace.sm),
-                    Text(t.dropoffNoteLabel(ride.dropoffNote), key: const Key('dropoffNote'), style: RfType.body.copyWith(color: RfColors.onInkMuted)),
-                  ],
-                  if (others > 0) ...[
-                    const SizedBox(height: RfSpace.sm),
-                    Text(t.withdrawOthers('$others'), key: const Key('withdrawOthersNote'), style: RfType.caption),
-                  ],
-                  const SizedBox(height: RfSpace.lg),
+                  RfGroup(title: t.sectionTrip, children: [
+                    RfStops(fromLabel: t.pickup, from: ride.pickupLandmark, toLabel: t.dropoff, to: ride.dropoffLandmark),
+                    RfFacts([
+                      RfFact(t.distanceLabel, formatDistance(ride.distanceM), ltr: true),
+                      RfFact(t.etaLabel, ride.myBid == null ? '—' : t.minutesShort('${(ride.myBid!.etaSeconds / 60).round()}')),
+                    ]),
+                    if (ride.riderNote.isNotEmpty) RfRow(title: ride.riderNote, titleStyle: RfType.caption),
+                    if (ride.pickupNote.isNotEmpty) RfRow(titleChild: Text(t.pickupNoteLabel(ride.pickupNote), key: const Key('pickupNote'), style: RfType.caption)),
+                    if (ride.dropoffNote.isNotEmpty) RfRow(titleChild: Text(t.dropoffNoteLabel(ride.dropoffNote), key: const Key('dropoffNote'), style: RfType.caption)),
+                  ]),
+                  if (others > 0) Text(t.withdrawOthers('$others'), key: const Key('withdrawOthersNote'), style: RfType.caption),
                 ]),
               ),
-              Container(
-                padding: const EdgeInsets.fromLTRB(RfSpace.lg, RfSpace.sm, RfSpace.lg, RfSpace.md),
-                child: Column(children: [
-                  if (ride.allowedActions.contains('confirm'))
-                    RfButton(
-                      key: const Key('confirmRide'),
-                      label: t.confirmButton,
-                      icon: Icons.check_circle_rounded,
-                      kind: RfButtonKind.go,
-                      large: true,
-                      loading: _busy,
-                      onPressed: () => _act(ride, 'confirm'),
+              RfFoot(
+                child: Row(children: [
+                  if (canDecline)
+                    Expanded(
+                      child: RfButton(key: const Key('declineRide'), label: t.declineButton, kind: RfButtonKind.secondary, large: true, onPressed: _busy ? null : () => _decline(ride)),
                     ),
-                  if (ride.allowedActions.contains('decline')) ...[
-                    const SizedBox(height: RfSpace.xs),
-                    TextButton(
-                      key: const Key('declineRide'),
-                      onPressed: _busy ? null : () => _decline(ride),
-                      child: Text(t.declineButton, style: RfType.bodyStrong.copyWith(color: RfColors.onInkMuted)),
+                  if (canDecline && canConfirm) const SizedBox(width: RfSpace.xs),
+                  if (canConfirm)
+                    Expanded(
+                      child: RfButton(key: const Key('confirmRide'), label: t.confirmButton, kind: RfButtonKind.go, large: true, loading: _busy, onPressed: () => _act(ride, 'confirm')),
                     ),
-                  ],
                 ]),
               ),
             ]);
@@ -284,10 +254,10 @@ class _ConfirmTimerState extends State<_ConfirmTimer> {
           child: Text(t.secondsShort('$seconds'), style: RfType.h3.copyWith(color: RfColors.onGold)),
         ),
       ]),
-      const SizedBox(height: RfSpace.sm),
+      const SizedBox(height: RfSpace.xs),
       LinearProgressIndicator(
         value: widget.total.inMilliseconds <= 0 ? 0 : (left.inMilliseconds / widget.total.inMilliseconds).clamp(0.0, 1.0),
-        minHeight: 8,
+        minHeight: 4,
         borderRadius: BorderRadius.circular(RfRadius.pill),
         backgroundColor: RfColors.ink3,
         color: color,
@@ -296,16 +266,7 @@ class _ConfirmTimerState extends State<_ConfirmTimer> {
   }
 }
 
-class _InkFact extends StatelessWidget {
-  const _InkFact({required this.label, required this.value});
-  final String label, value;
-  @override
-  Widget build(BuildContext context) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(label, style: RfType.caption.copyWith(color: RfColors.onInkMuted)),
-        const SizedBox(height: 2),
-        Ltr(value, style: RfType.bodyStrong.copyWith(color: RfColors.onInk)),
-      ]);
-}
+
 
 class _Result extends StatelessWidget {
   const _Result({required this.icon, required this.title, required this.body, required this.action});

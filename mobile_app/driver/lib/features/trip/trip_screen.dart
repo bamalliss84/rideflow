@@ -44,6 +44,9 @@ class _TripScreenState extends ConsumerState<TripScreen> {
   final _keys = <String, String>{};
   String _keyFor(String action, int version) => _keys.putIfAbsent('$action@$version', newActionKey);
 
+  /// What the last "arrived" tap sent, by ride version. Its key must carry the same body when the tap is retried.
+  final _arrivals = <int, Json>{};
+
   Future<void> _transition(Ride ride, String action) async {
     final t = AppLocalizations.of(context);
     final api = ref.read(driverApiProvider);
@@ -65,22 +68,24 @@ class _TripScreenState extends ConsumerState<TripScreen> {
       extra = {'start_code': code};
       attempt = 'start:$code'; // a refused code is remembered under its key, so a different code needs a new one
     }
-    if (action == 'arrive') {
-      // Arrival is evidence: the backend checks the geofence and GPS accuracy from these values.
-      final p = await ref.read(locationServiceProvider).current();
-      if (p == null) {
-        if (mounted) showToast(context, t.noLocationFix, error: true);
-        return;
-      }
-      extra = {'lat': p.lat, 'lng': p.lng, 'accuracy_m': p.accuracy, 'device_ts': p.deviceTs.toUtc().toIso8601String()};
-    }
     if (!mounted) return;
     await _runner.run(context, () async {
+      if (action == 'arrive') {
+        // Arrival is evidence: the backend checks the geofence and GPS accuracy from these values. Reading them is part
+        // of the action, so the button shows it's working from the first tap. No location in time: the tap still counts,
+        // and the location follows when there is one (D045).
+        final p = _arrivals.containsKey(ride.version) ? null : await ref.read(locationServiceProvider).now();
+        extra = _arrivals[ride.version] ??= p == null ? const {} : {'lat': p.lat, 'lng': p.lng, 'accuracy_m': p.accuracy, 'device_ts': p.deviceTs.toUtc().toIso8601String()};
+      }
       try {
         await api.transition(ride, action, actionKey: _keyFor(attempt, ride.version), extra: extra);
       } on ApiException catch (e) {
         if (e.status == 409) _refresh(); // state moved on (other party / timer): show the current one
         rethrow;
+      }
+      if (action == 'arrive' && extra.isEmpty) {
+        unawaited(ref.read(arrivalFixQueueProvider).add(ride.id));
+        if (mounted) showToast(context, t.arrivedNoLocation);
       }
     }, onChanged: () => setState(() {}));
     _refresh();
@@ -210,7 +215,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
           return RefreshIndicator(
             onRefresh: () async => _refresh(),
             child: ListView(padding: const EdgeInsets.fromLTRB(RfSpace.md, 0, RfSpace.md, RfSpace.lg), children: [
-              if (s != null) ...[_StepBar(step: s), const SizedBox(height: RfSpace.lg)],
+              if (s != null) ...[_StepBar(step: s), const SizedBox(height: RfSpace.sm)],
               ..._stage(ride, s, units, t),
             ]),
           );
@@ -226,71 +231,91 @@ class _TripScreenState extends ConsumerState<TripScreen> {
       case 1:
         final eta = (ride.myBid?.etaSeconds ?? 0) ~/ 60;
         return [
-          _Destination(caption: t.goToRider, place: ride.pickupLandmark, pickup: true),
-          if (eta > 0) ...[const SizedBox(height: RfSpace.xs), Text(t.etaPromise(t.minutesShort('$eta')), style: RfType.body.copyWith(color: RfColors.textMuted))],
-          ..._note(ride),
-          ..._mapButton(ride.pickup, t),
+          _Ticker(builder: (now) {
+            if (!locationStopped(ref.watch(onlineControllerProvider), null, now)) return const SizedBox.shrink();
+            return Padding(
+              padding: const EdgeInsets.only(bottom: RfSpace.sm),
+              child: Banner2(key: const Key('tripLocationStopped'), icon: Icons.gps_not_fixed_rounded, text: t.locationStoppedTrip),
+            );
+          }),
+          _StageTitle(title: t.goToRider, note: eta > 0 ? t.etaPromise(t.minutesShort('$eta')) : null),
+          RfGroup(title: t.pickup, children: [
+            RfRow(
+              leading: const RfRowIcon(Icons.radio_button_checked_rounded, color: RfColors.teal),
+              title: ride.pickupLandmark,
+              trailing: _mapButton(ride.pickup, t),
+            ),
+            ..._note(ride),
+          ]),
           ..._riderCard(ride, t),
-          _FareLine(label: '${t.fareCash} · ${formatDistance(ride.distanceM)}', fare: fare),
+          _fareGroup(t, fare, ride),
         ];
       case 2:
         return [
-          Text(t.atPickup, key: const Key('rideStatus'), style: RfType.body.copyWith(color: RfColors.textMuted)),
-          const SizedBox(height: RfSpace.xs),
-          Text(t.waitingFor(name), style: RfType.h1),
-          const SizedBox(height: RfSpace.md),
-          RfCard(
-            child: Column(children: [
-              Text(t.waitTime, style: RfType.body.copyWith(color: RfColors.textMuted)),
-              _Ticker(builder: (now) => Ltr(_clock(now.difference(ride.arrivedAt ?? now)), style: RfType.display.copyWith(fontSize: 26, color: RfColors.gold))),
-            ]),
-          ),
-          ..._note(ride),
+          _StageTitle(title: t.waitingFor(name), note: t.atPickup, titleKey: false),
+          RfGroup(title: t.waitTime, children: [
+            Padding(
+              padding: RfLayout.box,
+              child: Center(child: _Ticker(builder: (now) => Ltr(_clock(now.difference(ride.arrivedAt ?? now)), style: RfLayout.priceBig))),
+            ),
+            ..._note(ride),
+          ]),
           ..._riderCard(ride, t),
         ];
       case 3:
         return [
-          _Destination(caption: t.goToDestination, place: ride.dropoffLandmark, pickup: false),
-          if (ride.dropoffNote.isNotEmpty) ...[const SizedBox(height: RfSpace.sm), Banner2(key: const Key('dropoffNote'), text: t.dropoffNoteLabel(ride.dropoffNote), tone: Tone.info, icon: Icons.sticky_note_2_outlined)],
-          const SizedBox(height: RfSpace.xs),
-          Text(t.tripDistance(formatDistance(ride.distanceM)), style: RfType.body.copyWith(color: RfColors.textMuted)),
-          ..._mapButton(ride.dropoff, t),
+          _StageTitle(title: t.goToDestination),
+          RfGroup(title: t.dropoff, children: [
+            RfRow(
+              leading: const RfRowIcon(Icons.place_rounded, color: RfColors.gold),
+              title: ride.dropoffLandmark,
+              trailing: _mapButton(ride.dropoff, t),
+            ),
+            if (ride.dropoffNote.isNotEmpty) RfRow(titleChild: Text(t.dropoffNoteLabel(ride.dropoffNote), key: const Key('dropoffNote'), style: RfType.caption)),
+          ]),
           ..._riderCard(ride, t),
-          _FareLine(label: t.fareCash, fare: fare),
+          _fareGroup(t, fare, ride),
         ];
       case 4:
         return [
-          const SizedBox(height: RfSpace.xxl),
+          const SizedBox(height: RfSpace.lg),
           Text(t.collectFrom(name), key: const Key('rideStatus'), textAlign: TextAlign.center, style: RfType.h2),
-          const SizedBox(height: RfSpace.sm),
-          Center(child: MoneyText(fare, style: RfType.display.copyWith(fontSize: 32, color: RfColors.gold))),
-          const SizedBox(height: RfSpace.xl),
+          const SizedBox(height: RfSpace.xs),
+          Center(child: MoneyText(fare, style: RfLayout.priceBig)),
+          const SizedBox(height: RfSpace.lg),
           _route(ride, t),
         ];
     }
     if (ride.status == 'completed') {
       return [
         Banner2(tone: Tone.success, icon: Icons.check_circle_rounded, text: t.tripFinished(fare)),
-        const SizedBox(height: RfSpace.lg),
+        const SizedBox(height: RfSpace.md),
         _RatingPanel(ride: ride, riderName: name, onRated: _refresh),
-        const SizedBox(height: RfSpace.lg),
+        const SizedBox(height: RfSpace.md),
         _route(ride, t),
       ];
     }
     return [
       Row(children: [
-        Expanded(child: Text(rideStatusLabel(t, ride.status), key: const Key('rideStatus'), style: RfType.h1)),
+        Expanded(child: Text(rideStatusLabel(t, ride.status), key: const Key('rideStatus'), style: RfType.h2)),
         StatusPill(rideStatusLabel(t, ride.status), tone: toneFor(ride.status)),
       ]),
-      const SizedBox(height: RfSpace.md),
+      const SizedBox(height: RfSpace.xs),
       _route(ride, t),
       if (ride.cancellation != null) ...[
-        const SizedBox(height: RfSpace.sm),
         Banner2(tone: Tone.danger, icon: Icons.cancel_outlined, text: '${ride.cancellation!['reason'] ?? ''}'.isEmpty ? rideStatusLabel(t, ride.status) : '${ride.cancellation!['reason']}'),
+        const SizedBox(height: RfSpace.xs),
       ],
-      if (ride.agreedFareMinor != null) _FareLine(label: t.fareCash, fare: fare),
+      if (ride.agreedFareMinor != null) _fareGroup(t, fare, ride),
     ];
   }
+
+  Widget _fareGroup(AppLocalizations t, String fare, Ride ride) => RfGroup(children: [
+        RfFacts([
+          RfFact(t.fareCash, fare, ltr: true, color: RfColors.gold),
+          RfFact(t.distanceLabel, formatDistance(ride.distanceM), ltr: true),
+        ]),
+      ]);
 
   Widget? _bottomBar(Ride ride) {
     final t = AppLocalizations.of(context);
@@ -326,46 +351,32 @@ class _TripScreenState extends ConsumerState<TripScreen> {
   }
 
   List<Widget> _note(Ride ride) => [
-        if (ride.riderNote.isNotEmpty) ...[const SizedBox(height: RfSpace.sm), Banner2(text: ride.riderNote, tone: Tone.info, icon: Icons.sticky_note_2_outlined)],
-        if (ride.pickupNote.isNotEmpty) ...[const SizedBox(height: RfSpace.sm), Banner2(key: const Key('pickupNote'), text: AppLocalizations.of(context).pickupNoteLabel(ride.pickupNote), tone: Tone.info, icon: Icons.sticky_note_2_outlined)],
+        if (ride.riderNote.isNotEmpty) RfRow(title: ride.riderNote, titleStyle: RfType.caption),
+        if (ride.pickupNote.isNotEmpty) RfRow(titleChild: Text(AppLocalizations.of(context).pickupNoteLabel(ride.pickupNote), key: const Key('pickupNote'), style: RfType.caption)),
       ];
 
-  List<Widget> _mapButton(LatLng? target, AppLocalizations t) => [
-        if (target != null) ...[
-          const SizedBox(height: RfSpace.sm),
-          RfButton(key: const Key('openMap'), label: t.openInMaps, icon: Icons.near_me_rounded, kind: RfButtonKind.secondary, onPressed: () => _openMap(target)),
-        ],
-      ];
+  Widget? _mapButton(LatLng? target, AppLocalizations t) => target == null ? null : RfCircleButton(key: const Key('openMap'), icon: Icons.near_me_rounded, tooltip: t.openInMaps, onPressed: () => _openMap(target));
 
-  Widget _route(Ride ride, AppLocalizations t) => RfCard(
-        child: RouteStops(pickupLabel: t.pickup, pickup: ride.pickupLandmark, dropoffLabel: t.dropoff, dropoff: ride.dropoffLandmark, dense: true, showLabels: false),
-      );
+  Widget _route(Ride ride, AppLocalizations t) => RfGroup(children: [
+        RfStops(fromLabel: t.pickup, from: ride.pickupLandmark, toLabel: t.dropoff, to: ride.dropoffLandmark, showLabels: false),
+      ]);
 
   List<Widget> _riderCard(Ride ride, AppLocalizations t) {
     final rider = ride.rider;
     if (rider == null) return const [];
     final name = _riderName(ride, t);
     return [
-      const SizedBox(height: RfSpace.md),
-      RfCard(
-        padding: const EdgeInsets.all(RfSpace.sm),
-        child: Row(children: [
-          CircleAvatar(radius: 18, backgroundColor: RfColors.surfaceSunken, child: Text(name.characters.first, style: RfType.bodyStrong)),
-          const SizedBox(width: RfSpace.sm),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(name, style: RfType.bodyStrong, maxLines: 1, overflow: TextOverflow.ellipsis),
-              const SizedBox(height: 2),
-              if (ride.status == 'arrived' && ride.contactAttempts > 0)
-                Text(t.contactCount('${ride.contactAttempts}'), style: RfType.caption.copyWith(color: RfColors.teal, fontWeight: FontWeight.w700))
-              else
-                RatingBadge(score: rider.ratingAvg, count: rider.ratingCount, provisional: rider.ratingProvisional, newLabel: t.newUser),
-            ]),
-          ),
-          if (rider.phone != null)
-            RfButton(key: const Key('callRider'), label: t.callRider, icon: Icons.phone_rounded, kind: RfButtonKind.live, expand: false, onPressed: _runner.busy ? null : () => _callRider(ride)),
-        ]),
-      ),
+      RfGroup(title: t.rider, children: [
+        RfRow(
+          leading: CircleAvatar(radius: RfLayout.avatar, backgroundColor: RfColors.surfaceSunken, child: Text(name.characters.first, style: RfType.bodyStrong)),
+          title: name,
+          maxLines: 1,
+          subChild: ride.status == 'arrived' && ride.contactAttempts > 0
+              ? Text(t.contactCount('${ride.contactAttempts}'), style: RfType.caption.copyWith(color: RfColors.teal, fontWeight: FontWeight.w700))
+              : Align(alignment: AlignmentDirectional.centerStart, child: RatingBadge(score: rider.ratingAvg, count: rider.ratingCount, provisional: rider.ratingProvisional, newLabel: t.newUser)),
+          trailing: rider.phone == null ? null : RfCircleButton(key: const Key('callRider'), icon: Icons.phone_rounded, tooltip: t.callRider, onPressed: _runner.busy ? null : () => _callRider(ride)),
+        ),
+      ]),
     ];
   }
 }
@@ -419,31 +430,21 @@ class _StepBar extends StatelessWidget {
       ]);
 }
 
-class _Destination extends StatelessWidget {
-  const _Destination({required this.caption, required this.place, required this.pickup});
-  final String caption, place;
-  final bool pickup;
-  @override
-  Widget build(BuildContext context) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(caption, key: const Key('rideStatus'), style: RfType.body.copyWith(color: RfColors.textMuted)),
-        const SizedBox(height: RfSpace.xs),
-        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          pickup ? const Icon(Icons.radio_button_checked_rounded, size: 26, color: RfColors.teal) : const Icon(Icons.place_rounded, size: 26, color: RfColors.gold),
-          const SizedBox(width: RfSpace.xs),
-          Expanded(child: Text(place, style: RfType.h1)),
-        ]),
-      ]);
-}
+/// What to do now, in one line, with one detail under it.
+class _StageTitle extends StatelessWidget {
+  const _StageTitle({required this.title, this.note, this.titleKey = true});
+  final String title;
+  final String? note;
 
-class _FareLine extends StatelessWidget {
-  const _FareLine({required this.label, required this.fare});
-  final String label, fare;
+  /// The status key marks the instruction: the title itself, or the note when the title names the rider.
+  final bool titleKey;
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(RfSpace.xxs, RfSpace.sm, RfSpace.xxs, 0),
-        child: Row(children: [
-          Expanded(child: Text(label, style: RfType.body.copyWith(color: RfColors.textMuted))),
-          MoneyText(fare, style: RfType.h2.copyWith(color: RfColors.gold)),
+        padding: const EdgeInsets.only(bottom: RfSpace.xxs),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          if (!titleKey && note != null) Text(note!, key: const Key('rideStatus'), style: RfType.caption),
+          Text(title, key: titleKey ? const Key('rideStatus') : null, style: RfType.h2),
+          if (titleKey && note != null) Text(note!, style: RfType.caption),
         ]),
       );
 }
@@ -463,7 +464,9 @@ class _NoShowControl extends StatelessWidget {
       final left = unlockAt?.difference(now) ?? Duration.zero;
       final blocked = ride.arrivedOutsidePickup
           ? t.noShowOutside
-          : left > Duration.zero
+          : ride.arrivedWithoutLocation
+              ? t.noShowNoLocation
+              : left > Duration.zero
               ? t.noShowAfter(_clock(left))
               : ride.contactRequired && ride.contactAttempts < 1
                   ? t.noShowCallFirst

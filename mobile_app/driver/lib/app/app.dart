@@ -73,7 +73,9 @@ class _DriverAppState extends ConsumerState<DriverApp> with WidgetsBindingObserv
     WidgetsBinding.instance.addObserver(this);
     // Server reconciliation of "waiting for my confirmation": hints are fast, this guarantees correctness.
     _reconcile = Timer.periodic(const Duration(seconds: 15), (_) {
-      if (ref.read(authProvider).valueOrNull != null) ref.read(pendingMatchProvider.notifier).reconcile();
+      if (ref.read(authProvider).valueOrNull == null) return;
+      ref.read(pendingMatchProvider.notifier).reconcile();
+      unawaited(ref.read(arrivalFixQueueProvider).pump());
     });
   }
 
@@ -99,6 +101,7 @@ class _DriverAppState extends ConsumerState<DriverApp> with WidgetsBindingObserv
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && ref.read(authProvider).valueOrNull != null) {
       ref.read(eventsSocketProvider).reconnectNow();
+      unawaited(ref.read(arrivalFixQueueProvider).pump());
       ref.read(pendingMatchProvider.notifier).reconcile();
       ref.read(onlineControllerProvider.notifier).recheckAccess();
       ref.invalidate(eligibilityProvider);
@@ -107,9 +110,24 @@ class _DriverAppState extends ConsumerState<DriverApp> with WidgetsBindingObserv
     }
   }
 
+  /// Widgets read layout values while building and don't depend on anything for them, so a change has to reach all of them.
+  void _rebuildEverything() {
+    void rebuild(Element e) {
+      e.markNeedsBuild();
+      e.visitChildren(rebuild);
+    }
+
+    if (mounted) (context as Element).visitChildren(rebuild);
+  }
+
   @override
   Widget build(BuildContext context) {
     final locale = ref.watch(localeProvider);
+    final layout = ref.watch(layoutProvider);
+    if (layout != RfLayout.model) {
+      RfLayout.use(layout);
+      WidgetsBinding.instance.addPostFrameCallback((_) => _rebuildEverything());
+    }
     ref.watch(realtimeBridgeProvider);
     ref.listen(authProvider, (prev, next) {
       final socket = ref.read(eventsSocketProvider);
