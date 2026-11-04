@@ -36,8 +36,8 @@ class HomeScreen extends ConsumerWidget {
         bottom: 0,
         height: 370,
         child: Container(
-          decoration: BoxDecoration(color: RfColors.ink2, border: Border(top: BorderSide(color: RfColors.line)), borderRadius: const BorderRadius.vertical(top: Radius.circular(RfRadius.xl))),
-          child: ListView(padding: const EdgeInsets.fromLTRB(18, 18, 18, 12), children: [
+          decoration: BoxDecoration(color: RfLayout.page, border: Border(top: BorderSide(color: RfColors.line)), borderRadius: const BorderRadius.vertical(top: Radius.circular(RfRadius.lg))),
+          child: ListView(padding: const EdgeInsets.fromLTRB(16, 14, 16, 12), children: [
             if (active != null) ...[
               RfCard(
                 key: const Key('activeRide'),
@@ -48,50 +48,38 @@ class HomeScreen extends ConsumerWidget {
                   Text(t.open, style: RfType.bodyStrong.copyWith(color: RfColors.teal)),
                 ]),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
             ],
             Material(
               color: RfColors.surface,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(RfRadius.pill), side: BorderSide(color: RfColors.teal, width: 1.5)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: RfColors.lineStrong, width: 1.5)),
               child: InkWell(
                 key: const Key('whereTo'),
-                borderRadius: BorderRadius.circular(RfRadius.pill),
+                borderRadius: BorderRadius.circular(12),
                 onTap: active != null ? null : () => go(null),
                 child: SizedBox(
-                  height: 56,
+                  height: 46,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Row(children: [Icon(Icons.search_rounded, color: RfColors.text), const SizedBox(width: 10), Text(t.whereTo, style: RfType.bodyStrong)]),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Row(children: [Icon(Icons.search_rounded, size: 20, color: RfColors.textMuted), const SizedBox(width: 8), Text(t.whereTo, style: RfType.body.copyWith(color: RfColors.textMuted))]),
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 12),
-            Row(children: [
-              _Tile(icon: Icons.home_rounded, color: RfColors.teal, label: ofKind('home')?.label ?? t.home_, onTap: () => ofKind('home') == null ? context.push('/places') : go(ofKind('home')!.place)),
-              const SizedBox(width: 10),
-              _Tile(icon: Icons.work_rounded, color: RfColors.gold, label: ofKind('work')?.label ?? t.work, onTap: () => ofKind('work') == null ? context.push('/places') : go(ofKind('work')!.place)),
-              const SizedBox(width: 10),
-              _Tile(icon: Icons.add_rounded, color: RfColors.text, label: t.add, onTap: () => context.push('/places')),
+            RfGroup(title: t.myPlaces, plain: true, children: [
+              Row(children: [
+                _Tile(icon: Icons.home_rounded, color: RfColors.teal, label: ofKind('home')?.label ?? t.home_, onTap: () => ofKind('home') == null ? context.push('/places') : go(ofKind('home')!.place)),
+                const SizedBox(width: 8),
+                _Tile(icon: Icons.work_rounded, color: RfColors.gold, label: ofKind('work')?.label ?? t.work, onTap: () => ofKind('work') == null ? context.push('/places') : go(ofKind('work')!.place)),
+                const SizedBox(width: 8),
+                _Tile(icon: Icons.add_rounded, color: RfColors.text, label: t.add, onTap: () => context.push('/places')),
+              ]),
             ]),
-            if (recent.isNotEmpty) ...[
-              const SizedBox(height: 18),
-              Text(t.recent, style: RfType.h3),
-              const SizedBox(height: 8),
-              for (final place in recent.take(2))
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: RfCard(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                    onTap: active != null ? null : () => go(place),
-                    child: Row(children: [
-                      Icon(Icons.history_rounded, color: RfColors.textMuted, size: 20),
-                      const SizedBox(width: 12),
-                      Expanded(child: Text(place.landmark, style: RfType.bodyStrong, maxLines: 1, overflow: TextOverflow.ellipsis)),
-                    ]),
-                  ),
-                ),
-            ],
+            if (recent.isNotEmpty)
+              RfGroup(title: t.recent, children: [
+                for (final place in recent.take(2))
+                  RfRow(title: place.landmark, maxLines: 1, leading: RfRowIcon(Icons.history_rounded, color: RfColors.textMuted), onTap: active != null ? null : () => go(place)),
+              ]),
           ]),
         ),
       ),
@@ -109,14 +97,14 @@ class _Tile extends StatelessWidget {
   Widget build(BuildContext context) => Expanded(
         child: Material(
           color: RfColors.surface,
-          borderRadius: BorderRadius.circular(RfRadius.md),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: RfColors.line)),
           child: InkWell(
-            borderRadius: BorderRadius.circular(RfRadius.md),
+            borderRadius: BorderRadius.circular(12),
             onTap: onTap,
             child: SizedBox(
-              height: 70,
+              height: RfLayout.compact ? 60 : 70,
               child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Icon(icon, color: color, size: 22),
+                Icon(icon, color: color, size: 20),
                 const SizedBox(height: 4),
                 Text(label, style: RfType.caption.copyWith(color: RfColors.text, fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
               ]),

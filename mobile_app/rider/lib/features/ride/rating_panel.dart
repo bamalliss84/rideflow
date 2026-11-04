@@ -8,6 +8,7 @@ import '../../core/api/api_exception.dart';
 import '../../data/models.dart';
 import '../../design/components.dart';
 import '../../design/tokens.dart';
+import '../../shared/driver_photo.dart';
 import '../../shared/widgets.dart' show errorMessage;
 
 class RatingPanel extends ConsumerStatefulWidget {
@@ -77,7 +78,7 @@ class _RatingPanelState extends ConsumerState<RatingPanel> {
       child: ListView(padding: const EdgeInsets.all(18), children: [
         Text(t.rateTrip, style: RfType.h2),
         const SizedBox(height: 18),
-        Center(child: DriverAvatar(name: name, radius: 36)),
+        Center(child: DriverPhoto(driver: widget.ride.driver, name: name, radius: 36)),
         const SizedBox(height: 10),
         Text(name, textAlign: TextAlign.center, style: RfType.h2),
         const SizedBox(height: 6),

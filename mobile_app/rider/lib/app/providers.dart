@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,6 +25,13 @@ final apiClientProvider = Provider<ApiClient>((ref) {
 });
 
 final riderApiProvider = Provider<RiderApi>((ref) => RiderApi(ref.watch(apiClientProvider)));
+
+/// A driver's photo, by its address. Kept once read, and tried again if reading it failed.
+final photoBytesProvider = FutureProvider.autoDispose.family<Uint8List, String>((ref, path) async {
+  final bytes = await ref.read(apiClientProvider).bytes(path);
+  ref.keepAlive();
+  return bytes;
+});
 final locationServiceProvider = Provider<LocationService>((ref) => LocationService());
 final externalAppsProvider = Provider<ExternalApps>((ref) => const ExternalApps());
 final localeProvider = StateProvider<Locale>((ref) => const Locale('ar'));
@@ -69,6 +77,9 @@ const appearanceKey = 'rf_appearance';
 RfAppearance? decodeAppearance(String? s) => switch (s) { 'day' => RfAppearance.day, 'night' => RfAppearance.night, _ => null };
 /// Day or night (D042). main() has already applied the saved choice, so that is the starting value.
 final appearanceProvider = NotifierProvider<DevicePref<RfAppearance>, RfAppearance>(() => DevicePref<RfAppearance>(appearanceKey, RfColors.appearance, decodeAppearance, (a) => a.name));
+const layoutKey = 'rf_layout_model';
+/// Which layout model the screens use (D044). main() has already applied the saved choice.
+final layoutProvider = NotifierProvider<DevicePref<RfLayoutModel>, RfLayoutModel>(() => DevicePref<RfLayoutModel>(layoutKey, RfLayout.model, RfLayout.decode, (m) => m.name));
 final alwaysCodeProvider = NotifierProvider<DevicePref<bool>, bool>(() => DevicePref<bool>('rf_always_code', false, (s) => s == '1', (b) => b ? '1' : '0'));
 
 // ---------------------------------------------------------------- authentication
@@ -147,6 +158,9 @@ final myLocationProvider = FutureProvider.autoDispose<Point?>((ref) async {
   final fix = await service.current();
   return fix == null ? null : Point(fix.lat, fix.lng);
 });
+
+/// The last place the device's position was named, so the same spot shows its name without asking the server again.
+final namedSpotProvider = StateProvider<(Point, String)?>((ref) => null);
 
 /// Null when no position is available; a failed read isn't an error for the rider, the map just waits.
 final driverPositionProvider = FutureProvider.autoDispose.family<DriverPosition?, String>((ref, id) async {

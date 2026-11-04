@@ -37,6 +37,9 @@ class _DestinationScreenState extends ConsumerState<DestinationScreen> {
   /// A place that was chosen shows close enough to nudge the pin onto the exact door.
   static const _placeZoom = 18.0;
 
+  /// A new reading this close is the same spot, and keeps its name.
+  static const _sameSpotMetres = 30;
+
   final _map = MapController();
   final _typed = TextEditingController();
   Timer? _debounce;
@@ -49,6 +52,8 @@ class _DestinationScreenState extends ConsumerState<DestinationScreen> {
   Point? _pickupPoint;
   String? _pickupName;
   bool _pickupFromDevice = false;
+  Future<PlaceHit?>? _pickupLookup;
+  bool _waitingName = false;
 
   Point? _center;
   String? _centerName;
@@ -77,9 +82,13 @@ class _DestinationScreenState extends ConsumerState<DestinationScreen> {
       _searchOpen = true;
       _sheetOpen = ref.read(destinationModelProvider) == 3;
     }
-    // The home screen keeps its first fix alive, and a pickup must not come from where the rider was at launch.
+    // The home screen's fix shows at once. A pickup must not stay where the rider was at launch, so a new reading follows
+    // and replaces it.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) ref.invalidate(myLocationProvider);
+      if (!mounted) return;
+      final known = ref.read(myLocationProvider).valueOrNull;
+      if (known != null) _gotDeviceLocation(known);
+      ref.invalidate(myLocationProvider);
     });
   }
 
@@ -109,16 +118,31 @@ class _DestinationScreenState extends ConsumerState<DestinationScreen> {
       if (_pickupPoint == null) setState(() => _editingPickup = true);
       return;
     }
+    bool near(Point other) => _metres(other, here) < _sameSpotMetres;
+    final previous = _pickupPoint;
+    final named = ref.read(namedSpotProvider);
+    final name = previous != null && near(previous) && _pickupName != null ? _pickupName : (named != null && near(named.$1) ? named.$2 : null);
     setState(() {
       _pickupPoint = here;
       _pickupFromDevice = true;
+      _pickupName = name;
     });
     if (_center == null) {
       _center = here;
       _fly(here);
     }
-    final hit = await _reverse(here);
-    if (mounted && _pickupFromDevice) setState(() => _pickupName = hit == null ? null : _label(hit));
+    if (name != null) {
+      _pickupLookup = null;
+      return;
+    }
+    final lookup = _pickupLookup = _reverse(here);
+    final hit = await lookup;
+    if (!mounted || !identical(_pickupLookup, lookup)) return;
+    _pickupLookup = null;
+    if (!_pickupFromDevice) return;
+    final label = hit == null ? null : _label(hit);
+    if (label != null) ref.read(namedSpotProvider.notifier).state = (here, label);
+    setState(() => _pickupName = label);
   }
 
   void _onMoved(Point point, bool byUser) {
@@ -196,6 +220,7 @@ class _DestinationScreenState extends ConsumerState<DestinationScreen> {
   String get _name => _typed.text.trim().isNotEmpty ? _typed.text.trim() : (_centerName ?? '');
 
   void _confirmPickup() {
+    _pickupLookup = null;
     setState(() {
       _pickupPoint = _center;
       _pickupName = _name;
@@ -211,7 +236,15 @@ class _DestinationScreenState extends ConsumerState<DestinationScreen> {
     if (_center != null) _fly(_center!, zoom: _chosen ? _placeZoom : 15);
   }
 
-  void _showPrice() {
+  Future<void> _showPrice() async {
+    // The pickup's name may still be on its way: wait for it rather than sending the rider back to word the pickup.
+    final lookup = _pickupLookup;
+    if (lookup != null) {
+      setState(() => _waitingName = true);
+      await lookup;
+      if (!mounted) return;
+      setState(() => _waitingName = false);
+    }
     final name = _pickupName;
     if (name == null || name.isEmpty) {
       // The driver reads this, so a point with no name goes back to the rider for words.
@@ -271,7 +304,7 @@ class _DestinationScreenState extends ConsumerState<DestinationScreen> {
     final wordsField = TextField(key: const Key('placeName'), controller: _typed, maxLength: 200, onChanged: (_) => setState(() {}), decoration: InputDecoration(hintText: t.placeName, counterText: ''));
     final mainButton = _editingPickup
         ? RfButton(key: const Key('confirmPickup'), label: t.confirmPickup, large: true, onPressed: ready ? _confirmPickup : null)
-        : RfButton(key: const Key('showPrice'), label: _chosen ? t.showPrice : t.confirmDestination, large: true, onPressed: ready ? _showPrice : null);
+        : RfButton(key: const Key('showPrice'), label: _chosen ? t.showPrice : t.confirmDestination, large: true, loading: _waitingName, onPressed: ready ? _showPrice : null);
     final hintText = hint.isEmpty ? null : Text(hint, key: const Key('placeHint'), style: RfType.caption.copyWith(color: tooClose ? RfColors.coral : RfColors.textMuted));
 
     void toMap() => setState(() {
@@ -308,7 +341,7 @@ class _DestinationScreenState extends ConsumerState<DestinationScreen> {
                     ),
             ),
             if (!showList && !searching) Center(child: IgnorePointer(child: Padding(padding: const EdgeInsets.only(bottom: 44), child: Icon(Icons.place_rounded, key: const Key('pin'), color: RfColors.gold, size: 48)))),
-            if (searching) Positioned.fill(child: ColoredBox(color: RfColors.canvas)),
+            if (searching) Positioned.fill(child: ColoredBox(color: RfLayout.page)),
             SafeArea(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
@@ -603,18 +636,24 @@ class _SearchPanelState extends ConsumerState<_SearchPanel> {
           Expanded(child: widget.floating ? Material(color: Colors.transparent, elevation: widget.open ? 0 : 4, borderRadius: BorderRadius.circular(RfRadius.md), child: field) : field),
         ]),
       ),
-      if (widget.open && widget.header != null) Padding(padding: const EdgeInsets.symmetric(horizontal: 18), child: widget.header!),
-      if (widget.open) Expanded(
-        child: ListView(padding: const EdgeInsets.fromLTRB(18, 2, 18, 12), keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag, children: [
-        ...mine,
-        for (final (i, hit) in _hits.indexed) _ResultRow(key: Key('hit_$i'), icon: Icons.place_outlined, title: hit.name, subtitle: hit.detail.isEmpty ? null : hit.detail, trailing: _away(hit.point), onTap: () => choose(hit)),
-        if (status != null) Padding(padding: const EdgeInsets.symmetric(vertical: 12), child: Text(status, key: const Key('searchStatus'), style: RfType.caption)),
-        _ResultRow(key: const Key('backToMap'), icon: Icons.map_rounded, iconColor: RfColors.gold, title: t.chooseOnMap, onTap: () {
-          _leave();
-          widget.onMap();
-        }),
-      ]),
-      ),
+      if (widget.open)
+        Expanded(
+          child: ListView(padding: const EdgeInsets.fromLTRB(16, 2, 16, 12), keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag, children: [
+            if (widget.header != null) RfGroup(children: [Padding(padding: EdgeInsets.symmetric(horizontal: RfLayout.inset), child: widget.header!)]),
+            if (mine.isNotEmpty) RfGroup(title: t.recent, children: mine),
+            if (_hits.isNotEmpty)
+              RfGroup(title: t.sectionResults, children: [
+                for (final (i, hit) in _hits.indexed) _ResultRow(key: Key('hit_$i'), icon: Icons.place_outlined, title: hit.name, subtitle: hit.detail.isEmpty ? null : hit.detail, trailing: _away(hit.point), onTap: () => choose(hit)),
+              ]),
+            if (status != null) Padding(padding: const EdgeInsets.symmetric(vertical: 12), child: Text(status, key: const Key('searchStatus'), style: RfType.caption)),
+            RfGroup(children: [
+              _ResultRow(key: const Key('backToMap'), icon: Icons.map_rounded, iconColor: RfColors.gold, title: t.chooseOnMap, onTap: () {
+                _leave();
+                widget.onMap();
+              }),
+            ]),
+          ]),
+        ),
     ]);
   }
 }
@@ -627,12 +666,11 @@ class _ResultRow extends StatelessWidget {
   final Color? iconColor;
   final VoidCallback onTap;
   @override
-  Widget build(BuildContext context) => ListTile(
-        contentPadding: EdgeInsets.zero,
-        minTileHeight: 62,
-        leading: CircleAvatar(radius: 21, backgroundColor: RfColors.surfaceSunken, child: Icon(icon, color: iconColor ?? RfColors.text, size: 20)),
-        title: Text(title, style: RfType.bodyStrong, maxLines: 1, overflow: TextOverflow.ellipsis),
-        subtitle: subtitle == null ? null : Text(subtitle!, style: RfType.caption, maxLines: 1, overflow: TextOverflow.ellipsis),
+  Widget build(BuildContext context) => RfRow(
+        title: title,
+        sub: subtitle,
+        maxLines: 1,
+        leading: RfRowIcon(icon, color: iconColor),
         trailing: trailing == null ? null : Ltr(trailing!, style: RfType.caption),
         onTap: onTap,
       );

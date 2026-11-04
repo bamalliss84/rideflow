@@ -13,6 +13,7 @@ import '../../core/format.dart';
 import '../../data/models.dart';
 import '../../design/components.dart';
 import '../../design/tokens.dart';
+import '../../shared/driver_photo.dart';
 import '../../shared/ride_map.dart';
 import '../../shared/widgets.dart' show ActionRunner, AsyncBody;
 import '../request/request_screen.dart';
@@ -228,17 +229,15 @@ class _OffersViewState extends ConsumerState<_OffersView> {
         if (mounted) showToast(context, t.offerExpired, error: true);
       });
     }
-    final price = RfCard(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(children: [
-        Expanded(
-          child: ride.riderPriceMinor == null
-              ? Text('${t.estimate} ${widget.money(ride.estimateMin)}', style: RfType.caption)
-              : Row(children: [Text('${t.yourPrice} ', style: RfType.caption), MoneyText(widget.money(ride.riderPriceMinor), style: RfType.bodyStrong.copyWith(color: RfColors.gold))]),
-        ),
-        TextButton(key: const Key('raisePrice'), onPressed: widget.busy ? null : widget.onRaise, child: Text(ride.riderPriceMinor == null ? t.addPrice : t.raisePrice)),
-      ]),
-    );
+    final price = Row(children: [
+      Expanded(
+        child: ride.riderPriceMinor == null
+            ? Text('${t.estimate} ${widget.money(ride.estimateMin)}', style: RfType.caption)
+            : Row(children: [Text('${t.yourPrice} ', style: RfType.caption), MoneyText(widget.money(ride.riderPriceMinor), style: RfType.bodyStrong.copyWith(color: RfColors.gold))]),
+      ),
+      TextButton(key: const Key('raisePrice'), onPressed: widget.busy ? null : widget.onRaise, child: Text(ride.riderPriceMinor == null ? t.addPrice : t.raisePrice)),
+    ]);
+
     final menu = ride.canCancel
         ? PopupMenuButton<String>(
             key: const Key('rideMenu'),
@@ -250,44 +249,53 @@ class _OffersViewState extends ConsumerState<_OffersView> {
     if (live.isEmpty) {
       return SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 4, 18, 18),
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Row(children: [Expanded(child: Text('${t.to} ${ride.dropoffLandmark}', style: RfType.caption, maxLines: 1, overflow: TextOverflow.ellipsis)), menu]),
             const Spacer(),
             const Center(child: _Pulse()),
-            const SizedBox(height: 28),
+            const SizedBox(height: 24),
             Text(t.searching, key: const Key('searching'), textAlign: TextAlign.center, style: RfType.h1),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Text(t.searchingNote, textAlign: TextAlign.center, style: RfType.body.copyWith(color: RfColors.textMuted, height: 1.6)),
             const Spacer(),
-            price,
+            RfGroup(children: [Padding(padding: EdgeInsets.symmetric(horizontal: RfLayout.inset), child: price)]),
           ]),
         ),
       );
     }
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Row(children: [Expanded(child: Text(t.offersTitle('${live.length}'), style: RfType.h2)), menu]),
-          const SizedBox(height: 8),
-          SegmentedPills(
-            labels: [t.cheapest, t.nearest, t.topRated],
-            selected: _sort.index,
-            onSelected: (i) => setState(() => _sort = _Sort.values[i]),
-          ),
-          const SizedBox(height: 10),
-          price,
-          const SizedBox(height: 10),
-          Expanded(
-            child: ListView(children: [
-              for (final o in _ordered(live))
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: _OfferCard(key: Key('offer_${o.id}'), offer: o, money: widget.money, selected: o.id == _selected, onTap: () => setState(() => _selected = o.id)),
-                ),
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Expanded(
+        child: SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Row(children: [Expanded(child: Text(t.offersTitle('${live.length}'), style: RfType.h1)), menu]),
+              const SizedBox(height: 4),
+              SegmentedPills(
+                labels: [t.cheapest, t.nearest, t.topRated],
+                selected: _sort.index,
+                onSelected: (i) => setState(() => _sort = _Sort.values[i]),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: ListView(children: [
+                  for (final o in _ordered(live))
+                    Padding(
+                      padding: EdgeInsets.only(bottom: RfLayout.listGap),
+                      child: _OfferCard(key: Key('offer_${o.id}'), offer: o, money: widget.money, selected: o.id == _selected, onTap: () => setState(() => _selected = o.id)),
+                    ),
+                ]),
+              ),
             ]),
           ),
+        ),
+      ),
+      RfFoot(
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          price,
+          const SizedBox(height: 4),
           RfButton(
             key: const Key('selectOffer'),
             label: selected == null ? t.chooseOffer : t.selectOffer(selected.driver?.name ?? t.driver, widget.money(selected.amountMinor)),
@@ -297,7 +305,7 @@ class _OffersViewState extends ConsumerState<_OffersView> {
           ),
         ]),
       ),
-    );
+    ]);
   }
 }
 
@@ -316,34 +324,48 @@ class _OfferCard extends StatelessWidget {
     final left = offer.expiresAt == null ? 0 : offer.expiresAt!.difference(DateTime.now()).inSeconds;
     return RfCard(
       onTap: onTap,
-      color: selected ? RfColors.tealSoft : null,
+      inList: true,
       border: selected ? RfColors.teal : null,
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+      padding: EdgeInsets.zero,
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Row(children: [
-          DriverAvatar(name: d?.name ?? ''),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(d?.name ?? t.driver, style: RfType.bodyStrong),
-              const SizedBox(height: 2),
-              DriverStats(driver: d),
-              const SizedBox(height: 2),
-              Text('${d?.vehicle?.name ?? ''} · ${t.minutes('${(offer.etaSeconds / 60).ceil()}')}', style: RfType.caption, maxLines: 1, overflow: TextOverflow.ellipsis),
-            ]),
-          ),
-          const SizedBox(width: 8),
-          MoneyText(money(offer.amountMinor), style: RfType.number.copyWith(color: RfColors.gold)),
+        RfRow(
+          leading: DriverPhoto(driver: d, radius: RfLayout.avatar),
+          title: d?.name ?? t.driver,
+          sub: d?.vehicle?.name,
+          maxLines: 1,
+          trailing: MoneyText(money(offer.amountMinor), style: RfLayout.priceSmall),
+        ),
+        Container(height: 1, color: RfLayout.softLine),
+        RfFacts([
+          RfFact(t.ratingFact, null, child: _Stars(driver: d)),
+          RfFact(t.tripsFact, '${d?.completedRides ?? 0}', ltr: true),
+          RfFact(t.arrivesFact, t.minutes('${(offer.etaSeconds / 60).ceil()}')),
         ]),
-        if (total > 0) ...[
-          const SizedBox(height: 10),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(2),
-            child: LinearProgressIndicator(value: (left / total).clamp(0.0, 1.0), minHeight: 3, backgroundColor: RfColors.surfaceSunken, color: RfColors.teal),
+        if (total > 0)
+          Padding(
+            padding: EdgeInsets.fromLTRB(RfLayout.inset, 0, RfLayout.inset, 6),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(2),
+              child: LinearProgressIndicator(value: (left / total).clamp(0.0, 1.0), minHeight: 3, backgroundColor: RfColors.surfaceSunken, color: RfColors.teal),
+            ),
           ),
-        ],
       ]),
     );
+  }
+}
+
+class _Stars extends StatelessWidget {
+  const _Stars({required this.driver});
+  final Driver? driver;
+  @override
+  Widget build(BuildContext context) {
+    final d = driver;
+    final isNew = d == null || d.ratingProvisional || d.ratingAvg == null;
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Icon(Icons.star_rounded, color: RfColors.gold, size: 14),
+      const SizedBox(width: 2),
+      Text(isNew ? AppLocalizations.of(context).newDriver : d.ratingAvg!.toStringAsFixed(1), style: RfType.bodyStrong),
+    ]);
   }
 }
 
@@ -397,36 +419,29 @@ class _ConfirmingViewState extends State<_ConfirmingView> {
     final t = AppLocalizations.of(context);
     final deadline = widget.ride.matchDeadline;
     final left = deadline == null ? 0 : deadline.difference(DateTime.now()).inSeconds.clamp(0, 999);
-    Widget step(String label, Widget mark, {bool done = true}) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Row(children: [Expanded(child: Text(label, style: RfType.bodyStrong.copyWith(color: done ? RfColors.text : RfColors.textMuted))), mark]),
-        );
+    Widget step(String label, Widget mark, {bool done = true}) => RfRow(title: label, titleStyle: RfType.bodyStrong.copyWith(color: done ? RfColors.text : RfColors.textMuted), trailing: mark);
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text(t.confirming, key: const Key('confirming'), style: RfType.h2),
-          const SizedBox(height: 28),
+          Text(t.confirming, key: const Key('confirming'), style: RfType.h1),
+          const SizedBox(height: 24),
           Center(
             child: Column(children: [
-              Text('$left', style: RfType.display.copyWith(fontSize: 32)),
+              Text('$left', style: RfType.display.copyWith(fontSize: 30)),
               Text(t.seconds, style: RfType.caption),
             ]),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
           Text(t.waitingFor(widget.ride.driver?.name ?? t.driver), textAlign: TextAlign.center, style: RfType.h2),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           Text(t.notifyYou, textAlign: TextAlign.center, style: RfType.caption),
-          const SizedBox(height: 24),
-          RfCard(
-            child: Column(children: [
-              step(t.stepSent, Icon(Icons.check_rounded, color: RfColors.teal)),
-              const Divider(),
-              step(t.stepReview, const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))),
-              const Divider(),
-              step(t.stepConfirm, Icon(Icons.radio_button_unchecked_rounded, color: RfColors.textMuted), done: false),
-            ]),
-          ),
+          const SizedBox(height: 16),
+          RfGroup(children: [
+            step(t.stepSent, Icon(Icons.check_rounded, color: RfColors.teal, size: 20)),
+            step(t.stepReview, const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))),
+            step(t.stepConfirm, Icon(Icons.radio_button_unchecked_rounded, color: RfColors.textMuted, size: 20), done: false),
+          ]),
           const Spacer(),
           if (widget.ride.canCancel) RfButton(key: const Key('cancelRequest'), label: t.cancelRequest, kind: RfButtonKind.secondary, onPressed: widget.onCancel),
         ]),
@@ -445,13 +460,13 @@ class _ConfirmedView extends StatelessWidget {
     final t = AppLocalizations.of(context);
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          const SizedBox(height: 30),
-          Center(child: CircleAvatar(radius: 46, backgroundColor: RfColors.tealSoft, child: Icon(Icons.check_rounded, color: RfColors.teal, size: 54))),
-          const SizedBox(height: 18),
-          Text(t.tripConfirmed, key: const Key('tripConfirmed'), textAlign: TextAlign.center, style: RfType.h1),
           const SizedBox(height: 24),
+          Center(child: CircleAvatar(radius: 34, backgroundColor: RfColors.tealSoft, child: Icon(Icons.check_rounded, color: RfColors.teal, size: 38))),
+          const SizedBox(height: 12),
+          Text(t.tripConfirmed, key: const Key('tripConfirmed'), textAlign: TextAlign.center, style: RfType.h1),
+          const SizedBox(height: 12),
           _DriverCard(ride: ride, onCall: onCall),
           const Spacer(),
           RfButton(key: const Key('followDriver'), label: t.followDriver, large: true, onPressed: onContinue),
@@ -520,42 +535,45 @@ class _TripViewState extends ConsumerState<_TripView> {
         ]),
       ),
       Container(
-        decoration: BoxDecoration(color: RfColors.ink2, border: Border(top: BorderSide(color: RfColors.line)), borderRadius: const BorderRadius.vertical(top: Radius.circular(RfRadius.xl))),
+        decoration: BoxDecoration(color: RfLayout.page, border: Border(top: BorderSide(color: RfColors.line)), borderRadius: const BorderRadius.vertical(top: Radius.circular(RfRadius.lg))),
         child: SafeArea(
           top: false,
           child: Padding(
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
             child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               if (riding) Text(t.onWayTo, style: RfType.caption),
               Text(title, key: const Key('tripTitle'), style: RfType.h2.copyWith(color: arrived ? RfColors.teal : RfColors.text)),
               if (arrived) Text(ride.startCode != null ? t.goToCarCode : t.goToCar, style: RfType.caption),
-              const SizedBox(height: 12),
               if (riding)
-                RfCard(
-                  child: Row(children: [
-                    Expanded(child: StatColumn(label: t.tripTime, value: '$mm:$ss')),
-                    Expanded(child: StatColumn(label: t.distance, value: formatDistance(ride.distanceM))),
-                    Expanded(child: StatColumn(label: t.fare, value: widget.money(ride.fareMinor), color: RfColors.gold)),
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: RfGroup(children: [
+                    RfFacts([
+                      RfFact(t.tripTime, '$mm:$ss', ltr: true),
+                      RfFact(t.distance, formatDistance(ride.distanceM), ltr: true),
+                      RfFact(t.fare, widget.money(ride.fareMinor), ltr: true, color: RfColors.gold),
+                    ]),
                   ]),
                 )
               else ...[
                 _DriverCard(ride: ride, onCall: widget.onCall),
-                if (ride.startCode != null) ...[
-                  const SizedBox(height: 10),
-                  RfCard(
+                if (ride.startCode != null)
+                  RfGroup(
                     key: const Key('startCode'),
-                    border: RfColors.teal,
-                    child: Row(children: [
-                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(t.startCodeTitle, style: RfType.bodyStrong), Text(t.giveCode, style: RfType.caption)])),
-                      Ltr(ride.startCode!, style: RfType.number.copyWith(color: RfColors.teal, fontSize: 20, letterSpacing: 3)),
-                    ]),
+                    title: t.startCodeTitle,
+                    children: [
+                      RfRow(
+                        title: t.giveCode,
+                        titleStyle: RfType.caption,
+                        trailing: Ltr(ride.startCode!, style: RfLayout.price.copyWith(color: RfColors.teal, letterSpacing: 3)),
+                      ),
+                    ],
                   ),
-                ],
               ],
-              const SizedBox(height: 14),
+              const SizedBox(height: 4),
               Row(children: [
                 Expanded(child: RfButton(key: const Key('share'), label: t.share, kind: RfButtonKind.secondary, icon: Icons.ios_share_rounded, onPressed: widget.busy ? null : widget.onShare)),
-                const SizedBox(width: 10),
+                const SizedBox(width: 8),
                 Expanded(child: RfButton(key: const Key('emergency'), label: t.emergency, kind: RfButtonKind.dangerSoft, icon: Icons.warning_amber_rounded, onPressed: widget.onEmergency)),
               ]),
             ]),
@@ -575,32 +593,19 @@ class _DriverCard extends StatelessWidget {
     final t = AppLocalizations.of(context);
     final d = ride.driver;
     final v = d?.vehicle;
-    return RfCard(
-      padding: const EdgeInsets.all(14),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Row(children: [
-          DriverAvatar(name: d?.name ?? ''),
-          const SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(d?.name ?? t.driver, style: RfType.bodyStrong), DriverStats(driver: d)])),
-          if (d?.phone != null) IconButton.filled(key: const Key('callDriver'), tooltip: t.call, style: IconButton.styleFrom(backgroundColor: RfColors.tealSoft, minimumSize: const Size(48, 48)), onPressed: () => onCall(d!.phone!), icon: Icon(Icons.phone_rounded, color: RfColors.teal)),
+    return RfGroup(title: t.driver, children: [
+      RfRow(
+        leading: DriverPhoto(driver: d, radius: RfLayout.avatar),
+        title: d?.name ?? t.driver,
+        subChild: DriverStats(driver: d),
+        trailing: d?.phone == null ? null : RfCircleButton(key: const Key('callDriver'), icon: Icons.phone_rounded, tooltip: t.call, onPressed: () => onCall(d!.phone!)),
+      ),
+      if (v != null)
+        RfFacts([
+          RfFact(t.vehicleFact, v.color.isEmpty ? v.name : '${v.name}، ${v.color}'),
+          if (v.plate != null) RfFact(t.plateFact, null, child: Ltr(v.plate!, key: const Key('plate'), style: RfType.bodyStrong)),
         ]),
-        if (v != null) ...[
-          const SizedBox(height: 10),
-          const Divider(),
-          const SizedBox(height: 10),
-          Row(children: [
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(v.name, style: RfType.bodyStrong), Text(v.color, style: RfType.caption)])),
-            if (v.plate != null)
-              Container(
-                key: const Key('plate'),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(color: RfColors.surfaceSunken, borderRadius: BorderRadius.circular(RfRadius.sm)),
-                child: Ltr(v.plate!, style: RfType.bodyStrong),
-              ),
-          ]),
-        ],
-      ]),
-    );
+    ]);
   }
 }
 
@@ -620,19 +625,17 @@ class _ArrivedView extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          const SizedBox(height: 36),
-          Center(child: CircleAvatar(radius: 46, backgroundColor: RfColors.tealSoft, child: Icon(Icons.flag_rounded, color: RfColors.teal, size: 48))),
-          const SizedBox(height: 18),
+          const SizedBox(height: 28),
+          Center(child: CircleAvatar(radius: 34, backgroundColor: RfColors.tealSoft, child: Icon(Icons.flag_rounded, color: RfColors.teal, size: 34))),
+          const SizedBox(height: 12),
           Text(t.reachedDestination, key: const Key('reached'), textAlign: TextAlign.center, style: RfType.h1),
           Text(ride.dropoffLandmark, textAlign: TextAlign.center, style: RfType.caption),
-          const SizedBox(height: 28),
-          RfCard(
-            child: Column(children: [
-              Text(t.fareCash, style: RfType.caption),
-              MoneyText(money(ride.fareMinor), style: RfType.display.copyWith(color: RfColors.gold, fontSize: 26)),
-            ]),
-          ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
+          RfGroup(title: t.fareCash, children: [
+            Padding(padding: RfLayout.box, child: Center(child: MoneyText(money(ride.fareMinor), style: RfLayout.priceBig))),
+          ]),
+          const SizedBox(height: 8),
+
           RfButton(key: const Key('paid'), label: ride.cashConfirmedByMe ? t.paidDone : t.paid, kind: RfButtonKind.secondary, loading: busy, onPressed: ride.cashConfirmedByMe ? null : onPaid),
           const Spacer(),
           if (rated) RfButton(key: const Key('toReceipt'), label: t.receipt, large: true, onPressed: onReceipt) else RfButton(key: const Key('rateTrip'), label: t.rateTrip, large: true, onPressed: onRate),
@@ -669,13 +672,9 @@ class _NoOffersView extends ConsumerWidget {
           Text(t.noOffers, key: const Key('noOffers'), textAlign: TextAlign.center, style: RfType.h1),
           const SizedBox(height: 8),
           Text(t.noOffersNote, textAlign: TextAlign.center, style: RfType.body.copyWith(color: RfColors.textMuted, height: 1.6)),
-          const SizedBox(height: 28),
-          RfCard(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(ride.dropoffLandmark, style: RfType.bodyStrong),
-              if (was != null) Text(t.wasPrice(money(was)), style: RfType.caption),
-            ]),
-          ),
+          const SizedBox(height: 20),
+          RfGroup(children: [RfRow(title: ride.dropoffLandmark, sub: was == null ? null : t.wasPrice(money(was)))]),
+
           const Spacer(),
           RfButton(key: const Key('requestAgain'), label: t.requestAgain, large: true, onPressed: () => context.go('/request', extra: _draft(price: was))),
           const SizedBox(height: 8),

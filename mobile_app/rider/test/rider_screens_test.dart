@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -80,6 +83,7 @@ class FakeSearch implements PlaceSearch {
   final bool fail;
   final queries = <String>[];
   final areas = <Point?>[];
+  int reverses = 0;
   @override
   bool get available => true;
   @override
@@ -92,12 +96,13 @@ class FakeSearch implements PlaceSearch {
 
   @override
   Future<PlaceHit?> reverse(Point point) async {
+    reverses++;
     if (fail) throw Exception('offline');
     return reverseName == null ? null : PlaceHit(name: reverseName!, detail: 'المكلا', point: point);
   }
 }
 
-Future<FakeBackend> pump(WidgetTester tester, Map<String, Handler> routes, String initial, {ExternalApps apps = const ExternalApps(), Object? extra, SecureKV? prefs, PlaceSearch? search, Point? here, bool overrideLocation = false}) async {
+Future<FakeBackend> pump(WidgetTester tester, Map<String, Handler> routes, String initial, {Future<Point?> Function()? locate, ExternalApps apps = const ExternalApps(), Object? extra, SecureKV? prefs, PlaceSearch? search, Point? here, bool overrideLocation = false}) async {
   final backend = FakeBackend({
     'GET me': (_) => (200, _me),
     'GET rides': (_) => (200, {'results': []}),
@@ -126,7 +131,7 @@ Future<FakeBackend> pump(WidgetTester tester, Map<String, Handler> routes, Strin
       prefsProvider.overrideWithValue(prefs ?? MemoryKV()),
       externalAppsProvider.overrideWithValue(apps),
       if (search != null) placeSearchProvider.overrideWithValue(search),
-      if (overrideLocation) myLocationProvider.overrideWith((ref) async => here),
+      if (locate != null) myLocationProvider.overrideWith((ref) => locate()) else if (overrideLocation) myLocationProvider.overrideWith((ref) async => here),
       apiClientProvider.overrideWith((ref) => ApiClient(session: store, dio: backend.dio(), appClientId: 'test-rider')),
     ],
     child: MaterialApp.router(
@@ -179,6 +184,38 @@ void main() {
       expect(find.byKey(const Key('searching')), findsOneWidget);
     });
 
+    testWidgets('a price can be typed, and one below the minimum cannot be used', (tester) async {
+      final backend = await pump(tester, {
+        'POST fare-estimate': (_) => (200, estimate),
+        'POST rides': (_) => (201, ride('bidding')),
+        'GET rides/r1': (_) => (200, ride('bidding')),
+      }, '/request', extra: draft);
+      await tapKey(tester, 'addPrice');
+      RfButton use() => tester.widget<RfButton>(find.byKey(const Key('usePrice')));
+
+      await tester.enterText(find.byKey(const Key('priceInput')), '100');
+      await settle(tester);
+      expect(use().onPressed, isNull, reason: 'below the minimum');
+      await tester.enterText(find.byKey(const Key('priceInput')), '');
+      await settle(tester);
+      expect(use().onPressed, isNull, reason: 'nothing typed');
+
+      await tester.enterText(find.byKey(const Key('priceInput')), '12ab34');
+      await settle(tester);
+      expect(tester.widget<TextField>(find.byKey(const Key('priceInput'))).controller!.text, '1234', reason: 'digits only');
+
+      await tester.tap(find.byKey(const Key('priceUp4')));
+      await settle(tester);
+      final typed = tester.widget<TextField>(find.byKey(const Key('priceInput'))).controller!.text;
+      expect(int.parse(typed), greaterThan(1234), reason: 'quick amounts add to what was typed');
+
+      await tester.tap(find.byKey(const Key('usePrice')));
+      await tester.pump(const Duration(seconds: 1));
+      await settle(tester);
+      await tapKey(tester, 'requestOffers');
+      expect((posts(backend, 'rides').single.body as Map)['rider_price_minor'], int.parse(typed) * 100);
+    });
+
     testWidgets('the price sheet starts at the minimum and cannot go below it', (tester) async {
       final backend = await pump(tester, {
         'POST fare-estimate': (_) => (200, estimate),
@@ -186,7 +223,7 @@ void main() {
         'GET rides/r1': (_) => (200, ride('bidding')),
       }, '/request', extra: draft);
       await tapKey(tester, 'addPrice');
-      expect(tester.widget<IconButton>(find.byKey(const Key('priceDown'))).onPressed, isNull);
+      expect(tester.widget<TextButton>(find.byKey(const Key('priceDown'))).onPressed, isNull);
       await tester.tap(find.byKey(const Key('priceUp')));
       await settle(tester);
       await tester.tap(find.byKey(const Key('usePrice')));
@@ -299,7 +336,9 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
       await settle(tester);
       expect(backend.seen.where((s) => s.path == 'fare-estimate'), isNotEmpty);
-      expect(find.text('سوق الخضار'), findsNothing, reason: 'now on the price screen');
+      expect(find.byKey(const Key('requestOffers')), findsOneWidget, reason: 'now on the price screen');
+      expect(find.byKey(const Key('showPrice')), findsNothing);
+      expect(find.text('سوق الخضار'), findsOneWidget, reason: 'the price screen names the destination in the trip section');
     });
 
     testWidgets('without a location the rider sets the pickup first', (tester) async {
@@ -473,7 +512,7 @@ void main() {
         },
       }, '/ride/r1');
       await tapKey(tester, 'raisePrice');
-      expect(tester.widget<IconButton>(find.byKey(const Key('priceDown'))).onPressed, isNull);
+      expect(tester.widget<TextButton>(find.byKey(const Key('priceDown'))).onPressed, isNull);
       expect(find.text('بدون سعر'), findsNothing);
       await tester.tap(find.byKey(const Key('usePrice')));
       await tester.pump(const Duration(seconds: 1));
@@ -509,6 +548,47 @@ void main() {
       }, '/ride/r1');
       expect(find.byKey(const Key('noOffers')), findsOneWidget);
       expect(find.byKey(const Key('requestHigher')), findsOneWidget);
+    });
+  });
+
+  group('the driver photo', () {
+    final pixel = base64Decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAEBgIApD5fRAAAAABJRU5ErkJggg==');
+    Map<String, dynamic> withPhoto(Map<String, dynamic> d) => {...d, 'photo_url': 'drivers/d1/photo?v=1'};
+    ImageProvider? shown(WidgetTester tester) => tester.widget<CircleAvatar>(find.descendant(of: find.byType(DriverAvatar).first, matching: find.byType(CircleAvatar))).backgroundImage;
+
+    testWidgets('on an offer', (tester) async {
+      final backend = await pump(tester, {
+        'GET rides/r1': (_) => (200, ride('bidding')),
+        'GET rides/r1/bids': (_) => (200, [{...offer('a', 90000), 'driver': withPhoto(driver())}]),
+        'GET drivers/d1/photo': (_) => (200, pixel),
+      }, '/ride/r1');
+      expect(backend.seen.where((s) => s.path == 'drivers/d1/photo'), hasLength(1));
+      expect((shown(tester)! as MemoryImage).bytes, pixel);
+    });
+
+    testWidgets('on the trip', (tester) async {
+      await pump(tester, {
+        'GET rides/r1': (_) => (200, ride('en_route', actions: ['rider_cancel'], extra: {'driver': withPhoto(driver())})),
+        'GET drivers/d1/photo': (_) => (200, pixel),
+      }, '/ride/r1');
+      expect(shown(tester), isA<MemoryImage>());
+    });
+
+    testWidgets('the first letter when there is none', (tester) async {
+      await pump(tester, {
+        'GET rides/r1': (_) => (200, ride('en_route', actions: ['rider_cancel'], extra: {'driver': driver()})),
+      }, '/ride/r1');
+      expect(shown(tester), isNull);
+      expect(find.text('س'), findsWidgets);
+    });
+
+    testWidgets('the first letter when it can not be read', (tester) async {
+      await pump(tester, {
+        'GET rides/r1': (_) => (200, ride('en_route', actions: ['rider_cancel'], extra: {'driver': withPhoto(driver())})),
+        'GET drivers/d1/photo': (_) => (404, {'code': 'not_found'}),
+      }, '/ride/r1');
+      expect(shown(tester), isNull);
+      expect(find.text('س'), findsWidgets);
     });
   });
 
@@ -672,6 +752,54 @@ void main() {
       await settle(tester);
       expect(prefs.values['rf_appearance'], 'night');
     });
+  });
+
+  testWidgets('the pickup shows at once from the known position, and a new reading at the same spot keeps its name', (tester) async {
+    final search = FakeSearch();
+    final fresh = Completer<Point?>();
+    var reads = 0;
+    await pump(tester, const {}, '/', search: search, locate: () async => ++reads == 1 ? _shaab : await fresh.future);
+    final home = tester.element(find.text('HOME'));
+    final held = ProviderScope.containerOf(home).listen(myLocationProvider, (_, __) {});
+    addTearDown(held.close);
+    await settle(tester);
+    GoRouter.of(home).push('/destination');
+    await settle(tester);
+
+    expect(reads, 2, reason: 'a new reading was asked for');
+    expect(tester.widget<Text>(find.byKey(const Key('fromText'))).data, 'موقعي الحالي، شعب البادية، المكلا');
+    expect(search.reverses, 1);
+
+    fresh.complete(_shaab);
+    await settle(tester);
+    expect(tester.widget<Text>(find.byKey(const Key('fromText'))).data, 'موقعي الحالي، شعب البادية، المكلا');
+    expect(search.reverses, 1, reason: 'the same spot is not named twice');
+  });
+
+  testWidgets('switching the layout model redraws the screen already on show and is kept on the phone', (tester) async {
+    addTearDown(() => RfLayout.use(RfLayoutModel.a));
+    final prefs = MemoryKV();
+    final scope = ProviderContainer(overrides: [
+      sessionStoreProvider.overrideWithValue(SessionStore(MemoryKV())),
+      prefsProvider.overrideWithValue(prefs),
+    ]);
+    addTearDown(scope.dispose);
+    await tester.pumpWidget(UncontrolledProviderScope(container: scope, child: const RiderApp()));
+    await settle(tester);
+    Color background() => Theme.of(tester.element(find.byType(Scaffold).first)).scaffoldBackgroundColor;
+    expect(RfLayout.model, RfLayoutModel.a);
+    expect(background(), RfColors.canvas);
+
+    await scope.read(layoutProvider.notifier).set(RfLayoutModel.b);
+    await settle(tester);
+    expect(RfLayout.model, RfLayoutModel.b);
+    expect(prefs.values['rf_layout_model'], 'b');
+    expect(background(), RfColors.surface, reason: 'model b is one page with no boxes');
+
+    await scope.read(layoutProvider.notifier).set(RfLayoutModel.c);
+    await settle(tester);
+    expect(prefs.values['rf_layout_model'], 'c');
+    expect(RfLayout.rowHeight, lessThan(50));
   });
 
   testWidgets('switching the appearance recolours the screen already on show', (tester) async {

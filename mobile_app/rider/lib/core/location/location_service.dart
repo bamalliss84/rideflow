@@ -39,11 +39,16 @@ class LocationService {
 
   Future<LocationAccess> ensureAccess() => access();
 
-  /// A current fix: live reading first, then the platform's last known position. Null = no fix available.
+  /// A current fix. The phone's own reading from the last minute is used at once, since a new GPS reading can take many
+  /// seconds; then a live reading, then the last known position whatever its age. Null = no fix available.
   Future<Fix?> current() async {
     try {
+      final known = await Geolocator.getLastKnownPosition();
+      if (known != null && DateTime.now().difference(known.timestamp) < const Duration(minutes: 1)) return last = Fix.fromPosition(known);
+    } catch (_) {}
+    try {
       final p = await Geolocator.getCurrentPosition(
-          locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, timeLimit: Duration(seconds: 20)));
+          locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, timeLimit: Duration(seconds: 8)));
       return last = Fix.fromPosition(p);
     } catch (_) {
       try {

@@ -161,3 +161,36 @@ abstract final class RfType {
   static TextStyle get cta => _base.copyWith(fontSize: 15, fontWeight: FontWeight.w800, height: 1.1);
   static TextStyle get number => _base.copyWith(fontSize: 18, fontWeight: FontWeight.w800, height: 1.1);
 }
+
+// ---------------------------------------------------------------- layout models
+
+/// How data is arranged on every screen while the owner compares the three models (D044).
+/// a: separate cards. b: one page, sections and thin lines. c: borderless cards, shorter rows.
+enum RfLayoutModel { a, b, c }
+
+abstract final class RfLayout {
+  static RfLayoutModel _model = RfLayoutModel.a;
+  static RfLayoutModel get model => _model;
+  static void use(RfLayoutModel model) => _model = model;
+  static RfLayoutModel? decode(String? s) => switch (s) { 'a' => RfLayoutModel.a, 'b' => RfLayoutModel.b, 'c' => RfLayoutModel.c, _ => null };
+
+  static bool get ruled => _model == RfLayoutModel.b;
+  static bool get compact => _model == RfLayoutModel.c;
+
+  static Color get page => ruled ? RfColors.surface : RfColors.canvas;
+  static Color get softLine => RfColors.line.withOpacity(0.6);
+  static double get radius => switch (_model) { RfLayoutModel.a => 14, RfLayoutModel.b => 0, RfLayoutModel.c => 10 };
+  static double get groupGap => switch (_model) { RfLayoutModel.a => 8, RfLayoutModel.b => 2, RfLayoutModel.c => 6 };
+  static double get listGap => switch (_model) { RfLayoutModel.a => 8, RfLayoutModel.b => 0, RfLayoutModel.c => 6 };
+  static double get inset => switch (_model) { RfLayoutModel.a => 12, RfLayoutModel.b => 2, RfLayoutModel.c => 10 };
+  static double get rowHeight => compact ? 42 : 50;
+  static double get rowPad => compact ? 4 : 6;
+  static double get iconBox => compact ? 28 : 32;
+  static double get avatar => compact ? 16 : 19;
+  static EdgeInsets get titlePad => compact ? const EdgeInsets.fromLTRB(2, 8, 2, 4) : const EdgeInsets.fromLTRB(2, 12, 2, 6);
+  static EdgeInsets get box => EdgeInsets.symmetric(horizontal: inset, vertical: compact ? 8 : 10);
+
+  static TextStyle get price => RfType.display.copyWith(fontSize: 20, fontWeight: FontWeight.w800, color: RfColors.gold);
+  static TextStyle get priceSmall => price.copyWith(fontSize: 15);
+  static TextStyle get priceBig => price.copyWith(fontSize: 26);
+}

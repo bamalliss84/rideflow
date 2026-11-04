@@ -28,17 +28,17 @@ ThemeData buildRideFlowTheme({String family = RfFonts.preferred}) {
     labelMedium: RfType.label,
     labelSmall: RfType.caption,
   );
-  final inputBorder = OutlineInputBorder(borderRadius: BorderRadius.circular(RfRadius.md), borderSide: BorderSide(color: RfColors.line));
+  final inputBorder = OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: RfColors.line));
   TextStyle f(TextStyle style) => style.copyWith(fontFamily: family);
   return ThemeData(
     useMaterial3: true,
     fontFamily: family,
     colorScheme: scheme,
     textTheme: text.apply(fontFamily: family),
-    scaffoldBackgroundColor: RfColors.canvas,
+    scaffoldBackgroundColor: RfLayout.page,
     splashFactory: InkSparkle.splashFactory,
     appBarTheme: AppBarTheme(
-      backgroundColor: RfColors.canvas,
+      backgroundColor: RfLayout.page,
       foregroundColor: RfColors.text,
       elevation: 0,
       scrolledUnderElevation: 0,
@@ -48,7 +48,7 @@ ThemeData buildRideFlowTheme({String family = RfFonts.preferred}) {
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: RfColors.surfaceSunken,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       floatingLabelBehavior: FloatingLabelBehavior.always,
       labelStyle: f(RfType.label),
       floatingLabelStyle: f(RfType.label).copyWith(color: RfColors.tealDeep, fontWeight: FontWeight.w700),
@@ -61,7 +61,7 @@ ThemeData buildRideFlowTheme({String family = RfFonts.preferred}) {
       errorBorder: inputBorder.copyWith(borderSide: BorderSide(color: RfColors.coral)),
     ),
     bottomSheetTheme: BottomSheetThemeData(
-      backgroundColor: RfColors.surface,
+      backgroundColor: RfLayout.page,
       surfaceTintColor: Colors.transparent,
       showDragHandle: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(RfRadius.xl))),
@@ -72,6 +72,13 @@ ThemeData buildRideFlowTheme({String family = RfFonts.preferred}) {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(RfRadius.lg)),
       titleTextStyle: f(RfType.h2),
       contentTextStyle: f(RfType.body),
+    ),
+    cardTheme: CardTheme(
+      elevation: 0,
+      margin: EdgeInsets.only(bottom: RfLayout.listGap),
+      color: RfLayout.ruled ? Colors.transparent : RfColors.surface,
+      surfaceTintColor: Colors.transparent,
+      shape: RfLayout.ruled ? Border(bottom: BorderSide(color: RfColors.line)) : RoundedRectangleBorder(borderRadius: BorderRadius.circular(RfLayout.radius), side: RfLayout.compact ? BorderSide.none : BorderSide(color: RfColors.line)),
     ),
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: RfColors.surface,

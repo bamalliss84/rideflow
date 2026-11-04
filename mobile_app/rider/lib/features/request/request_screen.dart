@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,7 +10,6 @@ import '../../core/format.dart';
 import '../../data/models.dart';
 import '../../design/components.dart';
 import '../../design/tokens.dart';
-import '../../shared/ride_map.dart';
 import '../../shared/widgets.dart' show ActionRunner, AsyncBody;
 
 /// Default price step: 50 whole currency units. A ride's own snapshot carries the operator's step once it exists.
@@ -71,73 +71,66 @@ class _RequestScreenState extends ConsumerState<RequestScreen> {
     final d = widget.draft;
     return Scaffold(
       appBar: AppBar(title: Text(t.price), leading: const BackButton()),
-      bottomNavigationBar: value.valueOrNull == null
-          ? null
-          : SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(18, 8, 18, 12),
-                child: RfButton(key: const Key('requestOffers'), label: t.requestOffers, large: true, loading: _runner.busy, onPressed: _send),
-              ),
-            ),
+      bottomNavigationBar: value.valueOrNull == null ? null : RfFoot(child: RfButton(key: const Key('requestOffers'), label: t.requestOffers, large: true, loading: _runner.busy, onPressed: _send)),
       body: AsyncBody<Estimate>(
         value: value,
         onRetry: () => ref.invalidate(estimateProvider(widget.draft)),
         data: (e) {
           String money(int? v) => formatMoney(v, e.currency, units);
-          return ListView(padding: const EdgeInsets.fromLTRB(18, 4, 18, 18), children: [
-            ClipRRect(borderRadius: BorderRadius.circular(RfRadius.lg), child: SizedBox(height: 190, child: RideMap(pickup: d.pickup.point, dropoff: d.dropoff.point))),
-            const SizedBox(height: 12),
-            RfCard(
-              child: Row(children: [
-                Expanded(child: StatColumn(label: t.distance, value: formatDistance(e.distanceM))),
-                Expanded(child: StatColumn(label: t.payment, value: t.cash)),
-              ]),
-            ),
-            const SizedBox(height: 12),
-            RfCard(
-              border: RfColors.teal,
-              child: Column(children: [
-                Text(t.estimate, style: RfType.label),
-                const SizedBox(height: 4),
-                MoneyText('${formatMoney(e.minMinor, '', units)} – ${money(e.maxMinor)}', style: RfType.display.copyWith(color: RfColors.gold, fontSize: 22)),
-                const SizedBox(height: 4),
-                Text(t.estimateNote, style: RfType.caption, textAlign: TextAlign.center),
-              ]),
-            ),
-            const SizedBox(height: 12),
-            RfButton(
-              key: const Key('addPrice'),
-              label: _price == null ? t.addPrice : '${t.yourPrice} · ${money(_price)}',
-              kind: RfButtonKind.secondary,
-              onPressed: () async {
-                final picked = await showPriceSheet(context, start: _price ?? e.riderMinMinor, minimum: e.riderMinMinor, step: defaultStepMinor(units), currency: e.currency, minorUnits: units, estimate: '${formatMoney(e.minMinor, '', units)} – ${money(e.maxMinor)}', allowNone: true);
-                if (picked != null && mounted) setState(() => _price = picked == 0 ? null : picked);
-              },
-            ),
-            const SizedBox(height: 18),
-            TextField(
-              key: const Key('pickupNote'),
-              controller: _pickupNote,
-              maxLength: 300,
-              decoration: InputDecoration(hintText: t.pickupNoteHint, counterText: '', prefixIcon: Icon(Icons.radio_button_checked_rounded, color: RfColors.teal, size: 20)),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              key: const Key('dropoffNote'),
-              controller: _dropoffNote,
-              maxLength: 300,
-              decoration: InputDecoration(hintText: t.dropoffNoteHint, counterText: '', prefixIcon: Icon(Icons.place_rounded, color: RfColors.gold, size: 20)),
-            ),
-            const SizedBox(height: 4),
-            SwitchListTile(
-              key: const Key('codeSwitch'),
-              contentPadding: EdgeInsets.zero,
-              value: _code,
-              activeTrackColor: RfColors.teal,
-              title: Text(t.startCodeTitle, style: RfType.bodyStrong),
-              subtitle: Text(_code ? t.on_ : t.off_, style: RfType.caption),
-              onChanged: (v) => setState(() => _code = v),
-            ),
+          return ListView(padding: const EdgeInsets.fromLTRB(16, 0, 16, 16), children: [
+            RfGroup(title: t.sectionTrip, children: [
+              RfStops(fromLabel: t.from, from: d.pickup.landmark, toLabel: t.to, to: d.dropoff.landmark),
+              RfFacts([RfFact(t.distance, formatDistance(e.distanceM), ltr: true), RfFact(t.payment, t.cash)]),
+            ]),
+            RfGroup(title: t.estimate, children: [
+              Padding(
+                padding: RfLayout.box,
+                child: Column(children: [
+                  MoneyText('${formatMoney(e.minMinor, '', units)} – ${money(e.maxMinor)}', style: RfLayout.price),
+                  const SizedBox(height: 2),
+                  Text(t.estimateNote, style: RfType.caption, textAlign: TextAlign.center),
+                ]),
+              ),
+              RfRow(
+                key: const Key('addPrice'),
+                title: _price == null ? t.addPrice : t.yourPrice,
+                trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                  if (_price != null) MoneyText(money(_price), style: RfType.bodyStrong.copyWith(color: RfColors.gold)),
+                  Icon(Icons.chevron_left_rounded, color: RfColors.textMuted),
+                ]),
+                onTap: () async {
+                  final picked = await showPriceSheet(context, start: _price ?? e.riderMinMinor, minimum: e.riderMinMinor, step: defaultStepMinor(units), currency: e.currency, minorUnits: units, estimate: '${formatMoney(e.minMinor, '', units)} – ${money(e.maxMinor)}', allowNone: true);
+                  if (picked != null && mounted) setState(() => _price = picked == 0 ? null : picked);
+                },
+              ),
+            ]),
+            RfGroup(title: t.sectionNotes, children: [
+              Padding(
+                padding: RfLayout.box,
+                child: Column(children: [
+                  TextField(
+                    key: const Key('pickupNote'),
+                    controller: _pickupNote,
+                    maxLength: 300,
+                    decoration: InputDecoration(hintText: t.pickupNoteHint, counterText: '', prefixIcon: Icon(Icons.radio_button_checked_rounded, color: RfColors.teal, size: 18)),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    key: const Key('dropoffNote'),
+                    controller: _dropoffNote,
+                    maxLength: 300,
+                    decoration: InputDecoration(hintText: t.dropoffNoteHint, counterText: '', prefixIcon: Icon(Icons.place_rounded, color: RfColors.gold, size: 18)),
+                  ),
+                ]),
+              ),
+            ]),
+            RfGroup(children: [
+              RfRow(
+                title: t.startCodeTitle,
+                sub: _code ? t.on_ : t.off_,
+                trailing: Switch(key: const Key('codeSwitch'), value: _code, activeTrackColor: RfColors.teal, onChanged: (v) => setState(() => _code = v)),
+              ),
+            ]),
           ]);
         },
       ),
@@ -150,6 +143,7 @@ Future<int?> showPriceSheet(BuildContext context, {required int start, required 
     showModalBottomSheet<int>(
       context: context,
       backgroundColor: RfColors.ink2,
+      isScrollControlled: true, // the sheet rises above the keyboard
       builder: (_) => _PriceSheet(start: start, minimum: minimum, step: step, currency: currency, minorUnits: minorUnits, estimate: estimate, allowNone: allowNone),
     );
 
@@ -163,30 +157,83 @@ class _PriceSheet extends StatefulWidget {
 }
 
 class _PriceSheetState extends State<_PriceSheet> {
-  late int _price = widget.start;
+  // Starts selected, so the first digit typed replaces it.
+  late final _input = TextEditingController.fromValue(() {
+    final text = minorToInput(widget.start, widget.minorUnits);
+    return TextEditingValue(text: text, selection: TextSelection(baseOffset: 0, extentOffset: text.length));
+  }());
+
+  @override
+  void dispose() {
+    _input.dispose();
+    super.dispose();
+  }
+
+  int? get _price => inputToMinor(_input.text, widget.minorUnits);
+
+  /// Moves from what is typed, or from the lowest allowed price when nothing valid is.
+  void _add(int delta) {
+    final next = (_price ?? widget.minimum) + delta;
+    _input.value = TextEditingValue(text: minorToInput(next, widget.minorUnits), selection: TextSelection.collapsed(offset: minorToInput(next, widget.minorUnits).length));
+    setState(() {});
+  }
+
+  Widget _chip(String key, int delta, {bool enabled = true}) => Expanded(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 3),
+          child: TextButton(
+            key: Key(key),
+            style: TextButton.styleFrom(minimumSize: const Size(0, 44), padding: EdgeInsets.zero, backgroundColor: RfColors.ink3, foregroundColor: RfColors.text, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+            onPressed: enabled ? () => _add(delta) : null,
+            child: Opacity(opacity: enabled ? 1 : 0.4, child: Ltr('${delta > 0 ? '+' : '\u2212'}${minorToInput(delta.abs(), widget.minorUnits)}', style: RfType.bodyStrong)),
+          ),
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     String money(int v) => formatMoney(v, widget.currency, widget.minorUnits);
-    final down = _price - widget.step >= widget.minimum;
+    final price = _price;
+    final valid = price != null && price >= widget.minimum;
+    final step = widget.step;
     return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+      child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(20, 0, 20, 16 + MediaQuery.viewInsetsOf(context).bottom),
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Text(t.howMuch, style: RfType.h2),
           const SizedBox(height: 4),
           Text('${t.estimate} ${widget.estimate}', style: RfType.caption),
-          const SizedBox(height: 24),
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            IconButton.filledTonal(key: const Key('priceUp'), iconSize: 28, style: IconButton.styleFrom(minimumSize: const Size(56, 56), backgroundColor: RfColors.ink3), onPressed: () => setState(() => _price += widget.step), icon: const Icon(Icons.add_rounded)),
-            Expanded(child: Center(child: MoneyText(money(_price), style: RfType.display.copyWith(color: RfColors.gold, fontSize: 26)))),
-            IconButton.filledTonal(key: const Key('priceDown'), iconSize: 28, style: IconButton.styleFrom(minimumSize: const Size(56, 56), backgroundColor: RfColors.ink3), onPressed: down ? () => setState(() => _price -= widget.step) : null, icon: const Icon(Icons.remove_rounded)),
+          const SizedBox(height: 14),
+          TextField(
+            key: const Key('priceInput'),
+            controller: _input,
+            autofocus: true,
+            maxLength: 9,
+            keyboardType: TextInputType.numberWithOptions(decimal: widget.minorUnits > 0),
+            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(widget.minorUnits > 0 ? r'[\d.]' : r'\d'))],
+            textDirection: TextDirection.ltr,
+            textAlign: TextAlign.center,
+            style: RfType.display.copyWith(color: RfColors.gold, fontSize: 26),
+            decoration: InputDecoration(counterText: '', suffixText: widget.currency, contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12)),
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: 10),
+          Row(children: [
+            _chip('priceDown', -step, enabled: price != null && price - step >= widget.minimum),
+            _chip('priceUp', step),
+            _chip('priceUp2', step * 2),
+            _chip('priceUp4', step * 4),
           ]),
-          const SizedBox(height: 20),
-          Text(t.minPrice(money(widget.minimum)), style: RfType.caption.copyWith(height: 1.6), textAlign: TextAlign.center),
-          const SizedBox(height: 16),
-          RfButton(key: const Key('usePrice'), label: t.usePrice(money(_price)), large: true, onPressed: () => Navigator.pop(context, _price)),
+          const SizedBox(height: 12),
+          Text(
+            t.minPrice(money(widget.minimum)),
+            key: const Key('priceMinimum'),
+            style: RfType.caption.copyWith(height: 1.6, color: valid || _input.text.isEmpty ? null : RfColors.coral),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 12),
+          RfButton(key: const Key('usePrice'), label: t.usePrice(valid ? money(price) : ''), large: true, onPressed: valid ? () => Navigator.pop(context, price) : null),
           if (widget.allowNone) RfButton(label: t.noPrice, kind: RfButtonKind.ghost, onPressed: () => Navigator.pop(context, 0)),
         ]),
       ),

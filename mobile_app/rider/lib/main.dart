@@ -12,6 +12,9 @@ Future<void> main() async {
   try {
     RfColors.use(decodeAppearance(await const KeystoreKV().read(appearanceKey)) ?? RfAppearance.day);
   } catch (_) {}
+  try {
+    RfLayout.use(RfLayout.decode(await const KeystoreKV().read(layoutKey)) ?? RfLayoutModel.a);
+  } catch (_) {}
   applyAppearanceToSystemBars();
   runApp(const ProviderScope(child: RiderApp()));
 }

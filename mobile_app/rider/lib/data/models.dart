@@ -88,12 +88,13 @@ class Driver {
   Driver(Json j)
       : name = _str(j['display_name']),
         phone = j['phone'] as String?,
+        photoUrl = j['photo_url'] as String?,
         ratingAvg = _double(_map(j['trust'])['rating_avg']),
         ratingProvisional = _map(j['trust'])['rating_provisional'] != false,
         completedRides = _int(_map(j['trust'])['completed_rides']) ?? 0,
         vehicle = j['vehicle'] is Map ? Vehicle(_map(j['vehicle'])) : null;
   final String name;
-  final String? phone;
+  final String? phone, photoUrl;
   final double? ratingAvg;
   final bool ratingProvisional;
   final int completedRides;

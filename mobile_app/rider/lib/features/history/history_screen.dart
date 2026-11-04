@@ -44,7 +44,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                   child: ListView(children: [
                     for (final r in list)
                       Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
+                        padding: EdgeInsets.only(bottom: RfLayout.listGap),
                         child: _RideRow(ride: r, units: units),
                       ),
                   ]),
@@ -79,19 +79,18 @@ class _RideRow extends StatelessWidget {
     final fare = ride.fareMinor;
     return RfCard(
       key: Key('ride_${ride.id}'),
+      inList: true,
+      padding: EdgeInsets.zero,
       onTap: () => context.push(ride.isActive || unrated ? '/ride/${ride.id}' : '/receipt/${ride.id}'),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Row(children: [
-          Expanded(child: Text(ride.dropoffLandmark, style: RfType.bodyStrong, maxLines: 1, overflow: TextOverflow.ellipsis)),
-          const SizedBox(width: 8),
-          fare == null ? Text(t.noFare, style: RfType.caption) : MoneyText(formatMoney(fare, ride.currency, units), style: RfType.h2.copyWith(color: RfColors.gold)),
-        ]),
-        const SizedBox(height: 6),
-        Row(children: [
-          Expanded(child: Text(formatDateTime(ride.createdAt), style: RfType.caption)),
+      child: RfRow(
+        title: ride.dropoffLandmark,
+        sub: formatDateTime(ride.createdAt),
+        maxLines: 1,
+        trailing: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          fare == null ? Text(t.noFare, style: RfType.caption) : MoneyText(formatMoney(fare, ride.currency, units), style: RfType.bodyStrong.copyWith(color: RfColors.gold)),
           Text(status, style: RfType.caption.copyWith(color: color, fontWeight: FontWeight.w700)),
         ]),
-      ]),
+      ),
     );
   }
 }
@@ -143,27 +142,13 @@ class _ReceiptScreenState extends ConsumerState<ReceiptScreen> {
             if (r.driver != null) (t.driver, '${r.driver!.name} · ${r.driver!.vehicle?.name ?? ''}'),
             (t.distance, formatDistance(r.distanceM)),
           ];
-          return ListView(padding: const EdgeInsets.fromLTRB(18, 4, 18, 18), children: [
-            RfCard(
-              child: Column(children: [
-                for (final (label, value) in rows) ...[
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(label, style: RfType.caption),
-                      const SizedBox(width: 12),
-                      Expanded(child: Text(value, textAlign: TextAlign.end, style: RfType.bodyStrong)),
-                    ]),
-                  ),
-                  const Divider(),
-                ],
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  child: Row(children: [Expanded(child: Text(t.fareCash, style: RfType.caption)), MoneyText(fare, style: RfType.number.copyWith(color: RfColors.gold))]),
-                ),
-              ]),
-            ),
-            const SizedBox(height: 14),
+          return ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 16), children: [
+            RfGroup(children: [
+              for (final (label, value) in rows) label == t.distance ? RfRow(over: label, titleChild: Ltr(value, style: RfType.bodyStrong)) : RfRow(over: label, title: value),
+              RfRow(over: t.fareCash, titleChild: MoneyText(fare, style: RfLayout.priceSmall)),
+            ]),
+            const SizedBox(height: 8),
+
             RfButton(
               key: const Key('copyReceipt'),
               label: t.shareReceipt,

@@ -98,6 +98,26 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     if (picked != null) await ref.read(appearanceProvider.notifier).set(picked);
   }
 
+  Future<void> _pickLayout() async {
+    final t = AppLocalizations.of(context);
+    final picked = await showModalBottomSheet<RfLayoutModel>(
+      context: context,
+      backgroundColor: RfColors.ink2,
+      builder: (ctx) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          for (final (model, label) in [(RfLayoutModel.a, t.layoutA), (RfLayoutModel.b, t.layoutB), (RfLayoutModel.c, t.layoutC)])
+            ListTile(
+              key: Key('layout_${model.name}'),
+              title: Text(label, style: RfType.bodyStrong),
+              trailing: ref.read(layoutProvider) == model ? Icon(Icons.check_rounded, color: RfColors.teal) : null,
+              onTap: () => Navigator.pop(ctx, model),
+            ),
+        ]),
+      ),
+    );
+    if (picked != null) await ref.read(layoutProvider.notifier).set(picked);
+  }
+
   Future<void> _delete(String phone) async {
     final deleted = await showModalBottomSheet<bool>(context: context, isScrollControlled: true, backgroundColor: RfColors.ink2, builder: (_) => _DeleteSheet(phone: phone));
     if (deleted == true) await ref.read(authProvider.notifier).afterAccountDeleted();
@@ -109,52 +129,53 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     final me = ref.watch(authProvider).valueOrNull;
     final rating = ref.watch(myRatingProvider).valueOrNull;
     final name = me?.fullName ?? '';
-    Widget row(String title, {String? value, VoidCallback? onTap, Widget? trailing, Key? key}) => ListTile(
+    final layoutName = switch (ref.watch(layoutProvider)) { RfLayoutModel.a => t.layoutA, RfLayoutModel.b => t.layoutB, RfLayoutModel.c => t.layoutC };
+    final chevron = Icon(Icons.chevron_left_rounded, color: RfColors.textMuted);
+    Widget row(String title, {String? value, VoidCallback? onTap, Widget? trailing, Key? key}) => RfRow(
           key: key,
-          minTileHeight: 56,
-          title: Text(title, style: RfType.bodyStrong),
-          trailing: trailing ?? (value == null ? null : Text(value, style: RfType.caption)),
+          title: title,
+          trailing: trailing ?? (value == null ? null : ConstrainedBox(constraints: const BoxConstraints(maxWidth: 170), child: Text(value, style: RfType.caption, maxLines: 1, overflow: TextOverflow.ellipsis))),
           onTap: onTap,
         );
     return SafeArea(
-      child: ListView(padding: const EdgeInsets.fromLTRB(18, 18, 18, 18), children: [
-        Row(children: [
-          DriverAvatar(name: name.isEmpty ? '؟' : name, radius: 30),
-          const SizedBox(width: 14),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(name, style: RfType.h2, maxLines: 1, overflow: TextOverflow.ellipsis), Ltr(me?.phone ?? '', style: RfType.caption)])),
-          RfButton(key: const Key('editName'), label: t.edit, kind: RfButtonKind.secondary, expand: false, onPressed: () => _rename(name)),
+      child: ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 16), children: [
+        Text(t.navAccount, style: RfType.h1),
+        const SizedBox(height: 8),
+        RfGroup(children: [
+          RfRow(
+            leading: DriverAvatar(name: name.isEmpty ? '؟' : name, radius: RfLayout.avatar),
+            title: name,
+            subChild: Ltr(me?.phone ?? '', style: RfType.caption),
+            maxLines: 1,
+            trailing: TextButton(key: const Key('editName'), onPressed: () => _rename(name), child: Text(t.edit)),
+          ),
         ]),
-        const SizedBox(height: 18),
-        if (rating != null) ...[
-          RfCard(child: Row(children: [Expanded(child: Text(t.yourRating, style: RfType.caption)), Icon(Icons.star_rounded, color: RfColors.gold, size: 18), const SizedBox(width: 4), Text(rating.toStringAsFixed(1), style: RfType.bodyStrong)])),
-          const SizedBox(height: 14),
-        ],
-        RfCard(
-          padding: EdgeInsets.zero,
-          child: Column(children: [
-            row(t.myPlaces, key: const Key('myPlaces'), onTap: () => context.push('/places'), trailing: const Icon(Icons.chevron_left_rounded)),
-            const Divider(),
-            SwitchListTile(key: const Key('alwaysCode'), value: ref.watch(alwaysCodeProvider), activeTrackColor: RfColors.teal, title: Text(t.alwaysCode, style: RfType.bodyStrong), onChanged: (v) => ref.read(alwaysCodeProvider.notifier).set(v)),
-            const Divider(),
-            row(t.language, value: t.languageName, key: const Key('language'), onTap: () {
-              final current = ref.read(localeProvider);
-              ref.read(localeProvider.notifier).state = Locale(current.languageCode == 'ar' ? 'en' : 'ar');
-            }),
-            const Divider(),
-            row(t.fontKind, value: ref.watch(fontProvider), key: const Key('fontRow'), onTap: _pickFont),
-            row(t.appearance, value: ref.watch(appearanceProvider) == RfAppearance.night ? t.appearanceNight : t.appearanceDay, key: const Key('appearanceRow'), onTap: _pickAppearance),
-            const Divider(),
-            row(t.destinationModel, value: ref.watch(destinationModelProvider) == 3 ? t.destinationModel3 : t.destinationModel1, key: const Key('destinationModelRow'), onTap: _pickDestinationModel),
-            const Divider(),
-            row(t.terms, onTap: () => showToast(context, t.notReady)),
-            const Divider(),
-            row(t.help, onTap: () => showToast(context, t.notReady)),
-          ]),
-        ),
-        const SizedBox(height: 14),
-        RfButton(key: const Key('logout'), label: t.logout, kind: RfButtonKind.secondary, loading: _runner.busy, onPressed: () => ref.read(authProvider.notifier).signOut()),
-        const SizedBox(height: 4),
-        TextButton(key: const Key('deleteAccount'), onPressed: () => _delete(me?.phone ?? ''), child: Text(t.deleteAccount, style: RfType.bodyStrong.copyWith(color: RfColors.coral, fontSize: 13))),
+        RfGroup(title: t.sectionActivity, children: [
+          row(t.myPlaces, key: const Key('myPlaces'), onTap: () => context.push('/places'), trailing: chevron),
+          if (rating != null)
+            RfRow(
+              title: t.yourRating,
+              trailing: Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.star_rounded, color: RfColors.gold, size: 16), const SizedBox(width: 4), Text(rating.toStringAsFixed(1), style: RfType.bodyStrong)]),
+            ),
+        ]),
+        RfGroup(title: t.sectionSettings, children: [
+          row(t.alwaysCode, trailing: Switch(key: const Key('alwaysCode'), value: ref.watch(alwaysCodeProvider), activeTrackColor: RfColors.teal, onChanged: (v) => ref.read(alwaysCodeProvider.notifier).set(v))),
+          row(t.appearance, value: ref.watch(appearanceProvider) == RfAppearance.night ? t.appearanceNight : t.appearanceDay, key: const Key('appearanceRow'), onTap: _pickAppearance),
+          row(t.layoutModel, value: layoutName, key: const Key('layoutRow'), onTap: _pickLayout),
+          row(t.language, value: t.languageName, key: const Key('language'), onTap: () {
+            final current = ref.read(localeProvider);
+            ref.read(localeProvider.notifier).state = Locale(current.languageCode == 'ar' ? 'en' : 'ar');
+          }),
+          row(t.fontKind, value: ref.watch(fontProvider), key: const Key('fontRow'), onTap: _pickFont),
+          row(t.destinationModel, value: ref.watch(destinationModelProvider) == 3 ? t.destinationModel3 : t.destinationModel1, key: const Key('destinationModelRow'), onTap: _pickDestinationModel),
+        ]),
+        RfGroup(title: t.sectionSupport, children: [
+          row(t.help, onTap: () => showToast(context, t.notReady), trailing: chevron),
+          row(t.terms, onTap: () => showToast(context, t.notReady), trailing: chevron),
+        ]),
+        const SizedBox(height: 8),
+        TextButton(key: const Key('logout'), onPressed: _runner.busy ? null : () => ref.read(authProvider.notifier).signOut(), child: Text(t.logout, style: RfType.bodyStrong)),
+        TextButton(key: const Key('deleteAccount'), onPressed: () => _delete(me?.phone ?? ''), child: Text(t.deleteAccount, style: RfType.bodyStrong.copyWith(color: RfColors.coral))),
       ]),
     );
   }
@@ -283,17 +304,20 @@ class _PlacesScreenState extends ConsumerState<PlacesScreen> {
         onRetry: () => ref.invalidate(placesProvider),
         data: (places) {
           final has = places.map((p) => p.kind).toSet();
-          return ListView(padding: const EdgeInsets.fromLTRB(18, 4, 18, 18), children: [
+          return ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 16), children: [
             if (places.isEmpty) Padding(padding: const EdgeInsets.symmetric(vertical: 24), child: Text(t.placesEmpty, textAlign: TextAlign.center, style: RfType.caption)),
             for (final p in places)
               Padding(
-                padding: const EdgeInsets.only(bottom: 8),
+                padding: EdgeInsets.only(bottom: RfLayout.listGap),
                 child: RfCard(
                   key: Key('place_${p.id}'),
-                  padding: const EdgeInsets.fromLTRB(14, 6, 4, 6),
-                  child: Row(children: [
-                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(p.label, style: RfType.bodyStrong), Text(p.landmark, style: RfType.caption, maxLines: 1, overflow: TextOverflow.ellipsis)])),
-                    IconButton(
+                  inList: true,
+                  padding: EdgeInsets.zero,
+                  child: RfRow(
+                    title: p.label,
+                    sub: p.landmark,
+                    maxLines: 1,
+                    trailing: IconButton(
                       key: Key('removePlace_${p.id}'),
                       tooltip: t.cancel,
                       icon: Icon(Icons.delete_outline_rounded, color: RfColors.coral),
@@ -302,9 +326,10 @@ class _PlacesScreenState extends ConsumerState<PlacesScreen> {
                         ref.invalidate(placesProvider);
                       },
                     ),
-                  ]),
+                  ),
                 ),
               ),
+
             const SizedBox(height: 10),
             if (!has.contains('home')) ...[RfButton(key: const Key('addHome'), label: t.home_, icon: Icons.home_rounded, kind: RfButtonKind.secondary, onPressed: () => _add('home', t.home_)), const SizedBox(height: 8)],
             if (!has.contains('work')) ...[RfButton(key: const Key('addWork'), label: t.work, icon: Icons.work_rounded, kind: RfButtonKind.secondary, onPressed: () => _add('work', t.work)), const SizedBox(height: 8)],

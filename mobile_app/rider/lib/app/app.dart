@@ -104,6 +104,11 @@ class _RiderAppState extends ConsumerState<RiderApp> with WidgetsBindingObserver
       applyAppearanceToSystemBars();
       WidgetsBinding.instance.addPostFrameCallback((_) => _rebuildEverything());
     }
+    final layout = ref.watch(layoutProvider);
+    if (layout != RfLayout.model) {
+      RfLayout.use(layout);
+      WidgetsBinding.instance.addPostFrameCallback((_) => _rebuildEverything());
+    }
     ref.watch(realtimeBridgeProvider);
     ref.listen(authProvider, (prev, next) {
       final socket = ref.read(eventsSocketProvider);
