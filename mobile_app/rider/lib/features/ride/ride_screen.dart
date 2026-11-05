@@ -369,21 +369,65 @@ class _Stars extends StatelessWidget {
   }
 }
 
-class _Pulse extends StatelessWidget {
+/// Rings spreading from the middle while looking for drivers. Still when the phone asks for less motion.
+class _Pulse extends StatefulWidget {
   const _Pulse();
   @override
-  Widget build(BuildContext context) => Container(
+  State<_Pulse> createState() => _PulseState();
+}
+
+class _PulseState extends State<_Pulse> with SingleTickerProviderStateMixin {
+  late final _spin = AnimationController(vsync: this, duration: const Duration(milliseconds: 2400));
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _spin.stop();
+    } else if (!_spin.isAnimating) {
+      _spin.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _spin.dispose();
+    super.dispose();
+  }
+
+  Widget _ring(double delay) => AnimatedBuilder(
+        animation: _spin,
+        builder: (_, __) {
+          final v = (_spin.value + delay) % 1;
+          return Transform.scale(
+            scale: 0.35 + 0.65 * v,
+            child: Container(decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: RfColors.teal.withOpacity(0.55 * (1 - v)), width: 2))),
+          );
+        },
+      );
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        key: const Key('searchPulse'),
         width: 150,
         height: 150,
-        decoration: BoxDecoration(color: RfColors.teal.withOpacity(0.06), shape: BoxShape.circle, border: Border.all(color: RfColors.line, width: 2)),
-        child: Center(
-          child: Container(
-            width: 96,
-            height: 96,
-            decoration: BoxDecoration(color: RfColors.teal.withOpacity(0.1), shape: BoxShape.circle),
-            child: Center(child: Container(width: 30, height: 30, decoration: BoxDecoration(color: RfColors.canvas, shape: BoxShape.circle, border: Border.all(color: RfColors.teal, width: 6)))),
-          ),
-        ),
+        child: Stack(alignment: Alignment.center, children: [
+          Positioned.fill(child: _ring(0)),
+          Positioned.fill(child: _ring(1 / 3)),
+          Positioned.fill(child: _ring(2 / 3)),
+          const _PulseCore(),
+        ]),
+      );
+}
+
+class _PulseCore extends StatelessWidget {
+  const _PulseCore();
+  @override
+  Widget build(BuildContext context) => Container(
+        width: 96,
+        height: 96,
+        decoration: BoxDecoration(color: RfColors.teal.withOpacity(0.1), shape: BoxShape.circle),
+        child: Center(child: Container(width: 30, height: 30, decoration: BoxDecoration(color: RfColors.canvas, shape: BoxShape.circle, border: Border.all(color: RfColors.teal, width: 6)))),
       );
 }
 
@@ -519,7 +563,7 @@ class _TripViewState extends ConsumerState<_TripView> {
     return Column(children: [
       Expanded(
         child: Stack(children: [
-          Positioned.fill(child: RideMap(pickup: riding ? null : ride.pickup, dropoff: riding ? ride.dropoff : null, driver: position?.point, driverStale: position?.stale ?? false, center: position?.point ?? ride.pickup)),
+          Positioned.fill(child: RideMap(pickup: ride.pickup, dropoff: riding ? ride.dropoff : null, driver: position?.point, driverStale: position?.stale ?? false, center: position?.point ?? ride.pickup)),
           if (ride.canCancel)
             SafeArea(
               child: Align(
@@ -554,6 +598,20 @@ class _TripViewState extends ConsumerState<_TripView> {
                       RfFact(t.fare, widget.money(ride.fareMinor), ltr: true, color: RfColors.gold),
                     ]),
                   ]),
+                ),
+              if (riding && ride.pickup != null && ride.dropoff != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: RfButton(
+                    key: const Key('openGoogleMaps'),
+                    label: t.openGoogleMaps,
+                    kind: RfButtonKind.secondary,
+                    icon: Icons.open_in_new_rounded,
+                    onPressed: () async {
+                      final ok = await ref.read(externalAppsProvider).directions(fromLat: ride.pickup!.lat, fromLng: ride.pickup!.lng, toLat: ride.dropoff!.lat, toLng: ride.dropoff!.lng);
+                      if (!ok && context.mounted) showToast(context, t.mapsFailed, error: true);
+                    },
+                  ),
                 )
               else ...[
                 _DriverCard(ride: ride, onCall: widget.onCall),
@@ -621,27 +679,56 @@ class _ArrivedView extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     final rated = ride.myRatingStars != null;
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          const SizedBox(height: 28),
-          Center(child: CircleAvatar(radius: 34, backgroundColor: RfColors.tealSoft, child: Icon(Icons.flag_rounded, color: RfColors.teal, size: 34))),
-          const SizedBox(height: 12),
-          Text(t.reachedDestination, key: const Key('reached'), textAlign: TextAlign.center, style: RfType.h1),
-          Text(ride.dropoffLandmark, textAlign: TextAlign.center, style: RfType.caption),
-          const SizedBox(height: 12),
-          RfGroup(title: t.fareCash, children: [
-            Padding(padding: RfLayout.box, child: Center(child: MoneyText(money(ride.fareMinor), style: RfLayout.priceBig))),
+    final map = ride.dropoff != null;
+    return Column(children: [
+      if (map)
+        Expanded(
+          child: Stack(children: [
+            Positioned.fill(child: RideMap(pickup: ride.pickup, dropoff: ride.dropoff, arrived: true)),
+            SafeArea(
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: Container(
+                  margin: const EdgeInsets.only(top: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                  decoration: BoxDecoration(color: RfColors.surface, borderRadius: BorderRadius.circular(RfRadius.pill), boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 8)]),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(Icons.check_circle_rounded, color: RfColors.teal, size: 18),
+                    const SizedBox(width: 6),
+                    Text(t.reachedDestination, style: RfType.bodyStrong),
+                  ]),
+                ),
+              ),
+            ),
           ]),
-          const SizedBox(height: 8),
-
-          RfButton(key: const Key('paid'), label: ride.cashConfirmedByMe ? t.paidDone : t.paid, kind: RfButtonKind.secondary, loading: busy, onPressed: ride.cashConfirmedByMe ? null : onPaid),
-          const Spacer(),
-          if (rated) RfButton(key: const Key('toReceipt'), label: t.receipt, large: true, onPressed: onReceipt) else RfButton(key: const Key('rateTrip'), label: t.rateTrip, large: true, onPressed: onRate),
-        ]),
+        ),
+      Container(
+        decoration: BoxDecoration(color: RfLayout.page, border: Border(top: BorderSide(color: RfColors.line)), borderRadius: const BorderRadius.vertical(top: Radius.circular(RfRadius.lg))),
+        child: SafeArea(
+          top: !map,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              if (!map) ...[
+                const SizedBox(height: 28),
+                Center(child: CircleAvatar(radius: 34, backgroundColor: RfColors.tealSoft, child: Icon(Icons.flag_rounded, color: RfColors.teal, size: 34))),
+                const SizedBox(height: 12),
+              ],
+              Text(map ? t.arrivedAt(ride.dropoffLandmark) : t.reachedDestination, key: const Key('reached'), style: RfType.h2, maxLines: 2, overflow: TextOverflow.ellipsis),
+              Text(t.payThenRate, style: RfType.caption),
+              const SizedBox(height: 8),
+              RfGroup(children: [
+                RfRow(title: t.fareCash, trailing: MoneyText(money(ride.fareMinor), style: RfLayout.price)),
+              ]),
+              const SizedBox(height: 8),
+              RfButton(key: const Key('paid'), label: ride.cashConfirmedByMe ? t.paidDone : t.paid, kind: RfButtonKind.secondary, loading: busy, onPressed: ride.cashConfirmedByMe ? null : onPaid),
+              const SizedBox(height: 8),
+              if (rated) RfButton(key: const Key('toReceipt'), label: t.receipt, large: true, onPressed: onReceipt) else RfButton(key: const Key('rateTrip'), label: t.rateTrip, large: true, onPressed: onRate),
+            ]),
+          ),
+        ),
       ),
-    );
+    ]);
   }
 }
 

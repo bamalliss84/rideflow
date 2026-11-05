@@ -5,6 +5,7 @@ import 'package:latlong2/latlong.dart';
 import '../core/config.dart';
 import '../data/models.dart';
 import '../design/tokens.dart';
+import 'arrived_flag.dart';
 
 LatLng _ll(Point p) => LatLng(p.lat, p.lng);
 
@@ -12,9 +13,12 @@ LatLng _ll(Point p) => LatLng(p.lat, p.lng);
 /// the driver on a plain ground, so the app works without map data. The line between stops is straight:
 /// it shows the direction, not a road route (no routing service, D036).
 class RideMap extends StatelessWidget {
-  const RideMap({super.key, this.center, this.pickup, this.dropoff, this.driver, this.driverStale = false, this.controller, this.onMoved, this.onReady, this.zoom = 14});
+  const RideMap({super.key, this.center, this.pickup, this.dropoff, this.driver, this.driverStale = false, this.arrived = false, this.controller, this.onMoved, this.onReady, this.zoom = 14});
   final Point? center, pickup, dropoff, driver;
   final bool driverStale;
+
+  /// The trip is over: the destination shows the arrival mark instead of a pin (D049).
+  final bool arrived;
   final MapController? controller;
   final void Function(Point center, bool byUser)? onMoved;
   final VoidCallback? onReady;
@@ -47,11 +51,20 @@ class RideMap extends StatelessWidget {
               errorTileCallback: (_, __, ___) {},
             ),
           if (pickup != null && dropoff != null)
-            PolylineLayer(polylines: [Polyline(points: [_ll(pickup!), _ll(dropoff!)], strokeWidth: 5, color: RfColors.teal)]),
+            PolylineLayer(
+              polylines: driver != null && !arrived
+                  // On the way: the part behind the car is solid, the part ahead is faint.
+                  ? [
+                      Polyline(points: [_ll(driver!), _ll(dropoff!)], strokeWidth: 5, color: RfColors.teal.withOpacity(0.35)),
+                      Polyline(points: [_ll(pickup!), _ll(driver!)], strokeWidth: 5, color: RfColors.teal),
+                    ]
+                  : [Polyline(points: [_ll(pickup!), _ll(dropoff!)], strokeWidth: 5, color: RfColors.teal)],
+            ),
           MarkerLayer(markers: [
             if (pickup != null) Marker(point: _ll(pickup!), width: 26, height: 26, child: const _Ring()),
-            if (dropoff != null) Marker(point: _ll(dropoff!), width: 34, height: 34, child: Icon(Icons.place_rounded, color: RfColors.gold, size: 34)),
-            if (driver != null)
+            if (dropoff != null && arrived) Marker(point: _ll(dropoff!), width: 96, height: 96, child: const ArrivedFlag()),
+            if (dropoff != null && !arrived) Marker(point: _ll(dropoff!), width: 34, height: 34, child: Icon(Icons.place_rounded, color: RfColors.gold, size: 34)),
+            if (driver != null && !arrived)
               Marker(
                 point: _ll(driver!),
                 width: 40,

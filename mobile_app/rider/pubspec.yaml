@@ -31,7 +31,8 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   generate: true
-  # Tajawal (SIL Open Font License 1.1, assets/fonts/OFL.txt), bundled: no runtime font download.
+  # Tajawal and Cairo (SIL Open Font License 1.1, assets/fonts/OFL.txt and OFL-Cairo.txt), bundled: no runtime font download.
+  # The Cairo files are fixed weights made from Google Fonts' variable file, since Flutter doesn't pick a weight from one on its own.
   fonts:
     - family: Tajawal
       fonts:
@@ -42,6 +43,16 @@ flutter:
         - asset: assets/fonts/Tajawal-Bold.ttf
           weight: 700
         - asset: assets/fonts/Tajawal-ExtraBold.ttf
+          weight: 800
+    - family: Cairo
+      fonts:
+        - asset: assets/fonts/Cairo-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Cairo-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Cairo-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Cairo-ExtraBold.ttf
           weight: 800
 
 # geolocator_android 4.6.2 needs the Flutter >= 3.27 Gradle plugin (flutter.compileSdkVersion in plugin

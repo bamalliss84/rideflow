@@ -38,7 +38,6 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   }
 
   Future<void> _pickFont() async {
-    final t = AppLocalizations.of(context);
     final picked = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: RfColors.ink2,
@@ -51,7 +50,6 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
               trailing: ref.read(fontProvider) == family ? Icon(Icons.check_rounded, color: RfColors.teal) : null,
               onTap: () => Navigator.pop(ctx, family),
             ),
-          if (!RfFonts.available.contains(RfFonts.cairo)) ListTile(enabled: false, title: Text(RfFonts.cairo, style: RfType.bodyStrong), subtitle: Text(t.fontUnavailable, style: RfType.caption)),
         ]),
       ),
     );
@@ -170,6 +168,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
           row(t.destinationModel, value: ref.watch(destinationModelProvider) == 3 ? t.destinationModel3 : t.destinationModel1, key: const Key('destinationModelRow'), onTap: _pickDestinationModel),
         ]),
         RfGroup(title: t.sectionSupport, children: [
+          row(t.howItWorks, key: const Key('howItWorks'), onTap: () => context.push('/waits'), trailing: chevron),
           row(t.help, onTap: () => showToast(context, t.notReady), trailing: chevron),
           row(t.terms, onTap: () => showToast(context, t.notReady), trailing: chevron),
         ]),

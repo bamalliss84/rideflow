@@ -142,7 +142,7 @@ abstract final class RfShadow {
 abstract final class RfFonts {
   static const tajawal = 'Tajawal';
   static const cairo = 'Cairo';
-  static const available = [tajawal];
+  static const available = [tajawal, cairo];
   static const preferred = tajawal;
 }
 

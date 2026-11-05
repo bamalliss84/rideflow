@@ -24,6 +24,14 @@ class RiderApi {
   Future<void> deleteAccount(String code) => client.post('me/delete-account', data: {'code': code});
 
   // ---- places
+  /// Newest first. The feed pages forward by cursor, so this reads up to [limit] past [after].
+  Future<List<NotificationItem>> notifications({int after = 0, int limit = 200}) async {
+    final body = ((await client.get('notifications', query: {'after': after, 'limit': limit})) as Map).cast<String, dynamic>();
+    return results(body['results']).map(NotificationItem.new).toList().reversed.toList();
+  }
+
+  Future<void> markRead({int? upTo, int? cursor}) => client.post('notifications/read', data: {if (upTo != null) 'up_to': upTo, if (cursor != null) 'cursor': cursor});
+
   Future<List<City>> cities() async => results(await client.get('cities')).map(City.new).toList();
   Future<List<SavedPlace>> places() async => results(await client.get('me/places')).map(SavedPlace.new).toList();
   Future<SavedPlace> addPlace({required String kind, required String label, required Place place}) async =>

@@ -26,6 +26,17 @@ final apiClientProvider = Provider<ApiClient>((ref) {
 
 final riderApiProvider = Provider<RiderApi>((ref) => RiderApi(ref.watch(apiClientProvider)));
 
+/// What the rider is told about: offers and the trip. Hints the app acts on alone (search widened, an offer withdrawn) stay out.
+final notificationsProvider = FutureProvider.autoDispose<List<NotificationItem>>((ref) async {
+  final items = await ref.watch(riderApiProvider).notifications();
+  return items.where((n) => notificationKinds.contains(n.kind)).toList();
+});
+
+const notificationKinds = {
+  'ride.bid_created', 'ride.assigned', 'ride.match_released', 'ride.en_route', 'ride.driver_arrived', 'ride.driver_waiting',
+  'ride.started', 'ride.completed', 'ride.cancelled', 'ride.expired', 'ride.no_show_recorded',
+};
+
 /// A driver's photo, by its address. Kept once read, and tried again if reading it failed.
 final photoBytesProvider = FutureProvider.autoDispose.family<Uint8List, String>((ref, path) async {
   final bytes = await ref.read(apiClientProvider).bytes(path);
@@ -196,4 +207,10 @@ final realtimeBridgeProvider = Provider<void>((ref) {
     }
   });
   ref.onDispose(sub.cancel);
+});
+
+/// The operator's waiting times, for the "how it works" page (D049).
+final waitTimesProvider = FutureProvider.autoDispose<Map<String, int>>((ref) async {
+  final body = (await ref.watch(apiClientProvider).get('wait-times')) as Map;
+  return {for (final e in body.entries) e.key as String: (e.value as num).toInt()};
 });

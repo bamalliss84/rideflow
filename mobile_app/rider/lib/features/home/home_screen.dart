@@ -30,6 +30,7 @@ class HomeScreen extends ConsumerWidget {
         bottom: 340,
         child: here == null && cities == null ? ColoredBox(color: RfColors.mapGround) : RideMap(key: ValueKey(here?.lat ?? 0), center: here ?? cities?.firstOrNull?.center, pickup: here),
       ),
+      const Positioned(top: 0, left: 0, right: 0, child: SafeArea(child: Padding(padding: EdgeInsets.fromLTRB(12, 10, 12, 0), child: _ProfileCard()))),
       Positioned(
         left: 0,
         right: 0,
@@ -112,4 +113,61 @@ class _Tile extends StatelessWidget {
           ),
         ),
       );
+}
+
+/// Name, day or night and the notifications, over the map (D049, model 1). Riders have no photo, so the first letter stands in.
+class _ProfileCard extends ConsumerWidget {
+  const _ProfileCard();
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = AppLocalizations.of(context);
+    final me = ref.watch(authProvider).valueOrNull;
+    final name = me?.fullName.trim() ?? '';
+    final first = name.split(RegExp(r'\s+')).first;
+    final night = ref.watch(appearanceProvider) == RfAppearance.night;
+    final unread = ref.watch(notificationsProvider).valueOrNull?.where((n) => !n.read).length ?? 0;
+    Widget tool(Key key, IconData icon, String label, VoidCallback onTap, {int badge = 0}) => Stack(clipBehavior: Clip.none, children: [
+          IconButton.filledTonal(
+            key: key,
+            tooltip: label,
+            style: IconButton.styleFrom(backgroundColor: RfColors.surfaceSunken, minimumSize: const Size(44, 44)),
+            icon: Icon(icon, size: 20, color: RfColors.text),
+            onPressed: onTap,
+          ),
+          if (badge > 0)
+            PositionedDirectional(
+              top: 2,
+              end: 2,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                decoration: BoxDecoration(color: RfColors.coral, borderRadius: BorderRadius.circular(RfRadius.pill)),
+                child: Ltr(badge > 9 ? '9+' : '$badge', style: RfType.caption.copyWith(color: RfColors.canvas, fontSize: 11, fontWeight: FontWeight.w800)),
+              ),
+            ),
+        ]);
+    return Material(
+      key: const Key('profileCard'),
+      color: RfColors.surface,
+      elevation: 3,
+      shadowColor: Colors.black26,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Row(children: [
+          DriverAvatar(name: name.isEmpty ? '؟' : name, radius: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(first.isEmpty ? t.appTitle : t.hello(first), style: RfType.h2, maxLines: 1, overflow: TextOverflow.ellipsis),
+              Text(t.homeHint, style: RfType.caption, maxLines: 1, overflow: TextOverflow.ellipsis),
+            ]),
+          ),
+          tool(const Key('appearanceToggle'), night ? Icons.light_mode_outlined : Icons.dark_mode_outlined, night ? t.appearanceDay : t.appearanceNight,
+              () => ref.read(appearanceProvider.notifier).set(night ? RfAppearance.day : RfAppearance.night)),
+          const SizedBox(width: 6),
+          tool(const Key('notifications'), Icons.notifications_none_rounded, t.notificationsTitle, () => context.push('/notifications'), badge: unread),
+        ]),
+      ),
+    );
+  }
 }

@@ -14,8 +14,10 @@ import '../design/tokens.dart';
 import '../features/account/account_screen.dart';
 import '../features/auth/login_screen.dart';
 import '../features/history/history_screen.dart';
+import '../features/notifications/notifications_screen.dart';
 import '../features/home/home_screen.dart';
 import '../features/request/destination_screen.dart';
+import '../features/waits/wait_times_screen.dart';
 import '../features/request/request_screen.dart';
 import '../features/ride/ride_screen.dart';
 import '../shared/widgets.dart';
@@ -52,6 +54,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/ride/:id', builder: (_, s) => RideScreen(rideId: s.pathParameters['id']!)),
       GoRoute(path: '/receipt/:id', builder: (_, s) => ReceiptScreen(rideId: s.pathParameters['id']!)),
       GoRoute(path: '/places', builder: (_, __) => const PlacesScreen()),
+      GoRoute(path: '/waits', builder: (_, __) => const WaitTimesScreen()),
+      GoRoute(path: '/notifications', builder: (_, __) => const NotificationsScreen()),
     ],
   );
 });

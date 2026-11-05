@@ -72,6 +72,13 @@ class FakeApps extends ExternalApps {
     dialed.add(phone);
     return true;
   }
+
+  final routes = <(double?, double?, double, double)>[];
+  @override
+  Future<bool> directions({double? fromLat, double? fromLng, required double toLat, required double toLng}) async {
+    routes.add((fromLat, fromLng, toLat, toLng));
+    return true;
+  }
 }
 
 const _shaab = Point(14.5501, 49.1329);
@@ -551,6 +558,19 @@ void main() {
     });
   });
 
+  testWidgets('the search circle moves while waiting for offers', (tester) async {
+    await pump(tester, {
+      'GET rides/r1': (_) => (200, ride('bidding')),
+      'GET rides/r1/bids': (_) => (200, []),
+    }, '/ride/r1');
+    expect(find.byKey(const Key('searchPulse')), findsOneWidget);
+    final ring = find.descendant(of: find.descendant(of: find.byKey(const Key('searchPulse')), matching: find.byType(Transform)).first, matching: find.byType(Container));
+    Offset scales() => tester.getTopLeft(ring);
+    final before = scales();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(scales(), isNot(before));
+  });
+
   group('the driver photo', () {
     final pixel = base64Decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAEBgIApD5fRAAAAABJRU5ErkJggg==');
     Map<String, dynamic> withPhoto(Map<String, dynamic> d) => {...d, 'photo_url': 'drivers/d1/photo?v=1'};
@@ -615,6 +635,18 @@ void main() {
       expect(find.text('السوق المركزي'), findsOneWidget);
     });
 
+    testWidgets('on the way: the map shows the line, and Google Maps opens with both stops', (tester) async {
+      final apps = FakeApps();
+      await pump(tester, {'GET rides/r1': (_) => (200, withDriver('in_progress', actions: []))}, '/ride/r1', apps: apps);
+      await tapKey(tester, 'openGoogleMaps');
+      expect(apps.routes, [(14.5, 49.1, 14.6, 49.2)]);
+    });
+
+    testWidgets('no Google Maps button before the trip starts', (tester) async {
+      await pump(tester, {'GET rides/r1': (_) => (200, withDriver('en_route'))}, '/ride/r1');
+      expect(find.byKey(const Key('openGoogleMaps')), findsNothing);
+    });
+
     testWidgets('emergency stays off until the operator sets a number', (tester) async {
       final apps = FakeApps();
       final backend = await pump(tester, {'GET rides/r1': (_) => (200, withDriver('en_route'))}, '/ride/r1', apps: apps);
@@ -648,6 +680,12 @@ void main() {
   });
 
   group('the end', () {
+    testWidgets('the end shows the arrival mark on the map', (tester) async {
+      await pump(tester, {'GET rides/r1': (_) => (200, ride('completed', actions: [], extra: {'driver': driver(), 'agreed_fare_minor': 85000}))}, '/ride/r1');
+      expect(find.byKey(const Key('arrivedFlag')), findsOneWidget);
+      expect(find.byKey(const Key('reached')), findsOneWidget);
+    });
+
     Map<String, dynamic> done({int? stars, String? paid}) => ride('completed', actions: [], extra: {
           'driver': driver(),
           'cash': {'amount_minor': 85000, 'rider_confirmed_at': paid},
@@ -737,10 +775,11 @@ void main() {
       await tapKey(tester, 'alwaysCode');
       expect(prefs.values['rf_always_code'], '1');
       await tapKey(tester, 'fontRow');
-      await tester.tap(find.byKey(const Key('font_Tajawal')));
+      expect(find.byKey(const Key('font_Cairo')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('font_Cairo')));
       await tester.pump(const Duration(seconds: 1));
       await settle(tester);
-      expect(prefs.values['rf_font'], 'Tajawal');
+      expect(prefs.values['rf_font'], 'Cairo');
       await tapKey(tester, 'destinationModelRow');
       await tester.tap(find.byKey(const Key('destinationModel_3')));
       await tester.pump(const Duration(seconds: 1));

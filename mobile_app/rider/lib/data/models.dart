@@ -190,3 +190,18 @@ class RideDraft {
   final bool requireCode;
   final int? priceMinor;
 }
+
+class NotificationItem {
+  NotificationItem(Json j)
+      : cursor = _int(j['cursor']) ?? 0,
+        kind = _str(j['kind']),
+        payload = _map(j['payload']),
+        read = j['read'] == true,
+        createdAt = DateTime.tryParse(_str(j['created_at']))?.toLocal();
+  final int cursor;
+  final String kind;
+  final Json payload;
+  final bool read;
+  final DateTime? createdAt;
+  String? get rideId => payload['ride_id'] as String?;
+}

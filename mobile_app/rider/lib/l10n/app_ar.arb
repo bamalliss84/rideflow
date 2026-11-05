@@ -185,6 +185,7 @@
   "emergencyOff": "لم يحدد المشغّل رقم الطوارئ بعد.",
   "emergencyConfirm": "نبلغ المشغّل ونفتح الاتصال بالطوارئ. متابعة؟",
   "call": "اتصال",
+  "mapsFailed": "تعذّر فتح الخرائط على هذا الجوال.",
   "callFailed": "تعذّر فتح الاتصال على هذا الجوال.",
   "driverArrived": "وصل السائق",
   "goToCar": "توجّه إلى السيارة",
@@ -267,7 +268,99 @@
   "edit": "تعديل",
   "yourName": "اسمك",
   "yourRating": "تقييمك من السائقين",
+  "howItWorks": "كيف يعمل التطبيق",
+  "waitSeconds": "{n} ثانية",
+  "@waitSeconds": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "waitMinute1": "دقيقة",
+  "waitMinute2": "دقيقتان",
+  "waitMinutesFew": "{n} دقائق",
+  "@waitMinutesFew": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "waitMinutesMany": "{n} دقيقة",
+  "@waitMinutesMany": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "waitDay1": "يوم",
+  "waitDay2": "يومان",
+  "waitDaysFew": "{n} أيام",
+  "@waitDaysFew": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "waitDaysMany": "{n} يومًا",
+  "@waitDaysMany": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "waitsNote": "هذه أوقات مشغّلك الحالية، بالترتيب من الطلب إلى نهاية الرحلة.",
+  "waitSearch": "البحث عن سائقين",
+  "waitSearchText": "يبقى طلبك مفتوحًا هذه المدة، ثم ينتهي إن لم تختر عرضًا.",
+  "waitOffer": "صلاحية كل عرض",
+  "waitOfferText": "إذا انتهت يختفي العرض، ويمكن للسائق تقديم عرض آخر.",
+  "waitConfirm": "تأكيد السائق",
+  "waitConfirmText": "بعد اختيارك عرضًا. إن لم يؤكد يعود طلبك لاستقبال العروض.",
+  "waitFreeCancel": "الإلغاء المجاني",
+  "waitFreeCancelText": "بعد تأكيد السائق. قد تُحسب عليك الإلغاءات المتأخرة.",
+  "waitDriverWaits": "انتظار السائق لك",
+  "waitDriverWaitsText": "بعد وصوله. بعدها يمكنه تسجيل عدم حضورك.",
+  "waitRating": "تقييم الرحلة",
+  "waitRatingText": "بعد انتهاء الرحلة.",
+  "openGoogleMaps": "فتح في خرائط Google",
+  "arrivedAt": "وصلت إلى {place}",
+  "@arrivedAt": {
+    "placeholders": {
+      "place": {
+        "type": "String"
+      }
+    }
+  },
+  "payThenRate": "ادفع للسائق نقدًا، ثم قيّم الرحلة.",
   "myPlaces": "أماكني",
+  "hello": "أهلًا، {name}",
+  "@hello": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "homeHint": "حدد وجهتك ونوصلك بالسائقين",
+  "notificationsTitle": "الإشعارات",
+  "notificationsEmpty": "لا توجد إشعارات بعد.",
+  "markAllRead": "قراءة الكل",
+  "noteOffer": "وصلك عرض جديد على طلبك",
+  "noteAssigned": "أكد السائق رحلتك",
+  "noteReleased": "لم يؤكد السائق، وطلبك يستقبل العروض من جديد",
+  "noteEnRoute": "السائق في الطريق إليك",
+  "noteArrived": "وصل السائق إلى نقطة الانطلاق",
+  "noteWaiting": "السائق ينتظرك",
+  "noteStarted": "بدأت الرحلة",
+  "noteCompleted": "انتهت الرحلة",
+  "noteCancelled": "أُلغيت الرحلة",
+  "noteExpired": "انتهى طلبك دون اختيار عرض",
+  "noteNoShow": "سجّل السائق عدم حضورك",
+  "noteGeneric": "تحديث على رحلتك",
   "alwaysCode": "رمز بدء الرحلة دائمًا",
   "language": "اللغة",
   "layoutModel": "ترتيب الشاشات",
@@ -293,7 +386,6 @@
   "destinationModel": "شكل شاشة الوجهة",
   "destinationModel1": "النموذج 1: الخريطة كاملة",
   "destinationModel3": "النموذج 3: لوحة سفلية",
-  "fontUnavailable": "خط Cairo غير مضاف بعد.",
   "terms": "الشروط والخصوصية",
   "help": "المساعدة",
   "notReady": "ستتوفر قريبًا.",
