@@ -7,7 +7,7 @@ Read this first, then `docs/CURRENT_STATUS.md` (where work stands) and `docs/pro
 - Reply in Arabic, concisely. The owner tests on a real phone and approves designs screen by screen.
 - Designs come before code. Show several models on the canvas, wait for approval, then build. The owner's "don't start" means report and wait.
 - Commit or push only when asked. Push to `main` only after checks pass, then report the CI result.
-- New decisions get the next ID in the decision log (latest: D047). Never rewrite an approved decision or treat a proposal as approved.
+- New decisions get the next ID in the decision log (latest: D049). Never rewrite an approved decision or treat a proposal as approved.
 - Don't invent test results. Say what wasn't run or seen.
 - Never log OTP codes or tokens beyond the existing dev-only behaviour. Never weaken TLS, authentication or test assertions to make checks pass.
 - Don't delete test data, reset databases, or remove SDKs, caches, Docker volumes, emulator data or user files without approval.
@@ -130,7 +130,7 @@ Done:
 - Rider backend additions (D040): live driver position, free-cancel deadline and reason codes, start code, trip sharing API, emergency alert, raising the price, saved and recent places, device tokens, rider account deletion.
 
 Not done:
-- Rider app: a full trip ran on the owner's phone. Stops come from a live map with search (D041), on development servers only. Cairo font not added.
+- Rider app: a full trip ran on the owner's phone. Stops come from a live map with search (D041), on development servers only. 
 - Share-link viewing page.
 - Push sending (Firebase): adapter only, sends nothing. SMS provider: dev only.
 - Production map and search provider for the rider app (a paid key needs a backend proxy), and emergency numbers for Mukalla (the owner must supply them).

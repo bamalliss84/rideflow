@@ -215,4 +215,21 @@ D047 APPROVED by owner 2026-11-05: The driver adds their own photo. It shows to 
 - Impact: API (`driver/photo`, `drivers/<id>/photo`, `admin/drivers/<id>/photo`, `remove-photo`), driver and rider apps, portal driver page.
 - Linked tests: `services/api/tests/test_driver_photo.py`, `mobile_app/driver/test/driver_photo_test.dart`, `mobile_app/rider/test/rider_screens_test.dart`.
 
+D048 APPROVED by owner 2026-11-05: A driver who comes online or returns to the network sees the open requests they missed, without any action.
+- When a driver goes online, and with each location they send, the server adds them to open requests they haven't heard about. The driver must be eligible, not on a trip, and inside the distance the request's last wave would reach (7 km by default). The request must not have timed out.
+- The wave size doesn't limit this: it paces who hears first, and doesn't keep a later driver out. A request a driver hid stays hidden. A request nobody had heard starts taking offers when the first driver arrives.
+- The driver app re-reads its list every 15 seconds, in case the event was lost.
+- Rationale: the owner saw a request never reach a driver who opened the app or got the network back after it was made. Requests were sent only to drivers online at the moment of each wave, and the waves end in about a minute while a request stays open for 15.
+- Impact: `apps/rides/services.py`, driver location and availability endpoints, driver app.
+- Linked tests: `services/api/tests/test_late_dispatch.py`.
+
+D049 APPROVED by owner 2026-11-06: Home screens, wait times and the trip map, from the "Recommended models" on `Home-Waits-Map-Options`.
+- Driver home (model 1): a profile card (photo, name, rating, car, day or night, notifications), then the requests card with its filters (all, nearest, highest, with a rider price, my offers), then a status card (online, connection cut, reconnect, stop). The driver app gets a day appearance like the rider's; night stays the default.
+- Rider home (model 1): a profile card over the map (greeting, day or night, notifications with an unread count) and a notifications page.
+- Wait times (model 1): a timeline page in both apps' account, read from the operator's policy through `GET wait-times`, so it always shows the values in force.
+- Trip map (model 1): a straight line from pickup to destination with the car on it (the part behind is solid, the part ahead faint), and a pulsing arrival mark at the end. The line shows the direction, not a road. "Open in Google Maps" passes the coordinates as a route. The driver map uses the same tile setting as the rider's (`MAP_TILE_URL`) and draws on a plain ground without it.
+- Rationale: the owner asked for uncluttered, attractive homes, an explanation of every wait, and a trip map they can follow and hand to Google Maps.
+- Impact: both apps' home, account, trip and notification screens; `apps/rides/views.py` (`WaitTimesView`); contract.
+- Linked tests: `services/api/tests/test_wait_times.py`, `mobile_app/driver/test/trip_screen_test.dart`, `mobile_app/driver/test/requests_test.dart`, `mobile_app/rider/test/rider_screens_test.dart`.
+
 Rule: New decisions get sequential ID, date, approver, rationale, impact and linked task. Never silently reinterpret proposals as approved.
