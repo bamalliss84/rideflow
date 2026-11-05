@@ -86,6 +86,10 @@ class DriverAvailabilityView(DriverMixin, APIView):
         serializer = AvailabilitySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         driver = services.set_availability(self.get_driver(), serializer.validated_data["online"], request=request)
+        if driver.is_online:
+            from apps.rides.services import catch_up_dispatch
+
+            catch_up_dispatch(driver)
         return Response(services.eligibility(driver))
 
 

@@ -4,7 +4,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django_filters import rest_framework as filters
 from drf_spectacular.utils import extend_schema
-from rest_framework import status, viewsets
+from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.permissions import AllowAny
@@ -389,6 +389,38 @@ class PublicTripView(APIView):
             response = Response(public_trip_data(share.ride, services.driver_position(share.ride, current_policy())))
         response["Cache-Control"] = "no-store"
         return response
+
+
+class WaitTimesSerializer(serializers.Serializer):
+    bidding_timeout_seconds = serializers.IntegerField()
+    bid_expiry_seconds = serializers.IntegerField()
+    driver_confirm_timeout_seconds = serializers.IntegerField()
+    free_cancel_after_match_seconds = serializers.IntegerField()
+    noshow_wait_seconds = serializers.IntegerField()
+    location_stale_seconds = serializers.IntegerField()
+    rating_window_days = serializers.IntegerField()
+
+
+@extend_schema(tags=["rides"])
+class WaitTimesView(APIView):
+    """The operator's current waiting times, for the apps' "how it works" page (D049)."""
+
+    permission_classes = [IsRiderOrDriver]
+
+    @extend_schema(responses=WaitTimesSerializer)
+    def get(self, request):
+        p = current_policy()
+        return Response(
+            {
+                "bidding_timeout_seconds": p["rides.bidding_timeout_seconds"],
+                "bid_expiry_seconds": p["bids.expiry_seconds"],
+                "driver_confirm_timeout_seconds": p["match.driver_confirm_timeout_seconds"],
+                "free_cancel_after_match_seconds": p["cancellation.free_after_match_seconds"],
+                "noshow_wait_seconds": p["noshow.min_wait_seconds"],
+                "location_stale_seconds": p["presence.stale_seconds"],
+                "rating_window_days": p["ratings.window_days"],
+            }
+        )
 
 
 class DriverPhotoFileView(APIView):

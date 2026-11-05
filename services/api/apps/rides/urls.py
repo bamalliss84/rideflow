@@ -9,6 +9,7 @@ router.register("admin/rides", views.AdminRideViewSet, basename="admin-ride")
 
 urlpatterns = [
     path("public/trips/<str:token>", views.PublicTripView.as_view(), name="public-trip"),
+    path("wait-times", views.WaitTimesView.as_view(), name="wait-times"),
     path("drivers/<uuid:driver_id>/photo", views.DriverPhotoFileView.as_view(), name="driver-photo-file"),
     path("driver/ride-offers", views.DriverOffersView.as_view(), name="driver-ride-offers"),
     path("driver/ride-offers/hidden", views.DriverHiddenOffersView.as_view(), name="driver-hidden-offers"),

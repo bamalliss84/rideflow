@@ -4,6 +4,8 @@ validation, version bump, append-only event, and post-commit notifications (ADR-
 import secrets
 from datetime import timedelta
 
+from django.contrib.gis.db.models.functions import Distance
+from django.contrib.gis.measure import D
 from django.core import signing
 from django.db import IntegrityError, transaction
 from django.http import Http404
@@ -15,6 +17,7 @@ from apps.core.context import require_tenant
 from apps.core.exceptions import BusinessRuleViolation, Conflict, NotEligible, VersionConflict
 from apps.drivers import services as driver_services
 from apps.geo import services as geo
+from apps.geo.models import DriverLocation
 from apps.notifications.services import notify, notify_staff
 from apps.tenancy.policy import current_policy
 
@@ -258,6 +261,9 @@ def raise_price(ride_id, rider, expected_version, amount_minor, request=None):
     return ride
 
 
+LATE_DISPATCH_LIMIT = 20
+
+
 def _eligible_for_dispatch(driver, policy):
     return driver_services.eligibility(driver, policy)["eligible"] and not _driver_busy(driver)
 
@@ -303,6 +309,51 @@ def dispatch_next_wave(ride_id, rider, expected_version=None):
             raise Conflict(f"Cannot dispatch while {ride.status}.", code="invalid_transition")
         count = _dispatch_wave(ride, policy, actor=rider)
     return ride, count
+
+
+def catch_up_dispatch(driver):
+    """Open requests a driver missed by being offline or out of range when their waves went out (D048).
+
+    Runs when the driver goes online and with each applied location. Reaches as far as the request's last wave would,
+    and isn't limited by the wave size, which only paces who hears first. Returns how many requests were added.
+    """
+    policy = current_policy()
+    now = timezone.now()
+    location = DriverLocation.objects.filter(
+        driver=driver, server_ts__gte=now - timedelta(seconds=policy["presence.stale_seconds"])
+    ).first()
+    if location is None or not driver.is_online or not _eligible_for_dispatch(driver, policy):
+        return 0
+    reach = policy["dispatch.initial_radius_m"] + policy["dispatch.radius_step_m"] * (policy["dispatch.max_waves"] - 1)
+    missed = (
+        Ride.objects.filter(
+            status__in=(RideStatus.REQUESTED, RideStatus.BIDDING),
+            created_at__gt=now - timedelta(seconds=policy["rides.bidding_timeout_seconds"]),
+            pickup__distance_lte=(location.point, D(m=reach)),
+        )
+        .exclude(rider=driver.user)
+        .exclude(candidates__driver=driver)
+        .annotate(distance=Distance("pickup", location.point))
+        .order_by("distance")[:LATE_DISPATCH_LIMIT]
+    )
+    added = 0
+    for ride_id, distance in [(ride.pk, int(ride.distance.m)) for ride in missed]:
+        with transaction.atomic():
+            ride = _lock(ride_id)
+            if ride.status not in (RideStatus.REQUESTED, RideStatus.BIDDING):
+                continue
+            _candidate, created = DispatchCandidate.objects.get_or_create(
+                ride=ride, driver=driver, defaults={"wave": max(ride.wave_count, 1), "distance_m": distance}
+            )
+            if not created:
+                continue
+            _event(ride, "late_dispatched", data={"driver": str(driver.pk), "distance_m": distance})
+            if ride.status == RideStatus.REQUESTED:
+                _transition(ride, "dispatch", role=sm.SYSTEM, bidding_at=timezone.now())
+            _hint(driver.user, "ride.offer", ride, landmark=ride.pickup_landmark)
+            _hint(ride.rider, "ride.dispatched", ride, wave=ride.wave_count, drivers=1)
+            added += 1
+    return added
 
 
 # ---------------------------------------------------------------- bids

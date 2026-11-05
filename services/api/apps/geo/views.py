@@ -96,9 +96,10 @@ class DriverLocationView(APIView):
             driver, point, data["accuracy_m"], data["device_ts"], data.get("heading"), data.get("speed_mps")
         )
         if applied:
-            from apps.rides.services import record_driver_location_evidence
+            from apps.rides.services import catch_up_dispatch, record_driver_location_evidence
 
             record_driver_location_evidence(driver, location)
+            catch_up_dispatch(driver)
         return Response({"applied": applied, "server_ts": location.server_ts})
 
 

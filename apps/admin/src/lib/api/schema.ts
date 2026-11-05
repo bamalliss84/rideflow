@@ -2610,6 +2610,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/wait-times": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The operator's current waiting times, for the apps' "how it works" page (D049). */
+        get: operations["wait_times_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -4505,6 +4522,15 @@ export interface components {
          * @enum {string}
          */
         ViolationStatusEnum: "pending_review" | "verified" | "dismissed" | "overturned";
+        WaitTimes: {
+            bidding_timeout_seconds: number;
+            bid_expiry_seconds: number;
+            driver_confirm_timeout_seconds: number;
+            free_cancel_after_match_seconds: number;
+            noshow_wait_seconds: number;
+            location_stale_seconds: number;
+            rating_window_days: number;
+        };
     };
     responses: never;
     parameters: never;
@@ -9252,6 +9278,25 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Rating"];
+                };
+            };
+        };
+    };
+    wait_times_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaitTimes"];
                 };
             };
         };

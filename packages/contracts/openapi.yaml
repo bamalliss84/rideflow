@@ -5828,6 +5828,22 @@ paths:
               schema:
                 $ref: '#/components/schemas/Rating'
           description: ''
+  /api/v1/wait-times:
+    get:
+      operationId: wait_times_retrieve
+      description: The operator's current waiting times, for the apps' "how it works"
+        page (D049).
+      tags:
+      - rides
+      security:
+      - BearerJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WaitTimes'
+          description: ''
 components:
   schemas:
     AccountDeleteRequest:
@@ -10373,6 +10389,31 @@ components:
         * `verified` - Verified
         * `dismissed` - Dismissed
         * `overturned` - Overturned on appeal
+    WaitTimes:
+      type: object
+      properties:
+        bidding_timeout_seconds:
+          type: integer
+        bid_expiry_seconds:
+          type: integer
+        driver_confirm_timeout_seconds:
+          type: integer
+        free_cancel_after_match_seconds:
+          type: integer
+        noshow_wait_seconds:
+          type: integer
+        location_stale_seconds:
+          type: integer
+        rating_window_days:
+          type: integer
+      required:
+      - bid_expiry_seconds
+      - bidding_timeout_seconds
+      - driver_confirm_timeout_seconds
+      - free_cancel_after_match_seconds
+      - location_stale_seconds
+      - noshow_wait_seconds
+      - rating_window_days
   securitySchemes:
     BearerJWT:
       type: http
