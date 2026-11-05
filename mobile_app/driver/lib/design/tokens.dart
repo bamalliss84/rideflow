@@ -2,38 +2,112 @@ import 'package:flutter/material.dart';
 
 /// RideFlow design tokens (driver app). One source for colour, type, spacing, radius and elevation.
 ///
-/// Identity (D035, "Souq" dark): deep green surfaces, gold for prices and the main action, a live green for
-/// online and progress, a soft coral for danger. Token names predate the palette: `ink` is the ground colour.
-abstract final class RfColors {
-  // ink / surfaces
-  static const ink = Color(0xFF0F2419);
-  static const ink2 = Color(0xFF183426);
-  static const ink3 = Color(0xFF27493A);
-  static const text = Color(0xFFF3F6F3);
-  static const textMuted = Color(0xFFB8CABE);
-  static const textSubtle = Color(0xFF94AC9E);
-  static const onInk = Color(0xFFF3F6F3);
-  static const onInkMuted = Color(0xFFB8CABE);
-  static const canvas = Color(0xFF0F2419);
-  static const surface = Color(0xFF183426);
-  static const surfaceSunken = Color(0xFF27493A);
-  static const line = Color(0xFF27493A);
-  static const lineStrong = Color(0xFF4A7361);
-  static const gold = Color(0xFFF5B83D);
-  static const onGold = Color(0xFF18261E);
+/// Night is the approved "Souq" palette (D035) and stays the default; day is the driver's choice (D049). Token names
+/// predate the palettes: `ink` is the ground colour. Colours are read while building, so a widget using them can't be const.
+enum RfAppearance { day, night }
 
-  // brand / states
-  static const teal = Color(0xFF5FD09A);
-  static const tealDeep = Color(0xFF5FD09A);
-  static const tealSoft = Color(0xFF1F4A38);
-  static const amber = Color(0xFFF5B83D);
-  static const amberDeep = Color(0xFFF5B83D);
-  static const amberSoft = Color(0xFF3A3518);
-  static const coral = Color(0xFFFFA99D);
-  static const coralDeep = Color(0xFFFFA99D);
-  static const coralSoft = Color(0xFF4A2B27);
-  static const blue = Color(0xFF9DC2FF);
-  static const blueSoft = Color(0xFF243B55);
+class RfPalette {
+  const RfPalette({required this.ink, required this.ink2, required this.ink3, required this.text, required this.textMuted, required this.textSubtle, required this.onInk, required this.onInkMuted, required this.mapGround, required this.canvas, required this.surface, required this.surfaceSunken, required this.line, required this.lineStrong, required this.gold, required this.onGold, required this.teal, required this.tealDeep, required this.tealSoft, required this.amber, required this.amberDeep, required this.amberSoft, required this.coral, required this.coralDeep, required this.coralSoft, required this.blue, required this.blueSoft});
+  final Color ink, ink2, ink3, text, textMuted, textSubtle, onInk, onInkMuted, mapGround, canvas, surface, surfaceSunken, line, lineStrong, gold, onGold, teal, tealDeep, tealSoft, amber, amberDeep, amberSoft, coral, coralDeep, coralSoft, blue, blueSoft;
+
+  static const night = RfPalette(
+    ink: Color(0xFF0F2419),
+    ink2: Color(0xFF183426),
+    ink3: Color(0xFF27493A),
+    text: Color(0xFFF3F6F3),
+    textMuted: Color(0xFFB8CABE),
+    textSubtle: Color(0xFF94AC9E),
+    onInk: Color(0xFFF3F6F3),
+    onInkMuted: Color(0xFFB8CABE),
+    mapGround: Color(0xFF16291F),
+    canvas: Color(0xFF0F2419),
+    surface: Color(0xFF183426),
+    surfaceSunken: Color(0xFF27493A),
+    line: Color(0xFF27493A),
+    lineStrong: Color(0xFF4A7361),
+    gold: Color(0xFFF5B83D),
+    onGold: Color(0xFF18261E),
+    teal: Color(0xFF5FD09A),
+    tealDeep: Color(0xFF5FD09A),
+    tealSoft: Color(0xFF1F4A38),
+    amber: Color(0xFFF5B83D),
+    amberDeep: Color(0xFFF5B83D),
+    amberSoft: Color(0xFF3A3518),
+    coral: Color(0xFFFFA99D),
+    coralDeep: Color(0xFFFFA99D),
+    coralSoft: Color(0xFF4A2B27),
+    blue: Color(0xFF9DC2FF),
+    blueSoft: Color(0xFF243B55),
+  );
+  static const day = RfPalette(
+    ink: Color(0xFFF2F5F2),
+    ink2: Color(0xFFFFFFFF),
+    ink3: Color(0xFFE7EDE8),
+    text: Color(0xFF12211A),
+    textMuted: Color(0xFF4F6157),
+    textSubtle: Color(0xFF5C6E63),
+    onInk: Color(0xFF12211A),
+    onInkMuted: Color(0xFF4F6157),
+    mapGround: Color(0xFFE8ECE6),
+    canvas: Color(0xFFF2F5F2),
+    surface: Color(0xFFFFFFFF),
+    surfaceSunken: Color(0xFFE3EAE5),
+    line: Color(0xFFDDE3DD),
+    lineStrong: Color(0xFFBFCAC2),
+    gold: Color(0xFF9A6700),
+    onGold: Color(0xFFFFFFFF),
+    teal: Color(0xFF0A7D46),
+    tealDeep: Color(0xFF0A7D46),
+    tealSoft: Color(0xFFE4F3EA),
+    amber: Color(0xFF9A6700),
+    amberDeep: Color(0xFF9A6700),
+    amberSoft: Color(0xFFFBF0D6),
+    coral: Color(0xFFB3261E),
+    coralDeep: Color(0xFFB3261E),
+    coralSoft: Color(0xFFFBE9E7),
+    blue: Color(0xFF1B5FAA),
+    blueSoft: Color(0xFFE3EDF9),
+  );
+}
+
+abstract final class RfColors {
+  static RfAppearance _appearance = RfAppearance.night;
+  static RfPalette _p = RfPalette.night;
+
+  static RfAppearance get appearance => _appearance;
+  static bool get isNight => _appearance == RfAppearance.night;
+  static void use(RfAppearance appearance) {
+    _appearance = appearance;
+    _p = appearance == RfAppearance.night ? RfPalette.night : RfPalette.day;
+  }
+
+  static Color get ink => _p.ink;
+  static Color get ink2 => _p.ink2;
+  static Color get ink3 => _p.ink3;
+  static Color get text => _p.text;
+  static Color get textMuted => _p.textMuted;
+  static Color get textSubtle => _p.textSubtle;
+  static Color get onInk => _p.onInk;
+  static Color get onInkMuted => _p.onInkMuted;
+  static Color get mapGround => _p.mapGround;
+  static Color get canvas => _p.canvas;
+  static Color get surface => _p.surface;
+  static Color get surfaceSunken => _p.surfaceSunken;
+  static Color get line => _p.line;
+  static Color get lineStrong => _p.lineStrong;
+  static Color get gold => _p.gold;
+  static Color get onGold => _p.onGold;
+  static Color get teal => _p.teal;
+  static Color get tealDeep => _p.tealDeep;
+  static Color get tealSoft => _p.tealSoft;
+  static Color get amber => _p.amber;
+  static Color get amberDeep => _p.amberDeep;
+  static Color get amberSoft => _p.amberSoft;
+  static Color get coral => _p.coral;
+  static Color get coralDeep => _p.coralDeep;
+  static Color get coralSoft => _p.coralSoft;
+  static Color get blue => _p.blue;
+  static Color get blueSoft => _p.blueSoft;
 }
 
 abstract final class RfSpace {
@@ -64,18 +138,18 @@ abstract final class RfShadow {
 /// Tajawal type scale: readable at arm's length without crowding a phone screen.
 abstract final class RfType {
   static const family = 'Tajawal';
-  static const _base = TextStyle(fontFamily: family, color: RfColors.text, height: 1.35, letterSpacing: 0);
+  static TextStyle get _base => TextStyle(fontFamily: family, color: RfColors.text, height: 1.35, letterSpacing: 0);
 
-  static final display = _base.copyWith(fontSize: 22, fontWeight: FontWeight.w800, height: 1.15);
-  static final h1 = _base.copyWith(fontSize: 17, fontWeight: FontWeight.w800, height: 1.2);
-  static final h2 = _base.copyWith(fontSize: 15, fontWeight: FontWeight.w700, height: 1.25);
-  static final h3 = _base.copyWith(fontSize: 14, fontWeight: FontWeight.w700);
-  static final body = _base.copyWith(fontSize: 13, fontWeight: FontWeight.w400);
-  static final bodyStrong = _base.copyWith(fontSize: 13, fontWeight: FontWeight.w700);
-  static final label = _base.copyWith(fontSize: 12, fontWeight: FontWeight.w500, color: RfColors.textMuted);
-  static final caption = _base.copyWith(fontSize: 12, fontWeight: FontWeight.w500, color: RfColors.textMuted);
-  static final cta = _base.copyWith(fontSize: 14, fontWeight: FontWeight.w700, height: 1.1);
-  static final number = _base.copyWith(fontSize: 16, fontWeight: FontWeight.w800, height: 1.1);
+  static TextStyle get display => _base.copyWith(fontSize: 22, fontWeight: FontWeight.w800, height: 1.15);
+  static TextStyle get h1 => _base.copyWith(fontSize: 17, fontWeight: FontWeight.w800, height: 1.2);
+  static TextStyle get h2 => _base.copyWith(fontSize: 15, fontWeight: FontWeight.w700, height: 1.25);
+  static TextStyle get h3 => _base.copyWith(fontSize: 14, fontWeight: FontWeight.w700);
+  static TextStyle get body => _base.copyWith(fontSize: 13, fontWeight: FontWeight.w400);
+  static TextStyle get bodyStrong => _base.copyWith(fontSize: 13, fontWeight: FontWeight.w700);
+  static TextStyle get label => _base.copyWith(fontSize: 12, fontWeight: FontWeight.w500, color: RfColors.textMuted);
+  static TextStyle get caption => _base.copyWith(fontSize: 12, fontWeight: FontWeight.w500, color: RfColors.textMuted);
+  static TextStyle get cta => _base.copyWith(fontSize: 14, fontWeight: FontWeight.w700, height: 1.1);
+  static TextStyle get number => _base.copyWith(fontSize: 16, fontWeight: FontWeight.w800, height: 1.1);
 }
 
 // ---------------------------------------------------------------- layout models

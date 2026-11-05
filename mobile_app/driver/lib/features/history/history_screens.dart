@@ -89,7 +89,7 @@ class EarningsScreen extends ConsumerWidget {
         data: (rides) => RefreshIndicator(
           onRefresh: () async => ref.invalidate(ridesProvider),
           child: ListView(padding: const EdgeInsets.all(16), children: [
-            Text(t.earningsNote, style: const TextStyle(color: Brand.muted)),
+            Text(t.earningsNote, style: TextStyle(color: Brand.muted)),
             const SizedBox(height: 12),
             for (final (label, since) in periods)
               Padding(
@@ -117,9 +117,9 @@ class _Metric extends StatelessWidget {
   final String label, value;
   @override
   Widget build(BuildContext context) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(label, style: const TextStyle(color: Brand.muted, fontSize: 12)),
+        Text(label, style: TextStyle(color: Brand.muted, fontSize: 12)),
         const SizedBox(height: 4),
-        Ltr(value, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Brand.navy)),
+        Ltr(value, style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Brand.navy)),
       ]);
 }
 

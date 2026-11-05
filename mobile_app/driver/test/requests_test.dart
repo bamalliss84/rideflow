@@ -254,6 +254,7 @@ void main() {
       expect(find.byKey(const Key('makeOffer_r1')), findsNothing); // one open at a time
       expect(find.text('قدّم عرضك'), findsOneWidget);
 
+      await tester.ensureVisible(find.byKey(const Key('tab_price')));
       await tester.tap(find.byKey(const Key('tab_price')));
       await _settle(tester, 2);
       expect(find.byKey(const Key('toggleCard_r2')), findsNothing);

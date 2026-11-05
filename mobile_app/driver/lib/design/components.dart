@@ -86,7 +86,7 @@ class RfCard extends StatelessWidget {
     final accent = border;
     final model = RfLayout.model;
     final tint = color ?? (accent != null && model != RfLayoutModel.a ? accent.withOpacity(0.09) : null);
-    const line = BorderSide(color: RfColors.line);
+    final line = BorderSide(color: RfColors.line);
     final ShapeBorder shape = switch (model) {
       RfLayoutModel.a => RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: accent == null ? line : BorderSide(color: accent, width: 2)),
       RfLayoutModel.b => tint != null ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)) : Border(top: inList ? BorderSide.none : line, bottom: line),
@@ -195,7 +195,7 @@ class RouteStops extends StatelessWidget {
           height: 18,
           alignment: Alignment.center,
           decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: RfColors.teal, width: 3)),
-          child: Container(width: 5, height: 5, decoration: const BoxDecoration(color: RfColors.teal, shape: BoxShape.circle)),
+          child: Container(width: 5, height: 5, decoration: BoxDecoration(color: RfColors.teal, shape: BoxShape.circle)),
         ),
         pickupLabel,
         pickup,
@@ -207,7 +207,7 @@ class RouteStops extends StatelessWidget {
             Container(width: 2, height: 4, margin: const EdgeInsets.symmetric(vertical: 1), color: RfColors.textMuted),
         ]),
       ),
-      stop(const Icon(Icons.place_rounded, size: 24, color: RfColors.gold), dropoffLabel, dropoff),
+      stop(Icon(Icons.place_rounded, size: 24, color: RfColors.gold), dropoffLabel, dropoff),
     ]);
   }
 }
@@ -316,7 +316,7 @@ class RfSheet extends StatelessWidget {
           if (action != null)
             Container(
               padding: const EdgeInsets.fromLTRB(RfSpace.lg, RfSpace.sm, RfSpace.lg, RfSpace.md),
-              decoration: const BoxDecoration(color: RfColors.surface, border: Border(top: BorderSide(color: RfColors.line))),
+              decoration: BoxDecoration(color: RfColors.surface, border: Border(top: BorderSide(color: RfColors.line))),
               child: action,
             ),
         ]),
@@ -340,7 +340,7 @@ class EmptyState extends StatelessWidget {
           Container(
             width: 64,
             height: 64,
-            decoration: const BoxDecoration(color: RfColors.surfaceSunken, shape: BoxShape.circle),
+            decoration: BoxDecoration(color: RfColors.surfaceSunken, shape: BoxShape.circle),
             child: Icon(icon, size: 30, color: RfColors.textMuted),
           ),
           const SizedBox(height: RfSpace.sm),
@@ -644,7 +644,7 @@ class RfRowIcon extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         width: RfLayout.iconBox,
         height: RfLayout.iconBox,
-        decoration: const BoxDecoration(color: RfColors.surfaceSunken, shape: BoxShape.circle),
+        decoration: BoxDecoration(color: RfColors.surfaceSunken, shape: BoxShape.circle),
         child: Icon(icon, size: RfLayout.iconBox * 0.56, color: color ?? RfColors.text),
       );
 }
@@ -663,7 +663,7 @@ class RfCircleButton extends StatelessWidget {
         icon: Container(
           width: 38,
           height: 38,
-          decoration: const BoxDecoration(color: RfColors.tealSoft, shape: BoxShape.circle),
+          decoration: BoxDecoration(color: RfColors.tealSoft, shape: BoxShape.circle),
           child: Icon(icon, size: 19, color: RfColors.teal),
         ),
       );
@@ -718,7 +718,7 @@ class RfFoot extends StatelessWidget {
   final Widget child;
   @override
   Widget build(BuildContext context) => Container(
-        decoration: const BoxDecoration(color: RfColors.surface, border: Border(top: BorderSide(color: RfColors.line))),
+        decoration: BoxDecoration(color: RfColors.surface, border: Border(top: BorderSide(color: RfColors.line))),
         child: SafeArea(
           top: false,
           child: Padding(padding: const EdgeInsets.fromLTRB(16, 10, 16, 12), child: child),

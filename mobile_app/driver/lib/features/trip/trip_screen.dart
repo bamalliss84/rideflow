@@ -13,6 +13,7 @@ import '../../data/models.dart';
 import '../../design/components.dart';
 import '../../design/tokens.dart';
 import '../../shared/labels.dart';
+import '../../shared/trip_map.dart';
 import '../../shared/widgets.dart' show ActionRunner, AsyncBody, LoadingView, errorMessage;
 
 /// Forward transitions in state-machine order; the backend's `allowed_actions` decides what's possible, and the
@@ -216,6 +217,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
             onRefresh: () async => _refresh(),
             child: ListView(padding: const EdgeInsets.fromLTRB(RfSpace.md, 0, RfSpace.md, RfSpace.lg), children: [
               if (s != null) ...[_StepBar(step: s), const SizedBox(height: RfSpace.sm)],
+              ..._map(ride, s),
               ..._stage(ride, s, units, t),
             ]),
           );
@@ -241,7 +243,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
           _StageTitle(title: t.goToRider, note: eta > 0 ? t.etaPromise(t.minutesShort('$eta')) : null),
           RfGroup(title: t.pickup, children: [
             RfRow(
-              leading: const RfRowIcon(Icons.radio_button_checked_rounded, color: RfColors.teal),
+              leading: RfRowIcon(Icons.radio_button_checked_rounded, color: RfColors.teal),
               title: ride.pickupLandmark,
               trailing: _mapButton(ride.pickup, t),
             ),
@@ -267,7 +269,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
           _StageTitle(title: t.goToDestination),
           RfGroup(title: t.dropoff, children: [
             RfRow(
-              leading: const RfRowIcon(Icons.place_rounded, color: RfColors.gold),
+              leading: RfRowIcon(Icons.place_rounded, color: RfColors.gold),
               title: ride.dropoffLandmark,
               trailing: _mapButton(ride.dropoff, t),
             ),
@@ -310,6 +312,22 @@ class _TripScreenState extends ConsumerState<TripScreen> {
     ];
   }
 
+  /// The way to the rider, then the trip with the car on it, then the arrival mark (D049). The car follows this phone's location.
+  List<Widget> _map(Ride ride, int? step) {
+    final map = switch (step) {
+      1 => _Ticker(builder: (_) => TripMap(pickup: ride.pickup, me: _here())),
+      3 => _Ticker(builder: (_) => TripMap(pickup: ride.pickup, dropoff: ride.dropoff, me: _here())),
+      _ when ride.status == 'completed' => TripMap(pickup: ride.pickup, dropoff: ride.dropoff, arrived: true, height: 180),
+      _ => null,
+    };
+    return map == null ? const [] : [map, const SizedBox(height: RfSpace.sm)];
+  }
+
+  LatLng? _here() {
+    final fix = ref.read(locationServiceProvider).last;
+    return fix == null ? null : LatLng(fix.lat, fix.lng);
+  }
+
   Widget _fareGroup(AppLocalizations t, String fare, Ride ride) => RfGroup(children: [
         RfFacts([
           RfFact(t.fareCash, fare, ltr: true, color: RfColors.gold),
@@ -325,7 +343,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
     if (action == null && !noShow && !cash) return null;
     return Container(
       padding: const EdgeInsets.fromLTRB(RfSpace.md, RfSpace.sm, RfSpace.md, RfSpace.md),
-      decoration: const BoxDecoration(color: RfColors.surface, border: Border(top: BorderSide(color: RfColors.line))),
+      decoration: BoxDecoration(color: RfColors.surface, border: Border(top: BorderSide(color: RfColors.line))),
       child: SafeArea(
         top: false,
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [

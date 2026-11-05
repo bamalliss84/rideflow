@@ -464,6 +464,26 @@ void main() {
     expect(apps.mapped, [(14.6, 49.2)]);
   });
 
+  testWidgets('trip map: the arrival mark once the trip is over', (tester) async {
+    await pumpApp(tester, {'GET rides/r1': (_) => (200, located('completed'))}, '/ride/r1');
+    expect(find.byKey(const Key('tripMap')), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.byKey(const Key('arrivedFlag')), findsOneWidget);
+  });
+
+  testWidgets('trip map: en_route', (tester) async {
+    await pumpApp(tester, {'GET rides/r1': (_) => (200, located('en_route'))}, '/ride/r1');
+    expect(find.byKey(const Key('tripMap')), findsOneWidget);
+  });
+  testWidgets('trip map: arrived', (tester) async {
+    await pumpApp(tester, {'GET rides/r1': (_) => (200, located('arrived'))}, '/ride/r1');
+    expect(find.byKey(const Key('tripMap')), findsNothing);
+  });
+  testWidgets('trip map: in_progress', (tester) async {
+    await pumpApp(tester, {'GET rides/r1': (_) => (200, located('in_progress'))}, '/ride/r1');
+    expect(find.byKey(const Key('tripMap')), findsOneWidget);
+  });
+
   testWidgets('maps: hidden while waiting for the rider', (tester) async {
     await pumpApp(tester, {'GET rides/r1': (_) => (200, located('arrived'))}, '/ride/r1');
     expect(find.byKey(const Key('openMap')), findsNothing);

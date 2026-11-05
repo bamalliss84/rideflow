@@ -26,7 +26,7 @@ class AccountScreen extends ConsumerWidget {
             ListTile(
               key: Key('layout_${model.name}'),
               title: Text(label, style: RfType.bodyStrong),
-              trailing: ref.read(layoutProvider) == model ? const Icon(Icons.check_rounded, color: RfColors.teal) : null,
+              trailing: ref.read(layoutProvider) == model ? Icon(Icons.check_rounded, color: RfColors.teal) : null,
               onTap: () => Navigator.pop(ctx, model),
             ),
         ]),
@@ -41,7 +41,7 @@ class AccountScreen extends ConsumerWidget {
     final me = ref.watch(authProvider).valueOrNull;
     final name = me?.fullName.isNotEmpty == true ? me!.fullName : (me?.phone ?? '');
     final layoutName = switch (ref.watch(layoutProvider)) { RfLayoutModel.a => t.layoutA, RfLayoutModel.b => t.layoutB, RfLayoutModel.c => t.layoutC };
-    const chevron = Icon(Icons.chevron_left_rounded, color: RfColors.textMuted);
+    final chevron = Icon(Icons.chevron_left_rounded, color: RfColors.textMuted);
     return Scaffold(
       appBar: AppBar(title: Text(t.navAccount)),
       body: ListView(padding: const EdgeInsets.fromLTRB(RfSpace.md, 0, RfSpace.md, RfSpace.md), children: [
@@ -50,6 +50,7 @@ class AccountScreen extends ConsumerWidget {
           RfRow(title: t.onboardingTitle, leading: const RfRowIcon(Icons.badge_outlined), trailing: chevron, onTap: () => context.push('/onboarding')),
           RfRow(title: t.subscriptionTitle, leading: const RfRowIcon(Icons.workspace_premium_outlined), trailing: chevron, onTap: () => context.push('/subscription')),
           RfRow(title: t.notificationsTitle, leading: const RfRowIcon(Icons.notifications_none_rounded), trailing: chevron, onTap: () => context.push('/notifications')),
+          RfRow(key: const Key('howItWorks'), title: t.howItWorks, leading: const RfRowIcon(Icons.schedule_rounded), trailing: chevron, onTap: () => context.push('/waits')),
         ]),
         RfGroup(title: t.trustTitle, children: [
           AsyncBody<TrustSnapshot>(
@@ -129,7 +130,7 @@ class _ProfileCardState extends ConsumerState<_ProfileCard> {
         RfGroup(children: [
           RfRow(key: const Key('photoCamera'), title: t.takePhoto, leading: const RfRowIcon(Icons.photo_camera_outlined), onTap: () => Navigator.pop(context, 'camera')),
           RfRow(key: const Key('photoGallery'), title: t.pickFromGallery, leading: const RfRowIcon(Icons.photo_library_outlined), onTap: () => Navigator.pop(context, 'gallery')),
-          if (hasPhoto) RfRow(key: const Key('photoRemove'), title: t.removePhoto, leading: const RfRowIcon(Icons.delete_outline_rounded, color: RfColors.coral), onTap: () => Navigator.pop(context, 'remove')),
+          if (hasPhoto) RfRow(key: const Key('photoRemove'), title: t.removePhoto, leading: RfRowIcon(Icons.delete_outline_rounded, color: RfColors.coral), onTap: () => Navigator.pop(context, 'remove')),
         ]),
       ]),
     );
@@ -188,7 +189,7 @@ class _ProfileCardState extends ConsumerState<_ProfileCard> {
                     width: 30,
                     height: 30,
                     decoration: BoxDecoration(color: RfColors.gold, shape: BoxShape.circle, border: Border.all(color: RfColors.surface, width: 2)),
-                    child: const Icon(Icons.photo_camera_rounded, size: 15, color: RfColors.onGold),
+                    child: Icon(Icons.photo_camera_rounded, size: 15, color: RfColors.onGold),
                   ),
                 ),
               ]),

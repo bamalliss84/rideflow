@@ -4,7 +4,7 @@ import 'tokens.dart';
 
 ThemeData buildRideFlowTheme() {
   final scheme = ColorScheme.fromSeed(
-    brightness: Brightness.dark,
+    brightness: RfColors.isNight ? Brightness.dark : Brightness.light,
     seedColor: RfColors.gold,
     primary: RfColors.gold,
     onPrimary: RfColors.onGold,
@@ -28,7 +28,7 @@ ThemeData buildRideFlowTheme() {
     labelMedium: RfType.label,
     labelSmall: RfType.caption,
   );
-  final inputBorder = OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: RfColors.line));
+  final inputBorder = OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: RfColors.line));
   return ThemeData(
     useMaterial3: true,
     fontFamily: RfType.family,
@@ -56,8 +56,8 @@ ThemeData buildRideFlowTheme() {
       errorStyle: RfType.caption.copyWith(color: RfColors.coralDeep),
       border: inputBorder,
       enabledBorder: inputBorder,
-      focusedBorder: inputBorder.copyWith(borderSide: const BorderSide(color: RfColors.teal, width: 2)),
-      errorBorder: inputBorder.copyWith(borderSide: const BorderSide(color: RfColors.coral)),
+      focusedBorder: inputBorder.copyWith(borderSide: BorderSide(color: RfColors.teal, width: 2)),
+      errorBorder: inputBorder.copyWith(borderSide: BorderSide(color: RfColors.coral)),
     ),
     bottomSheetTheme: BottomSheetThemeData(
       backgroundColor: RfLayout.page,
@@ -77,7 +77,7 @@ ThemeData buildRideFlowTheme() {
       margin: EdgeInsets.only(bottom: RfLayout.listGap),
       color: RfLayout.ruled ? Colors.transparent : RfColors.surface,
       surfaceTintColor: Colors.transparent,
-      shape: RfLayout.ruled ? const Border(bottom: BorderSide(color: RfColors.line)) : RoundedRectangleBorder(borderRadius: BorderRadius.circular(RfLayout.radius), side: RfLayout.compact ? BorderSide.none : const BorderSide(color: RfColors.line)),
+      shape: RfLayout.ruled ? Border(bottom: BorderSide(color: RfColors.line)) : RoundedRectangleBorder(borderRadius: BorderRadius.circular(RfLayout.radius), side: RfLayout.compact ? BorderSide.none : BorderSide(color: RfColors.line)),
     ),
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: RfColors.surface,
@@ -97,8 +97,8 @@ ThemeData buildRideFlowTheme() {
       contentTextStyle: RfType.body.copyWith(color: RfColors.onInk),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(RfRadius.md)),
     ),
-    dividerTheme: const DividerThemeData(color: RfColors.line, thickness: 1, space: 1),
-    progressIndicatorTheme: const ProgressIndicatorThemeData(color: RfColors.teal),
+    dividerTheme: DividerThemeData(color: RfColors.line, thickness: 1, space: 1),
+    progressIndicatorTheme: ProgressIndicatorThemeData(color: RfColors.teal),
     switchTheme: SwitchThemeData(thumbColor: WidgetStateProperty.all(RfColors.text)),
   );
 }

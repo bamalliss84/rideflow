@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -68,7 +69,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       final e = next.valueOrNull;
       if (e != null) unawaited(ref.read(onlineControllerProvider.notifier).adopt(e.isOnline));
     });
-    final firstName = (me?.fullName.trim().split(RegExp(r'\s+')).first ?? '');
 
     final units = me?.minorUnits ?? 2;
     final offers = ref.watch(offersProvider);
@@ -84,13 +84,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         child: RefreshIndicator(
           onRefresh: _refresh,
           child: ListView(padding: const EdgeInsets.fromLTRB(RfSpace.md, RfSpace.sm, RfSpace.md, RfSpace.xl), children: [
+            const _ProfileCard(),
+            const SizedBox(height: RfSpace.sm),
             if (online.online)
-              _OnlineHeader(online: online, eligibility: eligibility.valueOrNull)
-            else ...[
-              _Header(name: firstName),
-              const SizedBox(height: RfSpace.md),
+              _StatusCard(online: online, eligibility: eligibility.valueOrNull, onRefresh: _reconnect)
+            else
               _AvailabilityHero(online: online, eligibility: eligibility.valueOrNull),
-            ],
             ..._problems(context, online, eligibility),
             if (pending != null) ...[const SizedBox(height: RfSpace.md), _PendingCard(ride: pending, minorUnits: units)],
             if (active != null && active.status != 'match_pending') ...[const SizedBox(height: RfSpace.md), _ActiveRideCard(ride: active)],
@@ -100,12 +99,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               EmptyState(icon: Icons.wifi_tethering_off_rounded, title: t.offersOfflineHint),
             ] else ...[
               const SizedBox(height: RfSpace.sm),
-              _Tabs(
-                selected: _tab,
-                all: fresh.length,
-                priced: fresh.where((r) => r.riderPriceMinor != null).length,
-                mine: mine.length,
-                onSelect: (tab) => setState(() => _tab = tab),
+              _RequestsHead(
+                count: fresh.length,
+                child: _Tabs(
+                  selected: _tab,
+                  all: fresh.length,
+                  priced: fresh.where((r) => r.riderPriceMinor != null).length,
+                  mine: mine.length,
+                  onSelect: (tab) => setState(() => _tab = tab),
+                ),
               ),
               const SizedBox(height: RfSpace.sm),
               offers.when(
@@ -115,7 +117,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 data: (_) => _tab == 'mine'
                     ? _MyOffers(offers: mine, minorUnits: units, maxOpen: eligibility.valueOrNull?.maxOpenBids)
                     : _RequestsList(
-                        rides: _tab == 'price' ? fresh.where((r) => r.riderPriceMinor != null).toList() : fresh,
+                        rides: _filtered(fresh),
                         minorUnits: units,
                         openId: _openId,
                         onToggle: (id) => setState(() => _openId = _openId == id ? null : id),
@@ -127,6 +129,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
       ),
     );
+  }
+
+  /// The chosen filter. "Nearest" measures from this phone's last location; with none, the order stays as it came.
+  List<Ride> _filtered(List<Ride> rides) {
+    switch (_tab) {
+      case 'price':
+        return rides.where((r) => r.riderPriceMinor != null).toList();
+      case 'high':
+        int top(Ride r) => r.riderPriceMinor ?? r.estimateMax ?? 0;
+        return [...rides]..sort((a, b) => top(b).compareTo(top(a)));
+      case 'near':
+        final here = ref.read(locationServiceProvider).last;
+        if (here == null) return rides;
+        double away(Ride r) => r.pickup == null ? double.infinity : distanceMeters(here.lat, here.lng, r.pickup!.lat, r.pickup!.lng);
+        return [...rides]..sort((a, b) => away(a).compareTo(away(b)));
+    }
+    return rides;
+  }
+
+  /// The connection dropped: reconnect the event stream, send the location and read everything again.
+  Future<void> _reconnect() async {
+    ref.read(eventsSocketProvider).reconnectNow();
+    try {
+      await ref.read(onlineControllerProvider.notifier).sendNow();
+    } catch (_) {}
+    await _refresh();
   }
 
   List<Widget> _problems(BuildContext context, OnlineState online, AsyncValue<Eligibility> eligibility) {
@@ -181,29 +209,95 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
-class _Header extends ConsumerWidget {
-  const _Header({required this.name});
-  final String name;
+/// Photo, name, rating and car, with day or night and the notifications (D049, model 1).
+class _ProfileCard extends ConsumerWidget {
+  const _ProfileCard();
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = AppLocalizations.of(context);
+    final me = ref.watch(authProvider).valueOrNull;
+    final profile = ref.watch(profileProvider).valueOrNull;
+    final trust = ref.watch(trustProvider).valueOrNull;
     final unread = ref.watch(notificationsProvider).valueOrNull?.where((n) => !n.read).length ?? 0;
-    return Row(children: [
-      Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(color: RfColors.surface, borderRadius: BorderRadius.circular(RfRadius.md)),
-        child: const Icon(Icons.local_taxi_rounded, color: RfColors.gold),
-      ),
-      const SizedBox(width: RfSpace.sm),
-      Expanded(
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(name.isEmpty ? t.appTitle : t.greeting(name), style: RfType.h2, maxLines: 1, overflow: TextOverflow.ellipsis),
-          Text('RideFlow', style: RfType.caption),
+    final night = ref.watch(appearanceProvider) == RfAppearance.night;
+    final path = profile?.photoUrl;
+    final image = path == null ? null : ref.watch(photoBytesProvider(path)).valueOrNull;
+    final name = (profile?.fullName.isNotEmpty == true ? profile!.fullName : me?.fullName) ?? '';
+    final car = profile?.vehicles.where((v) => v.make.isNotEmpty).map((v) => '${v.make} ${v.model}'.trim()).firstOrNull;
+    final rating = trust?.ratingAvg;
+    return RfCard(
+      key: const Key('profileCard'),
+      child: Row(children: [
+        CircleAvatar(
+          radius: 24,
+          backgroundColor: RfColors.surfaceSunken,
+          backgroundImage: image == null ? null : MemoryImage(image),
+          child: image != null ? null : Text(name.isEmpty ? '' : name.characters.first, style: RfType.h2.copyWith(color: RfColors.teal)),
+        ),
+        const SizedBox(width: RfSpace.sm),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(name.isEmpty ? t.appTitle : name, style: RfType.h2, maxLines: 1, overflow: TextOverflow.ellipsis),
+            Row(children: [
+              if (rating != null) ...[Icon(Icons.star_rounded, size: 14, color: RfColors.gold), const SizedBox(width: 2), Ltr(rating.toStringAsFixed(1), style: RfType.caption)],
+              if (rating != null && car != null) Text(' · ', style: RfType.caption),
+              if (car != null) Flexible(child: Text(car, style: RfType.caption, maxLines: 1, overflow: TextOverflow.ellipsis)),
+            ]),
+          ]),
+        ),
+        _RoundTool(
+          key: const Key('appearanceToggle'),
+          icon: night ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+          label: night ? t.dayMode : t.nightMode,
+          onTap: () => ref.read(appearanceProvider.notifier).set(night ? RfAppearance.day : RfAppearance.night),
+        ),
+        const SizedBox(width: RfSpace.xs),
+        _BellButton(unread: unread),
+      ]),
+    );
+  }
+}
+
+class _RoundTool extends StatelessWidget {
+  const _RoundTool({super.key, required this.icon, required this.label, required this.onTap});
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) => IconButton.filledTonal(
+        tooltip: label,
+        style: IconButton.styleFrom(backgroundColor: RfColors.surfaceSunken, minimumSize: const Size(44, 44)),
+        icon: Icon(icon, color: RfColors.text, size: 20),
+        onPressed: onTap,
+      );
+}
+
+/// The title and filters above the requests.
+class _RequestsHead extends StatelessWidget {
+  const _RequestsHead({required this.count, required this.child});
+  final int count;
+  final Widget child;
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return RfCard(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          Expanded(child: Text(t.availableRequests, style: RfType.h2)),
+          if (count > 0)
+            Container(
+              constraints: const BoxConstraints(minWidth: 22),
+              height: 22,
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(color: RfColors.gold, borderRadius: BorderRadius.circular(11)),
+              child: Ltr('$count', style: RfType.caption.copyWith(color: RfColors.onGold, fontWeight: FontWeight.w800)),
+            ),
         ]),
-      ),
-      _BellButton(unread: unread),
-    ]);
+        const SizedBox(height: RfSpace.xs),
+        child,
+      ]),
+    );
   }
 }
 
@@ -212,28 +306,40 @@ bool _hasLiveBid(Ride r) {
   return bid != null && bid.status == 'open' && (bid.expiresAt == null || bid.expiresAt!.isAfter(DateTime.now()));
 }
 
-/// Compact header while online: the list gets the room. "Online" still needs a server-confirmed fresh position.
-class _OnlineHeader extends ConsumerWidget {
-  const _OnlineHeader({required this.online, required this.eligibility});
+/// Online, or the connection dropped with a way to bring it back; stopping is always one tap away.
+/// "Ready" still needs a server-confirmed fresh position.
+class _StatusCard extends ConsumerWidget {
+  const _StatusCard({required this.online, required this.eligibility, required this.onRefresh});
   final OnlineState online;
   final Eligibility? eligibility;
+  final Future<void> Function() onRefresh;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = AppLocalizations.of(context);
-    final me = ref.watch(authProvider).valueOrNull;
     final ready = (eligibility?.locationFresh ?? false) && !locationStopped(online, eligibility, DateTime.now());
     final socket = ref.watch(socketStateProvider).valueOrNull;
-    final unread = ref.watch(notificationsProvider).valueOrNull?.where((n) => !n.read).length ?? 0;
+    final cut = socket == SocketState.disconnected;
     final lastSent = online.lastSentAt ?? eligibility?.locationServerTs;
     final ago = lastSent == null ? null : DateTime.now().difference(lastSent).inSeconds.clamp(0, 99999);
-    final rides = ref.watch(ridesProvider).valueOrNull;
-    final now = DateTime.now();
-    final today = rides == null ? null : summarize(rides, DateTime(now.year, now.month, now.day));
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Row(children: [
-        Expanded(child: Text(t.availableRequests, style: RfType.h1)),
-        _BellButton(unread: unread),
-        const SizedBox(width: RfSpace.xs),
+    return RfCard(
+      key: const Key('statusCard'),
+      child: Row(children: [
+        _Pulse(color: cut ? RfColors.coral : (ready ? RfColors.teal : RfColors.amber), active: ready && !cut),
+        const SizedBox(width: RfSpace.sm),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(cut ? t.connectionCut : t.onlineShort, style: RfType.bodyStrong),
+            Text(
+              cut ? t.connectionCutHint : (ready && ago != null ? t.statusOnlineLine('$ago') : t.degradedSubtitle),
+              key: Key(ready ? 'statusReady' : 'statusDegraded'),
+              style: RfType.caption,
+            ),
+          ]),
+        ),
+        if (cut || !ready) ...[
+          RfButton(key: const Key('reconnect'), label: t.refreshShort, icon: Icons.refresh_rounded, kind: RfButtonKind.primary, expand: false, onPressed: onRefresh),
+          const SizedBox(width: RfSpace.xs),
+        ],
         RfButton(
           key: const Key('toggleOnline'),
           label: t.stopShort,
@@ -249,24 +355,7 @@ class _OnlineHeader extends ConsumerWidget {
           },
         ),
       ]),
-      const SizedBox(height: RfSpace.xs),
-      Row(children: [
-        _Pulse(color: ready ? RfColors.teal : RfColors.amber, active: ready),
-        const SizedBox(width: RfSpace.xs),
-        Expanded(
-          child: Text(
-            ready && ago != null ? t.statusOnlineLine('$ago') : t.degradedSubtitle,
-            key: Key(ready ? 'statusReady' : 'statusDegraded'),
-            style: RfType.caption.copyWith(fontSize: 12),
-          ),
-        ),
-        if (socket != null && socket != SocketState.connected) StatusPill(t.realtimeReconnecting, tone: Tone.warning, dot: true),
-      ]),
-      if (today != null) ...[
-        const SizedBox(height: 2),
-        Text(t.todayLine('${today.count}', formatMoney(today.total, me?.currency ?? '', me?.minorUnits ?? 2)), style: RfType.caption),
-      ],
-    ]);
+    );
   }
 }
 
@@ -280,7 +369,7 @@ class _BellButton extends StatelessWidget {
       IconButton.filledTonal(
         tooltip: t.notificationsTitle,
         style: IconButton.styleFrom(backgroundColor: RfColors.surface, minimumSize: const Size(48, 48)),
-        icon: const Icon(Icons.notifications_none_rounded, color: RfColors.text),
+        icon: Icon(Icons.notifications_none_rounded, color: RfColors.text),
         onPressed: () => context.push('/notifications'),
       ),
       if (unread > 0)
@@ -313,7 +402,7 @@ class _AvailabilityHero extends ConsumerWidget {
         RfSheet(
           title: t.locationWhyTitle,
           body: [
-            const Center(child: Icon(Icons.my_location_rounded, size: 56, color: RfColors.teal)),
+            Center(child: Icon(Icons.my_location_rounded, size: 56, color: RfColors.teal)),
             const SizedBox(height: RfSpace.md),
             Text(t.locationWhyBody, style: RfType.body),
           ],
@@ -459,7 +548,7 @@ class _NotEligible extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(bottom: RfSpace.xs),
             child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Padding(padding: EdgeInsets.only(top: 2), child: Icon(Icons.error_outline_rounded, size: 18, color: RfColors.amberDeep)),
+              Padding(padding: const EdgeInsets.only(top: 2), child: Icon(Icons.error_outline_rounded, size: 18, color: RfColors.amberDeep)),
               const SizedBox(width: RfSpace.xs),
               Expanded(child: Text(eligibilityReason(t, r), style: RfType.body)),
             ]),
@@ -489,7 +578,7 @@ class _PendingCard extends StatelessWidget {
       onTap: () => context.push('/confirm/${ride.id}'),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Row(children: [
-          const Icon(Icons.notifications_active_rounded, color: RfColors.amberDeep),
+          Icon(Icons.notifications_active_rounded, color: RfColors.amberDeep),
           const SizedBox(width: RfSpace.xs),
           Expanded(child: Text(t.pendingBannerTitle, style: RfType.h3)),
           MoneyText(formatMoney(ride.agreedFareMinor ?? ride.myBid?.amountMinor, ride.currency, minorUnits), style: RfType.bodyStrong),
@@ -512,7 +601,7 @@ class _ActiveRideCard extends StatelessWidget {
     return RfCard(
       onTap: () => context.push('/ride/${ride.id}'),
       child: Row(children: [
-        const Icon(Icons.directions_car_filled_rounded, color: RfColors.teal),
+        Icon(Icons.directions_car_filled_rounded, color: RfColors.teal),
         const SizedBox(width: RfSpace.sm),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -557,37 +646,38 @@ class _Tabs extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
-    Widget tab(String id, String label, int flex) => Expanded(
-          flex: flex,
-          child: Material(
-            color: selected == id ? RfColors.gold : RfColors.surfaceSunken,
-            borderRadius: BorderRadius.circular(RfRadius.md),
-            child: InkWell(
-              key: Key('tab_$id'),
-              borderRadius: BorderRadius.circular(RfRadius.md),
-              onTap: () => onSelect(id),
-              child: SizedBox(
-                height: 42,
-                child: Center(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                      child: Text(label, style: RfType.bodyStrong.copyWith(fontSize: 12, color: selected == id ? RfColors.onGold : RfColors.text)),
-                    ),
-                  ),
-                ),
-              ),
+    Widget chip(String id, String label) {
+      final on = selected == id;
+      return Padding(
+        padding: const EdgeInsetsDirectional.only(end: 6),
+        child: Material(
+          color: on ? RfColors.text : Colors.transparent,
+          shape: StadiumBorder(side: BorderSide(color: on ? RfColors.text : RfColors.lineStrong)),
+          child: InkWell(
+            key: Key('tab_$id'),
+            customBorder: const StadiumBorder(),
+            onTap: () => onSelect(id),
+            child: Container(
+              height: 34,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              alignment: Alignment.center,
+              child: Text(label, style: RfType.bodyStrong.copyWith(fontSize: 12, color: on ? RfColors.canvas : RfColors.text)),
             ),
           ),
-        );
-    return Row(children: [
-      tab('all', t.tabAll('$all'), 7),
-      const SizedBox(width: 6),
-      tab('price', t.tabRiderPrice('$priced'), 13),
-      const SizedBox(width: 6),
-      tab('mine', t.tabMyOffers('$mine'), 10),
-    ]);
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(children: [
+        chip('all', t.tabAll('$all')),
+        chip('near', t.filterNearest),
+        chip('high', t.filterHighest),
+        chip('price', t.tabRiderPrice('$priced')),
+        chip('mine', t.tabMyOffers('$mine')),
+      ]),
+    );
   }
 }
 
@@ -722,7 +812,7 @@ class _RequestCard extends StatelessWidget {
                 AnimatedRotation(
                   turns: open ? 0.5 : 0,
                   duration: const Duration(milliseconds: 150),
-                  child: const Icon(Icons.expand_more_rounded, color: RfColors.text),
+                  child: Icon(Icons.expand_more_rounded, color: RfColors.text),
                 ),
                 SizedBox(width: RfLayout.inset),
               ]),
@@ -915,7 +1005,7 @@ class _OffersBar extends StatelessWidget {
           color: RfColors.surfaceSunken,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(RfRadius.md),
-            side: urgent ? const BorderSide(color: RfColors.gold, width: 2) : BorderSide.none,
+            side: urgent ? BorderSide(color: RfColors.gold, width: 2) : BorderSide.none,
           ),
           child: InkWell(
             key: const Key('offersBar'),
@@ -1227,4 +1317,12 @@ class _StepButton extends StatelessWidget {
           child: SizedBox(width: 50, height: 50, child: Icon(icon, size: 26, color: primary ? RfColors.onGold : RfColors.text)),
         ),
       );
+}
+
+/// Straight-line distance on the earth, in meters.
+double distanceMeters(double lat1, double lng1, double lat2, double lng2) {
+  const r = 6371000.0;
+  double rad(double d) => d * math.pi / 180;
+  final a = math.pow(math.sin(rad(lat2 - lat1) / 2), 2) + math.cos(rad(lat1)) * math.cos(rad(lat2)) * math.pow(math.sin(rad(lng2 - lng1) / 2), 2);
+  return 2 * r * math.asin(math.sqrt(a));
 }

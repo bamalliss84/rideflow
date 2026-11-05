@@ -117,7 +117,7 @@ class _ConfirmRideScreenState extends ConsumerState<ConfirmRideScreen> {
     return Scaffold(
       body: SafeArea(
         child: value.when(
-          loading: () => const Center(child: CircularProgressIndicator(color: RfColors.teal)),
+          loading: () => Center(child: CircularProgressIndicator(color: RfColors.teal)),
           error: (e, _) => _Result(
             icon: Icons.wifi_off_rounded,
             title: t.errorTitle,

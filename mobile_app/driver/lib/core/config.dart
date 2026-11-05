@@ -8,6 +8,12 @@ class AppConfig {
   /// Registered driver application of the operator (white-label app context, X-RideFlow-App).
   static const appClientId = String.fromEnvironment('APP_CLIENT_ID', defaultValue: 'demo-mukalla-driver');
 
+  /// XYZ tile address (`{z}/{x}/{y}`). Empty means no map data: the stops and the car still draw on a plain ground.
+  static const mapTileUrl = String.fromEnvironment('MAP_TILE_URL');
+
+  /// Credit the tile source's licence asks for, drawn on the map.
+  static const mapAttribution = String.fromEnvironment('MAP_ATTRIBUTION', defaultValue: '© OpenStreetMap');
+
   /// Shown only in debug builds on the sign-in screen, to make the target backend obvious.
   static const environmentLabel = String.fromEnvironment('ENV_LABEL', defaultValue: 'local');
 

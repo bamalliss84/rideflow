@@ -5,18 +5,18 @@ import '../design/tokens.dart';
 
 /// Compatibility aliases onto the RideFlow design tokens (lib/design). New code uses RfColors directly.
 abstract final class Brand {
-  static const navy = RfColors.ink;
-  static const navy700 = RfColors.ink3;
-  static const teal = RfColors.teal;
-  static const teal700 = RfColors.tealDeep;
-  static const tealSoft = RfColors.tealSoft;
-  static const amber = RfColors.amber;
-  static const amberSoft = RfColors.amberSoft;
-  static const coral = RfColors.coral;
-  static const coralSoft = RfColors.coralSoft;
-  static const surface = RfColors.canvas;
-  static const line = RfColors.line;
-  static const muted = RfColors.textMuted;
+  static Color get navy => RfColors.ink;
+  static Color get navy700 => RfColors.ink3;
+  static Color get teal => RfColors.teal;
+  static Color get teal700 => RfColors.tealDeep;
+  static Color get tealSoft => RfColors.tealSoft;
+  static Color get amber => RfColors.amber;
+  static Color get amberSoft => RfColors.amberSoft;
+  static Color get coral => RfColors.coral;
+  static Color get coralSoft => RfColors.coralSoft;
+  static Color get surface => RfColors.canvas;
+  static Color get line => RfColors.line;
+  static Color get muted => RfColors.textMuted;
 }
 
 ThemeData buildTheme() => buildRideFlowTheme();

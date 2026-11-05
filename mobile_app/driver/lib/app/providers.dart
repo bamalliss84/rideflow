@@ -81,6 +81,12 @@ class DevicePref<T> extends Notifier<T> {
   }
 }
 
+const appearanceKey = 'rf_appearance';
+RfAppearance? decodeAppearance(String? s) => switch (s) { 'day' => RfAppearance.day, 'night' => RfAppearance.night, _ => null };
+
+/// Day or night (D049). main() has already applied the saved choice, so that is the starting value.
+final appearanceProvider = NotifierProvider<DevicePref<RfAppearance>, RfAppearance>(() => DevicePref<RfAppearance>(appearanceKey, RfColors.appearance, decodeAppearance, (a) => a.name));
+
 const layoutKey = 'rf_layout_model';
 
 /// Which layout model the screens use (D044). main() has already applied the saved choice.
@@ -445,3 +451,9 @@ class OnlineController extends Notifier<OnlineState> {
 }
 
 final onlineControllerProvider = NotifierProvider<OnlineController, OnlineState>(OnlineController.new);
+
+/// The operator's waiting times, for the "how it works" page (D049).
+final waitTimesProvider = FutureProvider.autoDispose<Map<String, int>>((ref) async {
+  final body = (await ref.watch(apiClientProvider).get('wait-times')) as Map;
+  return {for (final e in body.entries) e.key as String: (e.value as num).toInt()};
+});

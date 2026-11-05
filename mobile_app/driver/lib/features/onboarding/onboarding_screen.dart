@@ -186,7 +186,7 @@ class _VehicleStep extends ConsumerWidget {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(color: RfColors.surfaceSunken, borderRadius: BorderRadius.circular(RfRadius.md)),
-                  child: const Icon(Icons.directions_car_rounded, color: RfColors.text),
+                  child: Icon(Icons.directions_car_rounded, color: RfColors.text),
                 ),
                 const SizedBox(width: RfSpace.sm),
                 Expanded(
@@ -362,7 +362,7 @@ class _DocumentTile extends StatelessWidget {
               if (latest != null && latest.reviewNote.isNotEmpty) Text(latest.reviewNote, style: RfType.caption.copyWith(color: RfColors.coralDeep)),
             ]),
           ),
-          if (latest != null) StatusPill(driverStatusLabel(t, latest.status), tone: toneFor(latest.status)) else const Icon(Icons.chevron_left_rounded, color: RfColors.textSubtle),
+          if (latest != null) StatusPill(driverStatusLabel(t, latest.status), tone: toneFor(latest.status)) else Icon(Icons.chevron_left_rounded, color: RfColors.textSubtle),
         ]),
       ),
     );
@@ -478,7 +478,7 @@ class _UploadSheetState extends ConsumerState<UploadSheet> {
           clipBehavior: Clip.antiAlias,
           child: _bytes == null
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  const Icon(Icons.add_photo_alternate_outlined, size: 40, color: RfColors.textMuted),
+                  Icon(Icons.add_photo_alternate_outlined, size: 40, color: RfColors.textMuted),
                   const SizedBox(height: 6),
                   Text(t.photoRequired, style: RfType.caption),
                 ]))

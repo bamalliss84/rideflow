@@ -86,7 +86,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             width: 64,
             height: 64,
             decoration: BoxDecoration(color: RfColors.ink, borderRadius: BorderRadius.circular(RfRadius.lg), boxShadow: RfShadow.card),
-            child: const Icon(Icons.local_taxi_rounded, color: RfColors.teal, size: 34),
+            child: Icon(Icons.local_taxi_rounded, color: RfColors.teal, size: 34),
           ),
           ),
           const SizedBox(height: 20),

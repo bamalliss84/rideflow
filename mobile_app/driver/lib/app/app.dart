@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,6 +17,7 @@ import '../features/home/home_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
 import '../features/subscription/subscription_screen.dart';
 import '../features/trip/trip_screen.dart';
+import '../features/waits/wait_times_screen.dart';
 import '../shared/widgets.dart';
 import 'providers.dart';
 import '../design/theme.dart';
@@ -53,9 +55,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/onboarding', builder: (_, __) => const OnboardingScreen()),
       GoRoute(path: '/subscription', builder: (_, __) => const SubscriptionScreen()),
       GoRoute(path: '/notifications', builder: (_, __) => const NotificationsScreen()),
+      GoRoute(path: '/waits', builder: (_, __) => const WaitTimesScreen()),
     ],
   );
 });
+
+void applyAppearanceToSystemBars() => SystemChrome.setSystemUIOverlayStyle(RfColors.isNight ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark);
 
 class DriverApp extends ConsumerStatefulWidget {
   const DriverApp({super.key});
@@ -76,6 +81,7 @@ class _DriverAppState extends ConsumerState<DriverApp> with WidgetsBindingObserv
       if (ref.read(authProvider).valueOrNull == null) return;
       ref.read(pendingMatchProvider.notifier).reconcile();
       unawaited(ref.read(arrivalFixQueueProvider).pump());
+      ref.invalidate(offersProvider); // requests that opened while the event stream was down (D048)
     });
   }
 
@@ -123,6 +129,12 @@ class _DriverAppState extends ConsumerState<DriverApp> with WidgetsBindingObserv
   @override
   Widget build(BuildContext context) {
     final locale = ref.watch(localeProvider);
+    final appearance = ref.watch(appearanceProvider);
+    if (appearance != RfColors.appearance) {
+      RfColors.use(appearance);
+      applyAppearanceToSystemBars();
+      WidgetsBinding.instance.addPostFrameCallback((_) => _rebuildEverything());
+    }
     final layout = ref.watch(layoutProvider);
     if (layout != RfLayout.model) {
       RfLayout.use(layout);
@@ -176,7 +188,7 @@ class _Shell extends ConsumerWidget {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                 child: Row(children: [
-                  const Icon(Icons.cloud_off_rounded, size: 16, color: RfColors.amber),
+                  Icon(Icons.cloud_off_rounded, size: 16, color: RfColors.amber),
                   const SizedBox(width: 8),
                   Expanded(child: Text(t.offlineBanner, style: const TextStyle(fontSize: 12))),
                 ]),

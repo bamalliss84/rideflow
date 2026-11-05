@@ -204,7 +204,7 @@ class _AccountCard extends StatelessWidget {
       child: RfCard(
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Row(children: [
-            const Icon(Icons.account_balance_rounded, color: RfColors.text),
+            Icon(Icons.account_balance_rounded, color: RfColors.text),
             const SizedBox(width: RfSpace.xs),
             Expanded(child: Text(a.bankName, style: RfType.bodyStrong)),
           ]),
@@ -249,7 +249,7 @@ class _TrialCardState extends ConsumerState<_TrialCard> {
     return RfCard(
       color: RfColors.tealSoft,
       child: Row(children: [
-        const Icon(Icons.card_giftcard_rounded, color: RfColors.tealDeep, size: 32),
+        Icon(Icons.card_giftcard_rounded, color: RfColors.tealDeep, size: 32),
         const SizedBox(width: RfSpace.sm),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -405,7 +405,7 @@ class _DepositFormState extends ConsumerState<_DepositForm> {
           ),
           clipBehavior: Clip.antiAlias,
           child: _receipt == null
-              ? const Center(child: Icon(Icons.receipt_long_rounded, size: 40, color: RfColors.textMuted))
+              ? Center(child: Icon(Icons.receipt_long_rounded, size: 40, color: RfColors.textMuted))
               : Image.memory(_receipt!, fit: BoxFit.cover, width: double.infinity),
         ),
         const SizedBox(height: RfSpace.sm),
