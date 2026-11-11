@@ -7,8 +7,9 @@ Read this first, then `docs/CURRENT_STATUS.md` (where work stands) and `docs/pro
 - Reply in Arabic, concisely. The owner tests on a real phone and approves designs screen by screen.
 - Designs come before code. Show several models on the canvas, wait for approval, then build. The owner's "don't start" means report and wait.
 - Commit or push only when asked. Push to `main` only after checks pass, then report the CI result.
-- New decisions get the next ID in the decision log (latest: D049). Never rewrite an approved decision or treat a proposal as approved.
+- New decisions get the next ID in the decision log (latest: D051). Never rewrite an approved decision or treat a proposal as approved.
 - Don't invent test results. Say what wasn't run or seen.
+- Don't defer work the owner asked for. Anything that truly must wait goes into `docs/RELEASE_CHECKLIST.md` the same day; review that file before any release for sale.
 - Never log OTP codes or tokens beyond the existing dev-only behaviour. Never weaken TLS, authentication or test assertions to make checks pass.
 - Don't delete test data, reset databases, or remove SDKs, caches, Docker volumes, emulator data or user files without approval.
 - `.env` and `rider_login.json` (a dev token) must stay out of commits. Don't copy `.env` values into files.
@@ -35,7 +36,7 @@ Backend conventions:
 - The ride is one row with an explicit state machine (`apps/rides/state_machine.py`).
 - Mutations use a row lock, `expected_version` (409 on mismatch), an `Idempotency-Key` and an append-only event.
 - WebSocket messages are hints only; clients re-read REST (ADR-0004).
-- Operator-tunable values live in `apps/tenancy/policy.py`.
+- Operator-tunable values live in `apps/tenancy/policy.py`. App behaviour is the `app.*` group, and the operator's region (country, currency symbol, distance unit, calling code) is on `Tenant` (D051). The apps read both from `GET app/config`, keep a copy on the phone, and re-read it when a response's `X-RideFlow-Config` header or the socket's `config` message reports a new version. Don't hard-code timings, currency or units in the apps or the portal.
 - A raised exception rolls back the idempotent request, so counters that must persist return an error response instead (see `start_trip`).
 
 ## Commands
@@ -57,6 +58,9 @@ docker compose exec -T api python manage.py makemigrations --check
 # API contract: redirect on the host side, and regenerate the portal types (CI compares both)
 docker compose exec -T api python manage.py spectacular --validate --fail-on-warn > packages/contracts/openapi.yaml
 cd apps/admin && npm run gen:api && npm run typecheck && npm run lint
+
+# The portal container is a built image: after any portal change, rebuild it or the owner sees the old one
+docker compose build admin && docker compose up -d admin
 
 # Driver app, from mobile_app/driver. Strings: edit tool/gen_arb.py, never the .arb files
 python tool/gen_arb.py && flutter gen-l10n

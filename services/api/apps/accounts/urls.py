@@ -8,6 +8,7 @@ urlpatterns = [
     path("auth/otp/verify", views.OTPVerifyView.as_view(), name="otp-verify"),
     path("auth/platform/login", views.PlatformLoginView.as_view(), name="platform-login"),
     path("auth/app-context", views.AppContextView.as_view(), name="app-context"),
+    path("app/config", views.AppConfigView.as_view(), name="app-config"),
     path("auth/mfa/setup", views.MFASetupView.as_view(), name="mfa-setup"),
     path("auth/mfa/verify", views.MFAVerifyView.as_view(), name="mfa-verify"),
     path("auth/mfa/recovery-codes", views.RecoveryCodesView.as_view(), name="mfa-recovery-codes"),

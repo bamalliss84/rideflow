@@ -4,10 +4,13 @@ server -> {"type": "hello", "cursor": <latest id>}
 client -> {"type": "resume", "cursor": <last seen id>}   => server replays missed hints, then "resumed"
 client -> {"type": "ping"}                               => {"type": "pong"}
 server -> {"type": "hint", "cursor": n, "kind": "...", "payload": {...}}
+server -> {"type": "config", "version": "..."}             => the operator changed settings: re-read GET app/config
 """
 
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
+
+from apps.tenancy.app_config import tenant_group
 
 from .services import replay, serialize, user_group
 
@@ -22,12 +25,16 @@ class EventsConsumer(AsyncJsonWebsocketConsumer):
         self.user_id = identity["user_id"]
         self.group = user_group(self.tenant_id, self.user_id)
         await self.channel_layer.group_add(self.group, self.channel_name)
+        self.config_group = tenant_group(self.tenant_id)
+        await self.channel_layer.group_add(self.config_group, self.channel_name)
         await self.accept()
         await self.send_json({"type": "hello", "cursor": await self._latest_cursor()})
 
     async def disconnect(self, code):
         if getattr(self, "group", None):
             await self.channel_layer.group_discard(self.group, self.channel_name)
+        if getattr(self, "config_group", None):
+            await self.channel_layer.group_discard(self.config_group, self.channel_name)
 
     async def receive_json(self, content, **kwargs):
         kind = content.get("type")
@@ -44,6 +51,9 @@ class EventsConsumer(AsyncJsonWebsocketConsumer):
             await self.send_json({"type": "resumed", "count": len(items), "has_more": len(items) == 100})
         else:
             await self.send_json({"type": "error", "detail": "unknown message type"})
+
+    async def config_changed(self, event):
+        await self.send_json({"type": "config", "version": event["version"]})
 
     async def hint(self, event):
         await self.send_json({"type": "hint", **event["message"]})

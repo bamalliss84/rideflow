@@ -28,11 +28,11 @@ class FakeLocation extends LocationService {
   bool get running => onFix != null;
 }
 
-Future<(ProviderContainer, FakeBackend)> setup(FakeLocation location, {int locationStatus = 200}) async {
+Future<(ProviderContainer, FakeBackend)> setup(FakeLocation location, {int locationStatus = 200, bool applied = true}) async {
   final store = SessionStore(MemoryKV());
   await store.save(const Tokens('a', 'r'));
   final backend = FakeBackend({
-    'POST driver/location': (_) => (locationStatus, locationStatus == 200 ? {'applied': true, 'server_ts': '2026-10-28T10:00:00Z'} : {'code': 'server_error'}),
+    'POST driver/location': (_) => (locationStatus, locationStatus == 200 ? {'applied': applied, 'server_ts': '2026-10-28T10:00:00Z'} : {'code': 'server_error'}),
     'POST driver/availability': (r) => (200, {
           'eligible': true,
           'reasons': [],
@@ -127,5 +127,39 @@ void main() {
     expect(c.read(onlineControllerProvider).online, isTrue);
     expect(location.running, isTrue);
     expect(backend.seen, isEmpty); // nothing sent until the updater produces a fix
+  });
+
+  group('send my location now', () {
+    test('shows that it is sending, then says it was sent', () async {
+      final (c, _) = await setup(FakeLocation(fix));
+      final controller = c.read(onlineControllerProvider.notifier);
+      final seen = <bool>[];
+      c.listen(onlineControllerProvider, (_, s) => seen.add(s.sending));
+      expect(await controller.sendNow(), SendResult.sent);
+      expect(seen.first, isTrue, reason: 'the button shows the send while it runs');
+      expect(c.read(onlineControllerProvider).sending, isFalse);
+      expect(c.read(onlineControllerProvider).lastSentAt, isNotNull);
+    });
+
+    test('a reading the server already had is reported, not shown as sent', () async {
+      final (c, _) = await setup(FakeLocation(fix), applied: false);
+      expect(await c.read(onlineControllerProvider.notifier).sendNow(), SendResult.sameReading);
+      expect(c.read(onlineControllerProvider).lastSentAt, isNull);
+    });
+
+    test('no position is reported', () async {
+      final (c, backend) = await setup(FakeLocation(null));
+      expect(await c.read(onlineControllerProvider.notifier).sendNow(), SendResult.noFix);
+      expect(c.read(onlineControllerProvider).sending, isFalse);
+      expect(backend.seen.where((s) => s.path == 'driver/location'), isEmpty);
+    });
+
+    test('back on screen while online, the location is sent at once', () async {
+      final location = FakeLocation(fix);
+      final (c, backend) = await setup(location);
+      await c.read(onlineControllerProvider.notifier).adopt(true);
+      await c.read(onlineControllerProvider.notifier).recheckAccess();
+      expect(backend.seen.where((s) => s.path == 'driver/location'), hasLength(1));
+    });
   });
 }

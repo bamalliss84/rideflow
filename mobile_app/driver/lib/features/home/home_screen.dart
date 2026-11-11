@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/providers.dart';
+import '../../core/app_settings.dart';
 import '../../core/api/api_client.dart';
 import '../../core/api/api_exception.dart';
 import '../../core/format.dart';
@@ -32,12 +33,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   String _tab = 'all';
   String? _openId;
 
+  /// Offers also arrive as realtime hints; this poll is only a safety net while online. Its gap is the operator's
+  /// `app.driver_requests_refresh_seconds` (D051).
+  void _startPoll(Duration every) {
+    _poll?.cancel();
+    _poll = Timer.periodic(every, (_) {
+      if (ref.read(onlineControllerProvider).online) ref.invalidate(offersProvider);
+    });
+  }
+
   @override
   void initState() {
     super.initState();
-    // Offers also arrive as realtime hints; this slow poll is only a safety net while online.
-    _poll = Timer.periodic(const Duration(seconds: 20), (_) {
-      if (ref.read(onlineControllerProvider).online) ref.invalidate(offersProvider);
+    _startPoll(ref.read(appSettingsProvider).driverRequestsRefresh);
+    ref.listenManual<AppSettings>(appSettingsProvider, (a, b) {
+      if (a?.driverRequestsRefresh != b.driverRequestsRefresh) _startPoll(b.driverRequestsRefresh);
     });
     _clock = Timer.periodic(const Duration(seconds: 1), (_) => mounted ? setState(() {}) : null); // freshness and offer countdowns
   }
@@ -188,10 +198,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         tone: Tone.warning,
         icon: Icons.gps_not_fixed_rounded,
         text: detail,
-        actionLabel: t.sendLocationNow,
+        actionLabel: online.sending ? t.sendingLocation : t.sendLocationNow,
+        busy: online.sending,
         onAction: () async {
           try {
-            await ref.read(onlineControllerProvider.notifier).sendNow();
+            final result = await ref.read(onlineControllerProvider.notifier).sendNow();
+            if (!context.mounted) return;
+            switch (result) {
+              case SendResult.sent:
+                showToast(context, t.locationSent);
+              case SendResult.sameReading:
+                showToast(context, t.locationSameReading, error: true);
+              case SendResult.noFix:
+                showToast(context, t.noLocationFix, error: true);
+            }
           } catch (e) {
             if (context.mounted) showToast(context, errorMessage(context, e), error: true);
           }
@@ -1058,7 +1078,8 @@ class _BidSheetState extends ConsumerState<BidSheet> {
   int _eta = 5;
   String? _error;
   _SendProblem _problem = _SendProblem.none;
-  static const _etaChoices = [3, 5, 8, 10, 15];
+  /// Arrival times the driver picks from: the operator's `app.offer_eta_choices_minutes` (D051).
+  List<int> get _etaChoices => currentSettings.offerEtaChoices;
 
   @override
   void initState() {

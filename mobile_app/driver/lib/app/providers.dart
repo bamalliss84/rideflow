@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/api/api_client.dart';
+import '../core/app_settings.dart';
 import '../core/api/api_exception.dart';
 import '../core/auth/session_store.dart';
 import '../core/external_apps.dart';
@@ -20,6 +21,7 @@ final sessionStoreProvider = Provider<SessionStore>((ref) => SessionStore());
 
 final apiClientProvider = Provider<ApiClient>((ref) {
   final client = ApiClient(session: ref.watch(sessionStoreProvider));
+  client.onConfigVersion = (v) => ref.read(appSettingsProvider.notifier).noteVersion(v);
   ref.listen<Locale>(localeProvider, (_, l) => client.locale = l.languageCode, fireImmediately: true);
   return client;
 });
@@ -91,6 +93,48 @@ const layoutKey = 'rf_layout_model';
 
 /// Which layout model the screens use (D044). main() has already applied the saved choice.
 final layoutProvider = NotifierProvider<DevicePref<RfLayoutModel>, RfLayoutModel>(() => DevicePref<RfLayoutModel>(layoutKey, RfLayout.model, RfLayout.decode, (m) => m.name));
+
+// ---------------------------------------------------------------- operator settings (D051)
+
+const appSettingsKey = 'rf_app_settings';
+
+/// The operator's settings. main() has already applied the copy kept on the phone; this re-reads the server on start,
+/// when a response or the event stream reports a new version, when the app comes back, and every
+/// `app.config_check_seconds`. A failed read keeps the last copy.
+class AppSettingsController extends Notifier<AppSettings> {
+  Future<void>? _reading;
+
+  @override
+  AppSettings build() => currentSettings;
+
+  Future<void> refresh() => _reading ??= _read().whenComplete(() => _reading = null);
+
+  /// A response or the event stream named the version in force: re-read only if it isn't the one we have.
+  void noteVersion(String version) {
+    if (version.isNotEmpty && version != state.version) unawaited(refresh());
+  }
+
+  Future<void> _read() async {
+    try {
+      final json = await ref.read(apiClientProvider).get('app/config');
+      if (json is! Map) return;
+      apply(AppSettings.fromJson(json.cast<String, dynamic>()));
+    } catch (_) {}
+  }
+
+  void apply(AppSettings next) {
+    if (next.version == state.version && next.version.isNotEmpty) return;
+    currentSettings = next;
+    state = next;
+    unawaited(() async {
+      try {
+        await ref.read(prefsProvider).write(appSettingsKey, next.encode());
+      } catch (_) {}
+    }());
+  }
+}
+
+final appSettingsProvider = NotifierProvider<AppSettingsController, AppSettings>(AppSettingsController.new);
 
 // ---------------------------------------------------------------- authentication
 
@@ -183,7 +227,13 @@ final activeRideProvider = FutureProvider.autoDispose<Ride?>((ref) async {
 // ---------------------------------------------------------------- realtime
 
 final eventsSocketProvider = Provider<EventsSocket>((ref) {
-  final socket = EventsSocket(session: ref.watch(sessionStoreProvider));
+  final settings = ref.read(appSettingsProvider);
+  final socket = EventsSocket(session: ref.watch(sessionStoreProvider), cutAfter: settings.connectionCutGrace, pingEvery: settings.socketPing);
+  ref.listen<AppSettings>(appSettingsProvider, (_, s) => socket
+    ..cutAfter = s.connectionCutGrace
+    ..pingEvery = s.socketPing);
+  final changes = socket.configChanges.listen((v) => ref.read(appSettingsProvider.notifier).noteVersion(v));
+  ref.onDispose(changes.cancel);
   ref.onDispose(socket.stop);
   return socket;
 });
@@ -284,8 +334,12 @@ class OnlineState {
     this.lastSentAt,
     this.locationError,
     this.noFix = false,
+    this.sending = false,
   });
   final bool online, busy;
+
+  /// "Send my location now" is running, so the button shows it.
+  final bool sending;
   final LocationAccess? locationAccess;
   final ApiException? error;
   final List<String> reasons;
@@ -307,6 +361,7 @@ class OnlineState {
     Object? locationError,
     bool clearLocationError = false,
     bool? noFix,
+    bool? sending,
   }) =>
       OnlineState(
         online: online ?? this.online,
@@ -317,15 +372,19 @@ class OnlineState {
         lastSentAt: lastSentAt ?? this.lastSentAt,
         locationError: clearLocationError ? null : (locationError ?? this.locationError),
         noFix: noFix ?? this.noFix,
+        sending: sending ?? this.sending,
       );
 }
+
+/// What "send my location now" achieved, so the driver is told.
+enum SendResult { sent, sameReading, noFix }
 
 /// Going online = permission + a real fix accepted by the server + backend eligibility (`POST driver/availability`,
 /// which also refuses without a fresh location). While online, movement updates plus a 30 s heartbeat keep the
 /// presence fresh; every failure is kept in state and shown, never swallowed.
-/// The heartbeat sends every 30 seconds and a read takes up to 20: this long without an accepted sample means it stopped,
-/// before the server's own limit (`presence.stale_seconds`, 120) drops the driver from new requests.
-const locationStoppedAfter = Duration(seconds: 75);
+/// This long without an accepted sample means it stopped, before the server's own limit (`presence.stale_seconds`)
+/// drops the driver from new requests. Operator setting `app.location_stopped_warning_seconds` (D051).
+Duration get locationStoppedAfter => currentSettings.locationStoppedWarning;
 
 /// True while online with no location accepted lately. Worked out here, each second, because the server's "fresh" flag
 /// is only as new as the last time it was read.
@@ -338,6 +397,12 @@ bool locationStopped(OnlineState online, Eligibility? eligibility, DateTime now)
 class OnlineController extends Notifier<OnlineState> {
   @override
   OnlineState build() {
+    // New location gaps from the operator apply at once while online (D051).
+    ref.listen<AppSettings>(appSettingsProvider, (a, b) {
+      if (state.online && (a?.locationMinInterval != b.locationMinInterval || a?.locationHeartbeat != b.locationHeartbeat)) {
+        ref.read(locationServiceProvider).retime(minInterval: b.locationMinInterval, heartbeat: b.locationHeartbeat, onError: _onLocationError);
+      }
+    });
     final location = ref.read(locationServiceProvider); // providers can't be read while disposing
     ref.onDispose(location.stop);
     return const OnlineState();
@@ -401,17 +466,30 @@ class OnlineController extends Notifier<OnlineState> {
     } else if (access != LocationAccess.granted) {
       location.stop();
     }
+    // Back on screen: send at once, so a gap while the phone slept doesn't leave the warning up until the next heartbeat.
+    if (access == LocationAccess.granted) {
+      try {
+        await sendNow();
+      } catch (_) {} // kept in state and shown
+    }
   }
 
-  /// Manual "send my location now" (e.g. after the driver turned GPS back on).
-  Future<void> sendNow() async {
-    final fix = await ref.read(locationServiceProvider).current();
-    if (fix == null) {
-      state = state.copy(noFix: true);
-      return;
+  /// Manual "send my location now" (e.g. after the driver turned GPS back on). The button shows [OnlineState.sending]
+  /// while it runs, and the result says what happened.
+  Future<SendResult> sendNow() async {
+    if (state.sending) return SendResult.sameReading;
+    state = state.copy(sending: true);
+    try {
+      final fix = await ref.read(locationServiceProvider).current();
+      if (fix == null) {
+        state = state.copy(noFix: true);
+        return SendResult.noFix;
+      }
+      return await _send(fix) ? SendResult.sent : SendResult.sameReading;
+    } finally {
+      state = state.copy(sending: false);
+      ref.invalidate(eligibilityProvider);
     }
-    await _send(fix);
-    ref.invalidate(eligibilityProvider);
   }
 
   Future<void> goOffline({bool silent = false}) async {
@@ -429,13 +507,14 @@ class OnlineController extends Notifier<OnlineState> {
     }
   }
 
-  Future<void> _send(Fix fix) async {
+  Future<bool> _send(Fix fix) async {
     try {
       final applied = await ref
           .read(driverApiProvider)
           .sendLocation(lat: fix.lat, lng: fix.lng, accuracy: fix.accuracy, heading: fix.heading, speed: fix.speed, deviceTs: fix.deviceTs);
       // Not applied: the phone repeated an old reading, so the location hasn't moved on.
       state = applied ? state.copy(lastSentAt: DateTime.now(), clearLocationError: true, noFix: false) : state.copy(clearLocationError: true);
+      return applied;
     } catch (e) {
       state = state.copy(locationError: e);
       rethrow;
@@ -443,11 +522,16 @@ class OnlineController extends Notifier<OnlineState> {
   }
 
   void _startStream() {
+    final s = ref.read(appSettingsProvider);
     ref.read(locationServiceProvider).start(
           onFix: _send,
-          onError: (e) => state = state.copy(locationError: e, noFix: e is StateError),
+          onError: _onLocationError,
+          minInterval: s.locationMinInterval,
+          heartbeat: s.locationHeartbeat,
         );
   }
+
+  void _onLocationError(Object e) => state = state.copy(locationError: e, noFix: e is StateError);
 }
 
 final onlineControllerProvider = NotifierProvider<OnlineController, OnlineState>(OnlineController.new);

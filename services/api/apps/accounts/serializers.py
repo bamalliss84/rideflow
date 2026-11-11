@@ -124,6 +124,30 @@ class MFASessionSerializer(TokenPairSerializer):
     tenant = MembershipSummarySerializer(allow_null=True)
 
 
+class MapCenterSerializer(serializers.Serializer):
+    lat = serializers.FloatField()
+    lng = serializers.FloatField()
+
+
+class RegionSerializer(serializers.Serializer):
+    operator_name = serializers.CharField()
+    country = serializers.CharField(allow_blank=True)
+    currency = serializers.CharField()
+    currency_symbol = serializers.CharField()
+    currency_minor_units = serializers.IntegerField()
+    distance_unit = serializers.ChoiceField(choices=["km", "mi"])
+    phone_country_code = serializers.CharField(allow_blank=True)
+    time_zone = serializers.CharField()
+    locale = serializers.CharField()
+    map_center = MapCenterSerializer(allow_null=True)
+
+
+class AppConfigSerializer(serializers.Serializer):
+    version = serializers.CharField()
+    region = RegionSerializer()
+    settings = serializers.DictField(child=serializers.JSONField())
+
+
 class AppContextSerializer(serializers.Serializer):
     tenant_name = serializers.CharField()
     app_type = serializers.CharField()

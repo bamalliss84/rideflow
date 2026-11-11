@@ -1142,6 +1142,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/app/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Public: the operator's region and the settings the apps run on (D051). Chosen by the app header, like
+         *     app-context; it holds nothing private, and the apps cache it to work offline.
+         */
+        get: operations["app_config_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/app-context": {
         parameters: {
             query?: never;
@@ -2746,6 +2766,13 @@ export interface components {
          * @enum {string}
          */
         AmendmentStatusEnum: "pending" | "accepted" | "rejected";
+        AppConfig: {
+            version: string;
+            region: components["schemas"]["Region"];
+            settings: {
+                [key: string]: unknown;
+            };
+        };
         AppContext: {
             tenant_name: string;
             app_type: string;
@@ -3094,6 +3121,12 @@ export interface components {
          */
         DisputeStatusEnum: "open" | "under_review" | "upheld" | "rejected";
         /**
+         * @description * `km` - km
+         *     * `mi` - mi
+         * @enum {string}
+         */
+        DistanceUnitEnum: "km" | "mi";
+        /**
          * @description * `national_id` - National ID
          *     * `driving_license` - Driving license
          *     * `vehicle_registration` - Vehicle registration
@@ -3383,6 +3416,12 @@ export interface components {
             mfa_token: string;
             code?: string;
             recovery_code?: string;
+        };
+        MapCenter: {
+            /** Format: double */
+            lat: number;
+            /** Format: double */
+            lng: number;
         };
         /** @description Mark everything up to a cursor (`up_to`) or exactly one notification (`cursor`). */
         MarkRead: {
@@ -3944,8 +3983,15 @@ export interface components {
             slug?: string;
             currency?: string;
             currency_minor_units?: number;
+            /** @description Shown next to amounts, e.g. ر.ي. Empty shows the code. */
+            currency_symbol?: string;
             time_zone?: string;
             locale?: string;
+            /** @description ISO 3166-1 alpha-2, e.g. YE. */
+            country?: string;
+            distance_unit?: components["schemas"]["DistanceUnitEnum"];
+            /** @description Calling code with +, e.g. +967. */
+            phone_country_code?: string;
         };
         PatchedUserRequest: {
             full_name?: string;
@@ -4076,6 +4122,18 @@ export interface components {
             total: number;
             /** Format: date-time */
             generated_at: string | null;
+        };
+        Region: {
+            operator_name: string;
+            country: string;
+            currency: string;
+            currency_symbol: string;
+            currency_minor_units: number;
+            distance_unit: components["schemas"]["DistanceUnitEnum"];
+            phone_country_code: string;
+            time_zone: string;
+            locale: string;
+            map_center: components["schemas"]["MapCenter"] | null;
         };
         ReviewDecisionRequest: {
             /** @default  */
@@ -4342,8 +4400,15 @@ export interface components {
             readonly status: components["schemas"]["TenantStatusEnum"];
             currency: string;
             currency_minor_units?: number;
+            /** @description Shown next to amounts, e.g. ر.ي. Empty shows the code. */
+            currency_symbol?: string;
             time_zone?: string;
             locale?: string;
+            /** @description ISO 3166-1 alpha-2, e.g. YE. */
+            country?: string;
+            distance_unit?: components["schemas"]["DistanceUnitEnum"];
+            /** @description Calling code with +, e.g. +967. */
+            phone_country_code?: string;
             /** Format: date-time */
             readonly created_at: string;
         };
@@ -4380,8 +4445,15 @@ export interface components {
             slug: string;
             currency: string;
             currency_minor_units?: number;
+            /** @description Shown next to amounts, e.g. ر.ي. Empty shows the code. */
+            currency_symbol?: string;
             time_zone?: string;
             locale?: string;
+            /** @description ISO 3166-1 alpha-2, e.g. YE. */
+            country?: string;
+            distance_unit?: components["schemas"]["DistanceUnitEnum"];
+            /** @description Calling code with +, e.g. +967. */
+            phone_country_code?: string;
         };
         /**
          * @description * `active` - Active
@@ -6740,6 +6812,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Violation"];
+                };
+            };
+        };
+    };
+    app_config_retrieve: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Client id of the registered tenant application (trusted app context). */
+                "X-RideFlow-App": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppConfig"];
                 };
             };
         };

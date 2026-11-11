@@ -5,6 +5,7 @@ import 'package:latlong2/latlong.dart';
 import '../core/config.dart';
 import '../data/models.dart';
 import '../design/tokens.dart';
+import '../core/app_settings.dart';
 import 'arrived_flag.dart';
 
 LatLng _ll(Point p) => LatLng(p.lat, p.lng);
@@ -13,7 +14,7 @@ LatLng _ll(Point p) => LatLng(p.lat, p.lng);
 /// the driver on a plain ground, so the app works without map data. The line between stops is straight:
 /// it shows the direction, not a road route (no routing service, D036).
 class RideMap extends StatelessWidget {
-  const RideMap({super.key, this.center, this.pickup, this.dropoff, this.driver, this.driverStale = false, this.arrived = false, this.controller, this.onMoved, this.onReady, this.zoom = 14});
+  const RideMap({super.key, this.center, this.pickup, this.dropoff, this.driver, this.driverStale = false, this.arrived = false, this.controller, this.onMoved, this.onReady, this.zoom});
   final Point? center, pickup, dropoff, driver;
   final bool driverStale;
 
@@ -22,7 +23,8 @@ class RideMap extends StatelessWidget {
   final MapController? controller;
   final void Function(Point center, bool byUser)? onMoved;
   final VoidCallback? onReady;
-  final double zoom;
+  /// Null uses the operator's `app.map_zoom` (D051).
+  final double? zoom;
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +37,7 @@ class RideMap extends StatelessWidget {
         mapController: controller,
         options: MapOptions(
           initialCenter: focus == null ? const LatLng(0, 0) : _ll(focus),
-          initialZoom: focus == null ? 2 : zoom,
+          initialZoom: focus == null ? 2 : (zoom ?? currentSettings.mapZoom.toDouble()),
           initialCameraFit: fit,
           backgroundColor: RfColors.mapGround,
           onMapReady: onReady,

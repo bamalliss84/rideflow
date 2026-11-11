@@ -89,3 +89,22 @@ async def test_hints_never_cross_tenants():
     await ws_b.send_json_to({"type": "resume", "cursor": 0})
     assert (await ws_b.receive_json_from())["type"] == "resumed"
     await ws_b.disconnect()
+
+
+async def test_a_settings_change_is_pushed_to_connected_apps():
+    @database_sync_to_async
+    def setup():
+        t = make_tenant("ws-config")
+        driver = make_driver(t)
+        return api_for(t, make_member(t, "owner")), api_for(t, driver.user)
+
+    owner_api, driver_api = await setup()
+    communicator = _ws(driver_api.tokens["access"])
+    connected, _ = await communicator.connect()
+    assert connected
+    assert (await communicator.receive_json_from())["type"] == "hello"
+    r = await database_sync_to_async(lambda: owner_api.post("/api/v1/admin/config", {"params": {"app.socket_ping_seconds": 40}}))()
+    assert r.status_code == 201
+    message = await communicator.receive_json_from(timeout=5)
+    assert message["type"] == "config" and message["version"]
+    await communicator.disconnect()

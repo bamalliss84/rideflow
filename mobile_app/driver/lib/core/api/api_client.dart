@@ -33,6 +33,9 @@ class ApiClient {
 
   /// Called when the refresh token is rejected: the user must sign in again.
   void Function()? onSessionExpired;
+
+  /// Called with the operator settings version every response carries (`X-RideFlow-Config`, D051).
+  void Function(String version)? onConfigVersion;
   String locale = 'ar';
 
   Future<Tokens?>? _refreshing;
@@ -71,6 +74,8 @@ class ApiClient {
     } on DioException catch (e) {
       throw ApiException(0, 'network', detail: e.message);
     }
+    final version = res.headers.value('x-rideflow-config');
+    if (version != null) onConfigVersion?.call(version);
     final status = res.statusCode ?? 0;
     if (status == 401 && auth && tokens != null && !retried) {
       final renewed = await _refreshOnce(tokens);

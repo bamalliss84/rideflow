@@ -11,8 +11,35 @@ class TenantSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Tenant
-        fields = ["id", "name", "slug", "status", "currency", "currency_minor_units", "time_zone", "locale", "created_at"]
+        fields = [
+            "id",
+            "name",
+            "slug",
+            "status",
+            "currency",
+            "currency_minor_units",
+            "currency_symbol",
+            "time_zone",
+            "locale",
+            "country",
+            "distance_unit",
+            "phone_country_code",
+            "created_at",
+        ]
         read_only_fields = ["id", "status", "created_at"]
+
+    def validate_country(self, value):
+        value = value.upper()
+        if value and (len(value) != 2 or not value.isalpha()):
+            raise serializers.ValidationError("Use an ISO-3166 two-letter code.")
+        return value
+
+    def validate_phone_country_code(self, value):
+        import re
+
+        if value and not re.fullmatch(r"\+\d{1,4}", value):
+            raise serializers.ValidationError("Use + and up to four digits, e.g. +967.")
+        return value
 
     def validate_currency(self, value):
         value = value.upper()

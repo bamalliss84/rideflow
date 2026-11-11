@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../../core/app_settings.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -106,7 +107,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               textDirection: TextDirection.ltr,
               autofillHints: const [AutofillHints.telephoneNumber],
               inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[+\d\s-]'))],
-              decoration: InputDecoration(labelText: t.phoneLabel, hintText: '+967…', helperText: t.phoneHint, prefixIcon: const Icon(Icons.phone_iphone)),
+              decoration: InputDecoration(labelText: t.phoneLabel, hintText: currentSettings.region.phoneCode.isEmpty ? null : '${currentSettings.region.phoneCode}…', helperText: t.phoneHint, prefixIcon: const Icon(Icons.phone_iphone)),
               onSubmitted: (_) => _sendCode(),
             ),
             const SizedBox(height: 20),

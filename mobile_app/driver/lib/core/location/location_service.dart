@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 
 import 'package:geolocator/geolocator.dart';
 
@@ -19,15 +20,38 @@ class Fix {
 /// and refuses to go online without a recent one, so an old fix would only fail without saying why.
 Fix? freshFix(Fix? fix, {DateTime? now, Duration maxAge = const Duration(minutes: 2)}) => fix != null && (now ?? DateTime.now()).difference(fix.deviceTs) < maxAge ? fix : null;
 
-/// Device location for an online driver (foreground only in this phase).
+/// Device location for an online driver.
 ///
 /// Two sources feed the sender: the position stream (movement) and a heartbeat that re-sends the latest fix
 /// every [heartbeat]. Without the heartbeat a parked driver produced no new samples, its presence went stale
 /// after `presence.stale_seconds`, and dispatch silently skipped it.
+///
+/// On Android the stream runs in a foreground service with an "online" notification. Without it the phone stops giving
+/// the app its location as soon as the screen sleeps or another app is opened, and requests stop reaching the driver.
 class LocationService {
   StreamSubscription<Position>? _sub;
   Timer? _heartbeat;
   Fix? last;
+
+  /// Title and text of the ongoing notification while online, in the driver's language. Set by the app shell.
+  ({String title, String text}) notice = (title: 'RideFlow', text: '');
+
+  Future<void> Function(Fix fix, {bool force})? _send;
+  Duration _minInterval = const Duration(seconds: 10);
+
+  LocationSettings _streamSettings() {
+    if (!Platform.isAndroid) return const LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 20);
+    return AndroidSettings(
+      accuracy: LocationAccuracy.high,
+      distanceFilter: 20,
+      foregroundNotificationConfig: ForegroundNotificationConfig(
+        notificationTitle: notice.title,
+        notificationText: notice.text,
+        enableWakeLock: true,
+        setOngoing: true,
+      ),
+    );
+  }
 
   /// Checks (and if [request] asks for) permission. Never requests while the app only syncs state.
   Future<LocationAccess> access({bool request = true}) async {
@@ -72,10 +96,11 @@ class LocationService {
     Duration heartbeat = const Duration(seconds: 30),
   }) {
     stop();
+    _minInterval = minInterval;
     DateTime? sentAt;
     Future<void> send(Fix fix, {bool force = false}) async {
       final now = DateTime.now();
-      if (!force && sentAt != null && now.difference(sentAt!) < minInterval) return;
+      if (!force && sentAt != null && now.difference(sentAt!) < _minInterval) return;
       sentAt = now;
       try {
         await onFix(fix);
@@ -84,21 +109,32 @@ class LocationService {
       }
     }
 
-    _sub = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 20),
-    ).listen((p) {
+    _send = send;
+    _sub = Geolocator.getPositionStream(locationSettings: _streamSettings()).listen((p) {
       last = Fix.fromPosition(p);
       unawaited(send(last!));
     }, onError: onError);
+    _startHeartbeat(heartbeat, onError);
+  }
 
-    _heartbeat = Timer.periodic(heartbeat, (_) async {
+  void _startHeartbeat(Duration every, void Function(Object error) onError) {
+    _heartbeat?.cancel();
+    _heartbeat = Timer.periodic(every, (_) async {
       final fix = await current();
       if (fix == null) {
         onError(StateError('no_location_fix'));
         return;
       }
-      await send(fix, force: true);
+      await _send?.call(fix, force: true);
     });
+  }
+
+  /// New gaps from the operator while online. Keeps the stream (and its foreground service) running: Android refuses to
+  /// start the service again while the app is in the background.
+  void retime({required Duration minInterval, required Duration heartbeat, required void Function(Object error) onError}) {
+    if (!running) return;
+    _minInterval = minInterval;
+    _startHeartbeat(heartbeat, onError);
   }
 
   void stop() {
@@ -106,6 +142,7 @@ class LocationService {
     _sub = null;
     _heartbeat?.cancel();
     _heartbeat = null;
+    _send = null;
   }
 
   bool get running => _heartbeat != null;

@@ -391,8 +391,11 @@ class SkeletonList extends StatelessWidget {
 
 /// Inline banner for warnings/errors with an optional action (never a silent failure).
 class Banner2 extends StatelessWidget {
-  const Banner2({super.key, required this.text, this.tone = Tone.warning, this.icon, this.actionLabel, this.onAction, this.title});
+  const Banner2({super.key, required this.text, this.tone = Tone.warning, this.icon, this.actionLabel, this.onAction, this.title, this.busy = false});
   final String text;
+
+  /// The action is running: a small spinner beside its label, and taps are ignored until it ends.
+  final bool busy;
   final String? title;
   final Tone tone;
   final IconData? icon;
@@ -413,7 +416,16 @@ class Banner2 extends StatelessWidget {
             Text(text, style: RfType.body.copyWith(color: tone == Tone.dark ? RfColors.onInk : RfColors.text)),
             if (actionLabel != null) ...[
               const SizedBox(height: RfSpace.xs),
-              GestureDetector(onTap: onAction, child: Text(actionLabel!, style: RfType.bodyStrong.copyWith(color: fg, decoration: TextDecoration.underline))),
+              GestureDetector(
+                onTap: busy ? null : onAction,
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  if (busy) ...[
+                    SizedBox(key: const Key('bannerBusy'), width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: fg)),
+                    const SizedBox(width: RfSpace.xs),
+                  ],
+                  Text(actionLabel!, style: RfType.bodyStrong.copyWith(color: fg, decoration: busy ? null : TextDecoration.underline)),
+                ]),
+              ),
             ],
           ]),
         ),

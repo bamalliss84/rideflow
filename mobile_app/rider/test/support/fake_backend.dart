@@ -15,12 +15,15 @@ typedef Handler = (int, Object?) Function(Seen request);
 
 /// In-process HTTP adapter for Dio: routes "METHOD path" to handlers, records every request.
 class FakeBackend implements HttpClientAdapter {
-  FakeBackend(this.routes, {this.latency = const {}});
+  FakeBackend(this.routes, {this.latency = const {}, this.responseHeaders = const {}});
   final Map<String, Handler> routes;
 
   /// Per-route response delay ("METHOD path"), to reproduce reads still in flight (real network timing).
   final Map<String, Duration> latency;
   final List<Seen> seen = [];
+
+  /// Headers added to every JSON response (e.g. the operator settings version).
+  final Map<String, String> responseHeaders;
 
   Dio dio() => Dio(BaseOptions(baseUrl: 'http://fake/api/v1/', validateStatus: (_) => true))..httpClientAdapter = this;
 
@@ -38,6 +41,7 @@ class FakeBackend implements HttpClientAdapter {
     if (payload is Uint8List) return ResponseBody.fromBytes(payload, status);
     return ResponseBody.fromString(jsonEncode(payload), status, headers: {
       Headers.contentTypeHeader: ['application/json'],
+      for (final e in responseHeaders.entries) e.key: [e.value],
     });
   }
 

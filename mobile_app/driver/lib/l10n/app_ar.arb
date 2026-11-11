@@ -100,6 +100,11 @@
     }
   },
   "sendLocationNow": "إرسال موقعي الآن",
+  "sendingLocation": "جارٍ إرسال موقعك…",
+  "locationSent": "تم إرسال موقعك",
+  "locationSameReading": "الجوال لم يعطِ قراءة موقع جديدة. تأكد أن GPS أو تطبيق الموقع يعمل ثم حاول.",
+  "onlineNoticeTitle": "أنت متصل وتستقبل الطلبات",
+  "onlineNoticeText": "يُرسل موقعك حتى لو أطفأت الشاشة أو فتحت تطبيقًا آخر.",
   "reason_location_required": "يلزم إرسال موقع حديث قبل الاتصال.",
   "onboardingTitle": "طلب الانضمام",
   "applicationStatus": "حالة الطلب",

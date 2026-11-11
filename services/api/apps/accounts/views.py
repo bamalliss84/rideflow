@@ -24,6 +24,7 @@ from . import mfa, otp
 from .authentication import APP_HEADER, issue_tokens, resolve_app
 from .models import MFADevice, PhoneOTP, User
 from .serializers import (
+    AppConfigSerializer,
     AppContextSerializer,
     LoginResponseSerializer,
     LogoutSerializer,
@@ -109,6 +110,23 @@ class AppContextView(APIView):
                 "tenant_status": app.tenant.status,
             }
         )
+
+
+class AppConfigView(APIView):
+    """Public: the operator's region and the settings the apps run on (D051). Chosen by the app header, like
+    app-context; it holds nothing private, and the apps cache it to work offline."""
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    @extend_schema(responses=AppConfigSerializer, parameters=[APP_PARAM], tags=["auth"])
+    def get(self, request):
+        from apps.tenancy import app_config
+
+        app = resolve_app(request)
+        response = Response(app_config.payload(app.tenant))
+        response[app_config.HEADER] = response.data["version"]
+        return response
 
 
 def _challenge_user(token):

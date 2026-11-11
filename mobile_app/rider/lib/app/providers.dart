@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/api/api_client.dart';
+import '../core/app_settings.dart';
 import '../core/api/api_exception.dart';
 import '../core/auth/session_store.dart';
 import '../core/external_apps.dart';
@@ -20,6 +21,7 @@ final prefsProvider = Provider<SecureKV>((ref) => const KeystoreKV());
 
 final apiClientProvider = Provider<ApiClient>((ref) {
   final client = ApiClient(session: ref.watch(sessionStoreProvider));
+  client.onConfigVersion = (v) => ref.read(appSettingsProvider.notifier).noteVersion(v);
   ref.listen<Locale>(localeProvider, (_, l) => client.locale = l.languageCode, fireImmediately: true);
   return client;
 });
@@ -92,6 +94,48 @@ const layoutKey = 'rf_layout_model';
 /// Which layout model the screens use (D044). main() has already applied the saved choice.
 final layoutProvider = NotifierProvider<DevicePref<RfLayoutModel>, RfLayoutModel>(() => DevicePref<RfLayoutModel>(layoutKey, RfLayout.model, RfLayout.decode, (m) => m.name));
 final alwaysCodeProvider = NotifierProvider<DevicePref<bool>, bool>(() => DevicePref<bool>('rf_always_code', false, (s) => s == '1', (b) => b ? '1' : '0'));
+
+// ---------------------------------------------------------------- operator settings (D051)
+
+const appSettingsKey = 'rf_app_settings';
+
+/// The operator's settings. main() has already applied the copy kept on the phone; this re-reads the server on start,
+/// when a response or the event stream reports a new version, when the app comes back, and every
+/// `app.config_check_seconds`. A failed read keeps the last copy.
+class AppSettingsController extends Notifier<AppSettings> {
+  Future<void>? _reading;
+
+  @override
+  AppSettings build() => currentSettings;
+
+  Future<void> refresh() => _reading ??= _read().whenComplete(() => _reading = null);
+
+  /// A response or the event stream named the version in force: re-read only if it isn't the one we have.
+  void noteVersion(String version) {
+    if (version.isNotEmpty && version != state.version) unawaited(refresh());
+  }
+
+  Future<void> _read() async {
+    try {
+      final json = await ref.read(apiClientProvider).get('app/config');
+      if (json is! Map) return;
+      apply(AppSettings.fromJson(json.cast<String, dynamic>()));
+    } catch (_) {}
+  }
+
+  void apply(AppSettings next) {
+    if (next.version == state.version && next.version.isNotEmpty) return;
+    currentSettings = next;
+    state = next;
+    unawaited(() async {
+      try {
+        await ref.read(prefsProvider).write(appSettingsKey, next.encode());
+      } catch (_) {}
+    }());
+  }
+}
+
+final appSettingsProvider = NotifierProvider<AppSettingsController, AppSettings>(AppSettingsController.new);
 
 // ---------------------------------------------------------------- authentication
 
@@ -187,7 +231,13 @@ final estimateProvider = FutureProvider.autoDispose.family<Estimate, RideDraft>(
 // ---------------------------------------------------------------- realtime
 
 final eventsSocketProvider = Provider<EventsSocket>((ref) {
-  final socket = EventsSocket(session: ref.watch(sessionStoreProvider));
+  final settings = ref.read(appSettingsProvider);
+  final socket = EventsSocket(session: ref.watch(sessionStoreProvider), cutAfter: settings.connectionCutGrace, pingEvery: settings.socketPing);
+  ref.listen<AppSettings>(appSettingsProvider, (_, s) => socket
+    ..cutAfter = s.connectionCutGrace
+    ..pingEvery = s.socketPing);
+  final changes = socket.configChanges.listen((v) => ref.read(appSettingsProvider.notifier).noteVersion(v));
+  ref.onDispose(changes.cancel);
   ref.onDispose(socket.stop);
   return socket;
 });

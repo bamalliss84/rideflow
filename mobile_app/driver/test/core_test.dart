@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter_gen/gen_l10n/app_localizations_ar.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations_en.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -171,5 +174,63 @@ void main() {
       expect(eligibilityReason(en, 'restricted_until:2026-11-01T10:00:00+03:00'), contains('2026-11-01 10:00'));
       expect(eligibilityReason(en, 'brand_new_reason'), contains('brand_new_reason'));
     });
+  });
+  group('EventsSocket drops', () {
+    // A local socket server that closes every connection after [keep], like a phone whose replies stop arriving.
+    Future<(HttpServer, List<int>)> server({Duration keep = const Duration(milliseconds: 200), bool refuseAfterFirst = false}) async {
+      final s = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      final accepted = <int>[0];
+      s.listen((req) async {
+        if (refuseAfterFirst && accepted[0] > 0) {
+          req.response.statusCode = 503;
+          await req.response.close();
+          return;
+        }
+        accepted[0]++;
+        final ws = await WebSocketTransformer.upgrade(req);
+        Timer(keep, () => ws.close());
+      });
+      return (s, accepted);
+    }
+
+    EventsSocket socketFor(HttpServer s, Duration cutAfter) => EventsSocket(
+          session: SessionStore(MemoryKV()),
+          tokenProvider: () async => 't',
+          endpoint: Uri.parse('ws://127.0.0.1:${s.port}/ws'),
+          origin: 'http://127.0.0.1',
+          cutAfter: cutAfter,
+        );
+
+    test('a short drop shows as reconnecting, never as a cut', () async {
+      final (s, accepted) = await server();
+      final socket = socketFor(s, const Duration(seconds: 10));
+      final seen = <SocketState>[];
+      final sub = socket.states.listen(seen.add);
+      await socket.start();
+      while (accepted[0] < 2) {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      expect(seen, isNot(contains(SocketState.disconnected)));
+      expect(seen.where((x) => x == SocketState.connected).length, greaterThanOrEqualTo(2));
+      await socket.stop();
+      await Future<void>.delayed(Duration.zero);
+      expect(seen.last, SocketState.disconnected, reason: 'going offline says so at once');
+      await sub.cancel();
+      await s.close(force: true);
+    }, timeout: const Timeout(Duration(seconds: 20)));
+
+    test('a drop that lasts past the grace shows as a cut', () async {
+      final (s, _) = await server(refuseAfterFirst: true);
+      final socket = socketFor(s, const Duration(milliseconds: 600));
+      final seen = <SocketState>[];
+      final sub = socket.states.listen(seen.add);
+      await socket.start();
+      await Future<void>.delayed(const Duration(milliseconds: 1200));
+      expect(seen, containsAllInOrder([SocketState.connected, SocketState.connecting, SocketState.disconnected]));
+      await socket.stop();
+      await sub.cancel();
+      await s.close(force: true);
+    }, timeout: const Timeout(Duration(seconds: 20)));
   });
 }

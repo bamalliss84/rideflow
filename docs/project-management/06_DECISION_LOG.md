@@ -232,4 +232,19 @@ D049 APPROVED by owner 2026-11-06: Home screens, wait times and the trip map, fr
 - Impact: both apps' home, account, trip and notification screens; `apps/rides/views.py` (`WaitTimesView`); contract.
 - Linked tests: `services/api/tests/test_wait_times.py`, `mobile_app/driver/test/trip_screen_test.dart`, `mobile_app/driver/test/requests_test.dart`, `mobile_app/rider/test/rider_screens_test.dart`.
 
+D050 APPROVED by owner 2026-11-11: Design direction A, "calm premium", for both apps (board `World-Class-DS2`).
+- White and near-black with confidence; the brand green only for live states; no borders around cards; hierarchy from type and spacing. Font: IBM Plex Sans Arabic.
+- Kept from the board: one design system for both apps; accept an offer from its card with a visible countdown; the price is the largest element; a driver request card half as tall, with the distance and time to the pickup; money in the local currency symbol, distance and time in local units; light motion and haptics; designed empty, error and offline states; a full English interface.
+- Next: the rider's whole flow in direction A, day and night, then the driver's. Nothing is coded before those boards are approved.
+- Rationale: the owner wants a world-class app, UI and experience.
+- Impact: both apps' design system and every screen, after approval screen by screen.
+
+D051 APPROVED by owner 2026-11-11: Any country, and every setting from the server.
+- An operator can run in any country: country, currency, its symbol, minor units, distance unit, phone country code, time zone and default map centre are operator settings, not code. Mukalla is the first operator, not a built-in.
+- Every value that changes behaviour (timeouts, refresh intervals, location sending, dispatch distance, offer choices) lives in the backend and is edited in the portal. Neither the apps nor the portal hard-code them.
+- The apps read these settings from the server, keep the last copy on the phone so they work offline, and refresh on their own when the operator changes anything, as soon as the phone is online.
+- Dispatch stays per operator: a request reaches only drivers within the distance the operator sets (already `dispatch.*`; the late dispatch of D048 uses the same reach).
+- Rationale: the owner wants the product to work in any country and to change behaviour from the portal without a new app release.
+- Impact: tenant model and platform portal, `apps/tenancy/policy.py`, a new app settings endpoint, both apps' formatting and timers.
+
 Rule: New decisions get sequential ID, date, approver, rationale, impact and linked task. Never silently reinterpret proposals as approved.

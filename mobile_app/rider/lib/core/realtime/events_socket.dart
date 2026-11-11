@@ -21,12 +21,19 @@ enum SocketState { disconnected, connecting, connected }
 /// hello -> resume from the last seen cursor (server replays missed hints) -> live hints; ping/pong keepalive.
 /// Duplicates (replay overlapping live delivery) are dropped by cursor. Reconnects with jittered backoff.
 class EventsSocket {
-  EventsSocket({required this.session, this.connector = _defaultConnector, this.tokenProvider, Uri? endpoint, String? origin})
+  EventsSocket({required this.session, this.connector = _defaultConnector, this.tokenProvider, Uri? endpoint, String? origin, this.cutAfter = const Duration(seconds: 15), this.pingEvery = const Duration(seconds: 25)})
       : endpoint = endpoint ?? AppConfig.wsEventsUri,
         origin = origin ?? AppConfig.apiOrigin;
 
   final Uri endpoint;
   final String origin;
+
+  /// A drop shorter than this shows as "reconnecting", not as a cut: weak networks lose the socket often
+  /// for a second or two (D005), and the list is re-read over REST meanwhile.
+  Duration cutAfter;
+
+  /// Keepalive gap; operator setting `app.socket_ping_seconds` (D051).
+  Duration pingEvery;
 
   final SessionStore session;
   final Future<WebSocket> Function(Uri uri, Map<String, dynamic> headers) connector;
@@ -36,12 +43,17 @@ class EventsSocket {
 
   final _hints = StreamController<Hint>.broadcast();
   final _state = StreamController<SocketState>.broadcast();
+  final _config = StreamController<String>.broadcast();
+
+  /// The operator changed settings: the version now in force (D051).
+  Stream<String> get configChanges => _config.stream;
   Stream<Hint> get hints => _hints.stream;
   Stream<SocketState> get states => _state.stream;
 
   WebSocket? _ws;
   Timer? _ping;
   Timer? _retry;
+  Timer? _cut;
   int _attempt = 0;
   int _lastCursor = 0;
   bool _running = false;
@@ -61,6 +73,7 @@ class EventsSocket {
     _running = false;
     _retry?.cancel();
     _ping?.cancel();
+    _cut?.cancel();
     await _ws?.close();
     _ws = null;
     _emit(SocketState.disconnected);
@@ -79,17 +92,22 @@ class EventsSocket {
     if (!_running) return;
     final token = tokenProvider != null ? await tokenProvider!() : (await session.read())?.access;
     if (token == null) return;
-    _emit(SocketState.connecting);
+    if (_cut == null) _emit(SocketState.connecting);
     try {
       final uri = endpoint.replace(queryParameters: {'token': token});
       final ws = await connector(uri, {'Origin': origin});
       _ws = ws;
       _attempt = 0;
+      _cut?.cancel();
+      _cut = null;
       _emit(SocketState.connected);
       _ping?.cancel();
-      _ping = Timer.periodic(const Duration(seconds: 25), (_) => _send({'type': 'ping'}));
+      _ping = Timer.periodic(pingEvery, (_) => _send({'type': 'ping'}));
       ws.listen(_onMessage, onDone: _onClosed, onError: (_) => _onClosed(), cancelOnError: true);
     } catch (_) {
+      _cut ??= Timer(cutAfter, () {
+        if (_running && _ws == null) _emit(SocketState.disconnected);
+      });
       _scheduleRetry();
     }
   }
@@ -102,6 +120,8 @@ class EventsSocket {
       return;
     }
     switch (msg['type']) {
+      case 'config':
+        if (!_config.isClosed) _config.add('${msg['version'] ?? ''}');
       case 'hello':
         _send({'type': 'resume', 'cursor': _lastCursor});
       case 'hint':
@@ -120,7 +140,12 @@ class EventsSocket {
   void _onClosed() {
     _ping?.cancel();
     _ws = null;
-    _emit(SocketState.disconnected);
+    if (!_running) return;
+    // Reconnecting first; a cut only if no new connection comes in time.
+    _emit(SocketState.connecting);
+    _cut ??= Timer(cutAfter, () {
+      if (_running && _ws == null) _emit(SocketState.disconnected);
+    });
     _scheduleRetry();
   }
 

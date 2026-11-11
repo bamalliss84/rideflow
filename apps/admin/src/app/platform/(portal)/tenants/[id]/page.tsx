@@ -72,6 +72,10 @@ export default function TenantDetailPage() {
             items={[
               { label: p.slug, value: <span className="ltr-nums">{d.slug}</span> },
               { label: p.currency, value: <MetaLine className="text-sm text-ink" parts={[<span key="c" className="ltr-nums">{d.currency}</span>, <span key="u" className="ltr-nums">{d.currency_minor_units}</span>]} /> },
+              { label: p.currencySymbol, value: d.currency_symbol || "—" },
+              { label: p.country, value: <span className="ltr-nums">{d.country || "—"}</span> },
+              { label: p.phoneCode, value: <span className="ltr-nums">{d.phone_country_code || "—"}</span> },
+              { label: p.distanceUnit, value: d.distance_unit === "mi" ? p.mi : p.km },
               { label: p.timeZone, value: <span className="ltr-nums">{d.time_zone}</span> },
               { label: p.locale, value: d.locale === "ar" ? "العربية" : "English" },
               { label: t.common.created, value: fmt.dateTime(d.created_at) },

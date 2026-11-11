@@ -31,6 +31,7 @@ const SECTIONS = [
   { id: "drivers", groups: ["drivers", "subscriptions"] },
   { id: "rewards", groups: ["rewards", "compensation"] },
   { id: "operator", groups: ["tenant", "safety"] },
+  { id: "apps", groups: ["app"] },
 ] as const;
 type SectionId = (typeof SECTIONS)[number]["id"];
 
@@ -45,6 +46,7 @@ type UnitKey = keyof Dictionary["policy"]["units"];
 function unitOf(key: string): UnitKey | null {
   if (key.endsWith("_minor")) return "minor";
   if (key.endsWith("_seconds")) return "seconds";
+  if (key.endsWith("_minutes")) return "minutes";
   if (key.endsWith("_m")) return "meters";
   if (key.endsWith("_pct")) return "percent";
   if (key.endsWith("_days") || key.includes("_days_") || key.includes(".days_")) return "days";
@@ -67,6 +69,15 @@ function validate(param: Param, value: unknown, p: Dictionary["policy"], tpl: (s
     const values = Object.values(value as Record<string, unknown>);
     if (values.some((v) => typeof v !== "number" || !Number.isInteger(v) || v < 0)) return p.errors.weights;
     if (values.reduce<number>((a, v) => a + Number(v), 0) <= 0) return p.errors.weightsZero;
+  }
+  if (param.key === "app.offer_eta_choices_minutes") {
+    const list = Array.isArray(value) ? (value as unknown[]) : [];
+    const ok =
+      list.length >= 1 &&
+      list.length <= 8 &&
+      list.every((v) => typeof v === "number" && Number.isInteger(v) && v >= 1 && v <= 180) &&
+      new Set(list).size === list.length;
+    if (!ok) return p.errors.choices;
   }
   if (param.key === "trust.tier_thresholds" && value && typeof value === "object") {
     const v = value as Record<string, number>;
@@ -177,6 +188,28 @@ export default function PolicyPage() {
               = <bdi>{fmt.money(value)}</bdi>
             </span> : null}
         </div>
+      );
+    }
+    if (param.key === "app.offer_eta_choices_minutes") {
+      // Typed as "3, 5, 8": anything that isn't a whole number is kept as text so the check above flags it.
+      const text = Array.isArray(value) ? (value as unknown[]).join(", ") : "";
+      return (
+        <input
+          dir="ltr"
+          aria-label={name}
+          inputMode="numeric"
+          className="w-full max-w-xs rounded-lg border border-line bg-surface px-3 py-2 text-sm"
+          defaultValue={text}
+          onChange={(e) =>
+            set(
+              param.key,
+              e.target.value
+                .split(/[,،\s]+/)
+                .filter(Boolean)
+                .map((s) => (/^\d+$/.test(s) ? Number(s) : s)),
+            )
+          }
+        />
       );
     }
     if (param.type === "str") {

@@ -10,7 +10,17 @@ import { ApiError, type Schemas } from "@/lib/api/client";
 
 type Tenant = Schemas["Tenant"];
 
-export const TIME_ZONES = ["Asia/Aden", "Asia/Riyadh", "Asia/Dubai", "Asia/Muscat", "Asia/Qatar", "Asia/Kuwait", "Asia/Bahrain", "Africa/Cairo", "Europe/London", "UTC"];
+/** Every IANA time zone the browser knows (any country, D051); a short list only on very old browsers. */
+export const TIME_ZONES: string[] = (() => {
+  const intl = Intl as unknown as { supportedValuesOf?: (key: string) => string[] };
+  try {
+    const all = intl.supportedValuesOf?.("timeZone");
+    if (all?.length) return [...all, "UTC"];
+  } catch {
+    /* fall through */
+  }
+  return ["Asia/Aden", "Asia/Riyadh", "Asia/Dubai", "Africa/Cairo", "Europe/London", "UTC"];
+})();
 
 export function TenantForm({ initial, onSubmit, submitLabel, onCancel }: {
   initial?: Partial<Tenant>;
@@ -26,8 +36,12 @@ export function TenantForm({ initial, onSubmit, submitLabel, onCancel }: {
     slug: initial?.slug ?? "",
     currency: initial?.currency ?? "",
     currency_minor_units: String(initial?.currency_minor_units ?? 2),
-    time_zone: initial?.time_zone ?? "Asia/Aden",
+    time_zone: initial?.time_zone ?? "UTC",
     locale: initial?.locale ?? "ar",
+    country: initial?.country ?? "",
+    currency_symbol: initial?.currency_symbol ?? "",
+    distance_unit: initial?.distance_unit ?? "km",
+    phone_country_code: initial?.phone_country_code ?? "",
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -40,7 +54,15 @@ export function TenantForm({ initial, onSubmit, submitLabel, onCancel }: {
     setBusy(true);
     setError(null);
     try {
-      const body: Record<string, unknown> = { name: form.name.trim(), time_zone: form.time_zone, locale: form.locale };
+      const body: Record<string, unknown> = {
+        name: form.name.trim(),
+        time_zone: form.time_zone,
+        locale: form.locale,
+        country: form.country.trim().toUpperCase(),
+        currency_symbol: form.currency_symbol.trim(),
+        distance_unit: form.distance_unit,
+        phone_country_code: form.phone_country_code.trim(),
+      };
       if (!editing) {
         body.slug = form.slug.trim();
         body.currency = form.currency.trim().toUpperCase();
@@ -77,6 +99,23 @@ export function TenantForm({ initial, onSubmit, submitLabel, onCancel }: {
                   {z}
                 </option>
               ))}
+            </Select>
+          )}
+        </Field>
+        <Field label={p.country} hint={p.countryHint} error={fieldErrors.country}>
+          {(f) => <Input {...f} value={form.country} onChange={set("country")} dir="ltr" maxLength={2} placeholder="YE" />}
+        </Field>
+        <Field label={p.currencySymbol} hint={p.currencySymbolHint} error={fieldErrors.currency_symbol}>
+          {(f) => <Input {...f} value={form.currency_symbol} onChange={set("currency_symbol")} maxLength={8} placeholder="ر.ي" />}
+        </Field>
+        <Field label={p.phoneCode} hint={p.phoneCodeHint} error={fieldErrors.phone_country_code}>
+          {(f) => <Input {...f} value={form.phone_country_code} onChange={set("phone_country_code")} dir="ltr" maxLength={5} placeholder="+967" />}
+        </Field>
+        <Field label={p.distanceUnit} error={fieldErrors.distance_unit}>
+          {(f) => (
+            <Select {...f} value={form.distance_unit} onChange={set("distance_unit")}>
+              <option value="km">{p.km}</option>
+              <option value="mi">{p.mi}</option>
             </Select>
           )}
         </Field>

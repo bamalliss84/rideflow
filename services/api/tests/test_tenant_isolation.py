@@ -20,6 +20,7 @@ PUBLIC_ROUTES = {
     "platform-login",
     "token-refresh",
     "app-context",
+    "app-config",
     "mfa-setup",
     "mfa-verify",
     "public-trip",

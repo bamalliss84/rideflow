@@ -22,6 +22,7 @@ import '../features/request/request_screen.dart';
 import '../features/ride/ride_screen.dart';
 import '../shared/widgets.dart';
 import 'providers.dart';
+import '../core/app_settings.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier<int>(0);
@@ -73,10 +74,24 @@ class _RiderAppState extends ConsumerState<RiderApp> with WidgetsBindingObserver
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _startSettingsCheck(ref.read(appSettingsProvider).configCheck);
+    ref.listenManual<AppSettings>(appSettingsProvider, (a, b) {
+      if (a?.configCheck != b.configCheck) _startSettingsCheck(b.configCheck);
+    });
+    unawaited(ref.read(appSettingsProvider.notifier).refresh());
+  }
+
+  Timer? _settingsCheck;
+
+  /// The operator's settings are re-read at least this often, besides each reported change (D051).
+  void _startSettingsCheck(Duration every) {
+    _settingsCheck?.cancel();
+    _settingsCheck = Timer.periodic(every, (_) => unawaited(ref.read(appSettingsProvider.notifier).refresh()));
   }
 
   @override
   void dispose() {
+    _settingsCheck?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -84,6 +99,7 @@ class _RiderAppState extends ConsumerState<RiderApp> with WidgetsBindingObserver
   /// Back in the foreground: reconnect the event stream now and re-read state that may have changed.
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) unawaited(ref.read(appSettingsProvider.notifier).refresh());
     if (state == AppLifecycleState.resumed && ref.read(authProvider).valueOrNull != null) {
       ref.read(eventsSocketProvider).reconnectNow();
       ref.invalidate(ridesProvider);

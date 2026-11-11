@@ -2856,6 +2856,30 @@ paths:
               schema:
                 $ref: '#/components/schemas/Violation'
           description: ''
+  /api/v1/app/config:
+    get:
+      operationId: app_config_retrieve
+      description: |-
+        Public: the operator's region and the settings the apps run on (D051). Chosen by the app header, like
+        app-context; it holds nothing private, and the apps cache it to work offline.
+      parameters:
+      - in: header
+        name: X-RideFlow-App
+        schema:
+          type: string
+        description: Client id of the registered tenant application (trusted app context).
+        required: true
+      tags:
+      - auth
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppConfig'
+          description: ''
   /api/v1/auth/app-context:
     get:
       operationId: auth_app_context_retrieve
@@ -6171,6 +6195,20 @@ components:
         * `pending` - Pending
         * `accepted` - Accepted
         * `rejected` - Rejected
+    AppConfig:
+      type: object
+      properties:
+        version:
+          type: string
+        region:
+          $ref: '#/components/schemas/Region'
+        settings:
+          type: object
+          additionalProperties: {}
+      required:
+      - region
+      - settings
+      - version
     AppContext:
       type: object
       properties:
@@ -7071,6 +7109,14 @@ components:
         * `under_review` - Under review
         * `upheld` - Upheld
         * `rejected` - Rejected
+    DistanceUnitEnum:
+      enum:
+      - km
+      - mi
+      type: string
+      description: |-
+        * `km` - km
+        * `mi` - mi
     DocTypeEnum:
       enum:
       - national_id
@@ -7847,6 +7893,18 @@ components:
           pattern: ^\s*[0-9a-fA-F]{5}[-\s]?[0-9a-fA-F]{5}\s*$
       required:
       - mfa_token
+    MapCenter:
+      type: object
+      properties:
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
+      required:
+      - lat
+      - lng
     MarkRead:
       type: object
       description: Mark everything up to a cursor (`up_to`) or exactly one notification
@@ -8884,6 +8942,10 @@ components:
           type: integer
           maximum: 32767
           minimum: 0
+        currency_symbol:
+          type: string
+          description: Shown next to amounts, e.g. ر.ي. Empty shows the code.
+          maxLength: 8
         time_zone:
           type: string
           minLength: 1
@@ -8892,6 +8954,16 @@ components:
           type: string
           minLength: 1
           maxLength: 16
+        country:
+          type: string
+          description: ISO 3166-1 alpha-2, e.g. YE.
+          maxLength: 2
+        distance_unit:
+          $ref: '#/components/schemas/DistanceUnitEnum'
+        phone_country_code:
+          type: string
+          description: Calling code with +, e.g. +967.
+          maxLength: 5
     PatchedUserRequest:
       type: object
       properties:
@@ -9228,6 +9300,42 @@ components:
       - generated_at
       - remaining
       - total
+    Region:
+      type: object
+      properties:
+        operator_name:
+          type: string
+        country:
+          type: string
+        currency:
+          type: string
+        currency_symbol:
+          type: string
+        currency_minor_units:
+          type: integer
+        distance_unit:
+          $ref: '#/components/schemas/DistanceUnitEnum'
+        phone_country_code:
+          type: string
+        time_zone:
+          type: string
+        locale:
+          type: string
+        map_center:
+          allOf:
+          - $ref: '#/components/schemas/MapCenter'
+          nullable: true
+      required:
+      - country
+      - currency
+      - currency_minor_units
+      - currency_symbol
+      - distance_unit
+      - locale
+      - map_center
+      - operator_name
+      - phone_country_code
+      - time_zone
     ReviewDecisionRequest:
       type: object
       properties:
@@ -9881,12 +9989,26 @@ components:
           type: integer
           maximum: 32767
           minimum: 0
+        currency_symbol:
+          type: string
+          description: Shown next to amounts, e.g. ر.ي. Empty shows the code.
+          maxLength: 8
         time_zone:
           type: string
           maxLength: 64
         locale:
           type: string
           maxLength: 16
+        country:
+          type: string
+          description: ISO 3166-1 alpha-2, e.g. YE.
+          maxLength: 2
+        distance_unit:
+          $ref: '#/components/schemas/DistanceUnitEnum'
+        phone_country_code:
+          type: string
+          description: Calling code with +, e.g. +967.
+          maxLength: 5
         created_at:
           type: string
           format: date-time
@@ -9984,6 +10106,10 @@ components:
           type: integer
           maximum: 32767
           minimum: 0
+        currency_symbol:
+          type: string
+          description: Shown next to amounts, e.g. ر.ي. Empty shows the code.
+          maxLength: 8
         time_zone:
           type: string
           minLength: 1
@@ -9992,6 +10118,16 @@ components:
           type: string
           minLength: 1
           maxLength: 16
+        country:
+          type: string
+          description: ISO 3166-1 alpha-2, e.g. YE.
+          maxLength: 2
+        distance_unit:
+          $ref: '#/components/schemas/DistanceUnitEnum'
+        phone_country_code:
+          type: string
+          description: Calling code with +, e.g. +967.
+          maxLength: 5
       required:
       - currency
       - name

@@ -25,6 +25,26 @@ class RequestIdMiddleware:
         return response
 
 
+class ConfigVersionMiddleware:
+    """Adds the app settings version to every tenant-bound API response, so the apps notice a change on their
+    next request and re-read GET app/config (D051)."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+        tenant = getattr(request, "tenant", None)
+        if tenant is not None and request.path.startswith("/api/"):
+            from apps.tenancy import app_config
+
+            try:
+                response[app_config.HEADER] = app_config.version_of(tenant)
+            except Exception:  # noqa: BLE001 - the header is a hint; never fail the request for it
+                pass
+        return response
+
+
 class TenantContextMiddleware:
     """Every API request starts 'locked' (RLS denies tenant rows) until authentication binds a tenant.
 

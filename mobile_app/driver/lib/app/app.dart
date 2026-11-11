@@ -20,6 +20,7 @@ import '../features/trip/trip_screen.dart';
 import '../features/waits/wait_times_screen.dart';
 import '../shared/widgets.dart';
 import 'providers.dart';
+import '../core/app_settings.dart';
 import '../design/theme.dart';
 import '../design/tokens.dart';
 
@@ -76,18 +77,33 @@ class _DriverAppState extends ConsumerState<DriverApp> with WidgetsBindingObserv
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _startTimers(ref.read(appSettingsProvider));
+    ref.listenManual<AppSettings>(appSettingsProvider, (a, b) {
+      if (a?.driverReconcile != b.driverReconcile || a?.configCheck != b.configCheck) _startTimers(b);
+    });
+    unawaited(ref.read(appSettingsProvider.notifier).refresh());
+  }
+
+  Timer? _settingsCheck;
+
+  /// Gaps come from the operator's settings (D051) and restart when they change.
+  void _startTimers(AppSettings s) {
+    _reconcile?.cancel();
+    _settingsCheck?.cancel();
     // Server reconciliation of "waiting for my confirmation": hints are fast, this guarantees correctness.
-    _reconcile = Timer.periodic(const Duration(seconds: 15), (_) {
+    _reconcile = Timer.periodic(s.driverReconcile, (_) {
       if (ref.read(authProvider).valueOrNull == null) return;
       ref.read(pendingMatchProvider.notifier).reconcile();
       unawaited(ref.read(arrivalFixQueueProvider).pump());
       ref.invalidate(offersProvider); // requests that opened while the event stream was down (D048)
     });
+    _settingsCheck = Timer.periodic(s.configCheck, (_) => unawaited(ref.read(appSettingsProvider.notifier).refresh()));
   }
 
   @override
   void dispose() {
     _reconcile?.cancel();
+    _settingsCheck?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -105,6 +121,7 @@ class _DriverAppState extends ConsumerState<DriverApp> with WidgetsBindingObserv
   /// Back in the foreground: reconnect the event stream now and re-read state that may have changed.
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) unawaited(ref.read(appSettingsProvider.notifier).refresh());
     if (state == AppLifecycleState.resumed && ref.read(authProvider).valueOrNull != null) {
       ref.read(eventsSocketProvider).reconnectNow();
       unawaited(ref.read(arrivalFixQueueProvider).pump());
@@ -177,6 +194,7 @@ class _Shell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = AppLocalizations.of(context);
+    ref.read(locationServiceProvider).notice = (title: t.onlineNoticeTitle, text: t.onlineNoticeText);
     final socket = ref.watch(socketStateProvider).valueOrNull;
     return Scaffold(
       body: Column(children: [

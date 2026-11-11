@@ -109,6 +109,20 @@ PARAMS = {
     "compensation.max_days_per_driver_month": Param(0, int, 0, 31, PROVISIONAL, "D015 OPEN"),
     "compensation.tenant_monthly_budget_days": Param(0, int, 0, 100000, PROVISIONAL, "D015 OPEN"),
     # Tenant suspension (OD-08 proposed)
+    # How the apps behave (D051). The apps read these from GET app/config and never hard-code them.
+    "app.config_check_seconds": Param(300, int, 30, 86400, PROVISIONAL, "apps re-read their settings at least this often"),
+    "app.driver_requests_refresh_seconds": Param(20, int, 5, 600, PROVISIONAL, "driver request list re-read while online"),
+    "app.driver_reconcile_seconds": Param(15, int, 5, 600, PROVISIONAL, "driver app re-checks offers and pending matches"),
+    "app.rider_ride_refresh_seconds": Param(10, int, 3, 600, PROVISIONAL, "rider app re-reads the open ride"),
+    "app.location_min_interval_seconds": Param(10, int, 2, 600, PROVISIONAL, "shortest gap between driver location sends"),
+    "app.location_heartbeat_seconds": Param(30, int, 5, 900, PROVISIONAL, "driver location sent at least this often while still"),
+    "app.location_stopped_warning_seconds": Param(
+        75, int, 15, 3600, PROVISIONAL, "driver warned when no location was sent for this long"
+    ),
+    "app.connection_cut_grace_seconds": Param(15, int, 0, 300, PROVISIONAL, "a shorter socket drop shows as reconnecting, not cut"),
+    "app.socket_ping_seconds": Param(25, int, 5, 120, PROVISIONAL, "app keepalive on the events socket"),
+    "app.offer_eta_choices_minutes": Param([3, 5, 8, 10, 15], list, None, None, PROVISIONAL, "arrival times the driver picks from"),
+    "app.map_zoom": Param(14, int, 3, 19, PROVISIONAL, "map zoom when the apps open"),
     "tenant.block_new_rides_when_suspended": Param(True, bool, None, None, PROPOSED, "OD-08"),
 }
 
@@ -148,6 +162,13 @@ def validate_overrides(overrides):
             if set(value) != {"silver", "gold", "diamond"} or not (0 <= value["silver"] <= value["gold"] <= value["diamond"] <= 100):
                 errors[key] = "Requires 0 <= silver <= gold <= diamond <= 100."
                 continue
+        if key == "app.offer_eta_choices_minutes" and (
+            not 1 <= len(value) <= 8
+            or any(not isinstance(v, int) or isinstance(v, bool) or not 1 <= v <= 180 for v in value)
+            or len(set(value)) != len(value)
+        ):
+            errors[key] = "Use 1 to 8 different whole minutes between 1 and 180."
+            continue
         if key == "drivers.required_documents" and not set(value) <= DOCUMENT_TYPES:
             errors[key] = f"Document types must be among {sorted(DOCUMENT_TYPES)}."
             continue

@@ -24,6 +24,13 @@ class Tenant(models.Model):
     currency_minor_units = models.PositiveSmallIntegerField(default=2)
     time_zone = models.CharField(max_length=64, default="UTC")
     locale = models.CharField(max_length=16, default="ar")
+    # Where the operator runs (D051): set per operator, never in the apps.
+    country = models.CharField(max_length=2, blank=True, default="", help_text="ISO 3166-1 alpha-2, e.g. YE.")
+    currency_symbol = models.CharField(
+        max_length=8, blank=True, default="", help_text="Shown next to amounts, e.g. ر.ي. Empty shows the code."
+    )
+    distance_unit = models.CharField(max_length=2, choices=[("km", "km"), ("mi", "mi")], default="km")
+    phone_country_code = models.CharField(max_length=5, blank=True, default="", help_text="Calling code with +, e.g. +967.")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

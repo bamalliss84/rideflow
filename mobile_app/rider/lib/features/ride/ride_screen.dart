@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/providers.dart';
+import '../../core/app_settings.dart';
 import '../../core/api/api_client.dart';
 import '../../core/api/api_exception.dart';
 import '../../core/format.dart';
@@ -38,7 +39,16 @@ class _RideScreenState extends ConsumerState<RideScreen> {
   @override
   void initState() {
     super.initState();
-    _poll = Timer.periodic(const Duration(seconds: 10), (_) {
+    _startPoll(ref.read(appSettingsProvider).riderRideRefresh);
+    ref.listenManual<AppSettings>(appSettingsProvider, (a, b) {
+      if (a?.riderRideRefresh != b.riderRideRefresh) _startPoll(b.riderRideRefresh);
+    });
+  }
+
+  /// The gap is the operator's `app.rider_ride_refresh_seconds` (D051).
+  void _startPoll(Duration every) {
+    _poll?.cancel();
+    _poll = Timer.periodic(every, (_) {
       final ride = ref.read(rideProvider(widget.rideId)).valueOrNull;
       if (ride == null || !ride.isActive) return;
       _refresh();
