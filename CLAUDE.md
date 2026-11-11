@@ -13,6 +13,7 @@ Read this first, then `docs/CURRENT_STATUS.md` (where work stands) and `docs/pro
 - Never log OTP codes or tokens beyond the existing dev-only behaviour. Never weaken TLS, authentication or test assertions to make checks pass.
 - Don't delete test data, reset databases, or remove SDKs, caches, Docker volumes, emulator data or user files without approval.
 - `.env` and `rider_login.json` (a dev token) must stay out of commits. Don't copy `.env` values into files.
+- Firebase: each app needs `android/app/google-services.json` to build, and the API reads the service account key from `.secrets/firebase-admin.json` (mounted read-only). All three stay out of git. Never print the key's contents.
 
 ## What RideFlow is
 
@@ -136,7 +137,7 @@ Done:
 Not done:
 - Rider app: a full trip ran on the owner's phone. Stops come from a live map with search (D041), on development servers only. 
 - Share-link viewing page.
-- Push sending (Firebase): adapter only, sends nothing. SMS provider: dev only.
+- Push (Firebase project `rideflow-cf3f1`) is built in the API and both apps; it sends once the service account key is at `.secrets/firebase-admin.json`. A test push to each app appeared on the owner's phone (2026-11-12); real trip events not yet seen. SMS provider: dev only.
 - Production map and search provider for the rider app (a paid key needs a backend proxy), and emergency numbers for Mukalla (the owner must supply them).
 - Android verification of camera, GPS and permissions; Flutter in CI; release signing.
 - Rating extras: retaliation detection, delayed updates, required low-rating reason, reminders.

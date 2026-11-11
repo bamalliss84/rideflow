@@ -50,7 +50,7 @@ class ApiClient {
 
   Future<dynamic> patch(String path, {Object? data}) => _send('PATCH', path, data: data);
 
-  Future<dynamic> delete(String path) => _send('DELETE', path);
+  Future<dynamic> delete(String path, {Object? data}) => _send('DELETE', path, data: data);
 
   Future<dynamic> upload(String path, Map<String, dynamic> fields, {String? actionKey}) =>
       _send('POST', path, data: FormData.fromMap(fields), actionKey: actionKey ?? newActionKey());

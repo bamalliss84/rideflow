@@ -134,6 +134,7 @@ class _RiderAppState extends ConsumerState<RiderApp> with WidgetsBindingObserver
       final socket = ref.read(eventsSocketProvider);
       if (next.valueOrNull != null) {
         unawaited(socket.start());
+        unawaited(ref.read(pushRegistrarProvider).register());
       } else if (prev?.valueOrNull != null) {
         unawaited(socket.stop());
       }

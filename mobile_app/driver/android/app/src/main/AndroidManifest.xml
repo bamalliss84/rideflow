@@ -13,6 +13,8 @@
         android:label="RideFlow Driver"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <!-- Pushes from the server use this channel (created in MainActivity). -->
+        <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="rides"/>
         <activity
             android:name=".MainActivity"
             android:exported="true"

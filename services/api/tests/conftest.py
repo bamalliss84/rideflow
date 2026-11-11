@@ -12,6 +12,12 @@ def _reset_context():
     context.set_system()
 
 
+@pytest.fixture(autouse=True)
+def _no_real_push(settings):
+    """Tests never call Google, even on a machine that has the Firebase key; push tests switch it on themselves."""
+    settings.PUSH_PROVIDER = "none"
+
+
 @pytest.fixture
 def ta(db):
     return make_tenant("alpha")

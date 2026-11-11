@@ -4,6 +4,9 @@
 !.env.example
 *.pem
 *.key
+.secrets/
+# Firebase app files: not secret, but kept out of the public history; each machine adds its own copy.
+mobile_app/*/android/app/google-services.json
 
 # Python
 __pycache__/

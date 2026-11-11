@@ -51,7 +51,7 @@ def notify(user, kind, payload):
     group = user_group(tenant.pk, user.pk)
     message = serialize(notification)
     transaction.on_commit(lambda: _send(group, message))
-    transaction.on_commit(lambda: send_push(user, kind, payload))
+    transaction.on_commit(lambda: send_push(user, kind, payload, tenant))
     return notification
 
 

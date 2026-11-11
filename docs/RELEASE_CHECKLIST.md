@@ -7,7 +7,9 @@ section, with the date.
 ## Accounts, codes and messages
 
 - [ ] A real SMS provider for sign-in codes in each country. `OTP_PROVIDER=dev` must be off (settings refuse it without DEBUG). (2026-11-12)
-- [ ] Push notifications through Firebase actually sent; today the adapter sends nothing. (2026-11-12)
+- [ ] Push notifications seen on real phones for every event in `apps/notifications/push.py`, app closed and in the background. Built 2026-11-12; production keeps the service account key in the host's secret store, never in the image. (2026-11-12)
+- [ ] A white notification icon (monochrome drawable) for both apps; Android shows the launcher icon as a grey square in the status bar. (2026-11-12)
+- [ ] Push texts reviewed by the owner, and sent in the person's own app language rather than the operator's default. (2026-11-12)
 - [ ] Emergency number set for each operator (`safety.emergency_phone`); the button stays off while it is empty. Mukalla's numbers come from the owner. (2026-11-12)
 
 ## Maps and search
@@ -33,6 +35,7 @@ section, with the date.
 - [ ] Confirmation sound and vibration. (2026-11-12)
 - [ ] The automated trip journey (`integration_test/ride_flow_test.dart`) run on a physical phone. (2026-11-12)
 - [ ] One shared package for the code both apps copy (`core`, `design`, `shared`), so a fix lands once. (2026-11-12)
+- [ ] Notification permission (Android 13+) is asked at sign-in through Firebase; check the first-run prompt on a fresh install of both apps. (2026-11-12)
 
 ## Operators and settings
 

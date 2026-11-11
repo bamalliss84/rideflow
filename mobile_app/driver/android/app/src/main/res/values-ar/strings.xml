@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="rides_channel">الرحلات</string>
+    <string name="rides_channel_description">الطلبات والتأكيد وتحديثات الرحلة</string>
+</resources>

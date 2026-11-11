@@ -158,7 +158,9 @@ CHANNEL_LAYERS = {
     }
 }
 
-PUSH_PROVIDER = env("PUSH_PROVIDER", "none")
+# Phone notifications through Firebase: on once a service account key path is given (kept outside the repository).
+FIREBASE_CREDENTIALS_FILE = env("FIREBASE_CREDENTIALS_FILE", "")
+PUSH_PROVIDER = env("PUSH_PROVIDER", "fcm" if FIREBASE_CREDENTIALS_FILE else "none")
 TRIP_SHARE_BASE_URL = env("TRIP_SHARE_BASE_URL", "")
 
 REST_FRAMEWORK = {

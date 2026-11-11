@@ -162,6 +162,7 @@ class _DriverAppState extends ConsumerState<DriverApp> with WidgetsBindingObserv
       final socket = ref.read(eventsSocketProvider);
       if (next.valueOrNull != null) {
         unawaited(socket.start());
+        unawaited(ref.read(pushRegistrarProvider).register());
         ref.invalidate(pendingMatchProvider); // restore a pending confirmation after sign-in / restart
       } else if (prev?.valueOrNull != null) {
         unawaited(socket.stop());

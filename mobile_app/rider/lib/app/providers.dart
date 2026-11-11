@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/api/api_client.dart';
 import '../core/app_settings.dart';
+import '../core/push.dart';
 import '../core/api/api_exception.dart';
 import '../core/auth/session_store.dart';
 import '../core/external_apps.dart';
@@ -169,6 +170,7 @@ class AuthController extends AsyncNotifier<Me?> {
   Future<void> signOut() async {
     final tokens = await ref.read(sessionStoreProvider).read();
     try {
+      await ref.read(pushRegistrarProvider).unregister();
       if (tokens != null) await ref.read(riderApiProvider).logout(tokens.refresh);
     } catch (_) {
       // Best effort: the session is cleared locally regardless.
@@ -187,6 +189,10 @@ class AuthController extends AsyncNotifier<Me?> {
 }
 
 final authProvider = AsyncNotifierProvider<AuthController, Me?>(AuthController.new);
+
+/// Phone notifications while the app is closed: Firebase in the app, replaced in tests.
+final pushSourceProvider = Provider<PushSource>((_) => FirebasePushSource());
+final pushRegistrarProvider = Provider<PushRegistrar>((ref) => PushRegistrar(client: ref.watch(apiClientProvider), source: ref.watch(pushSourceProvider)));
 
 // ---------------------------------------------------------------- server state (re-read, never assumed)
 

@@ -4,10 +4,14 @@
     <!-- Foreground location while online / on a trip (dispatch and arrival evidence). No background location. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <!-- Notifications while the app is closed (offers, driver arrived). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
         android:label="RideFlow"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <!-- Pushes from the server use this channel (created in MainActivity). -->
+        <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="rides"/>
         <activity
             android:name=".MainActivity"
             android:exported="true"
