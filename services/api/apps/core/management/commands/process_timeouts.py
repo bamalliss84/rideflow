@@ -5,18 +5,20 @@ from django.db import close_old_connections
 
 
 class Command(BaseCommand):
-    help = "Applies ride timers (bid expiry, driver-confirmation timeout, unmatched expiry) for every tenant."
+    help = "Applies ride timers (bid expiry, driver-confirmation timeout, unmatched expiry) and subscription reminders."
 
     def add_arguments(self, parser):
         parser.add_argument("--loop", type=int, default=0, help="Repeat every N seconds (0 = run once).")
 
     def handle(self, *args, **options):
         from apps.rides.services import process_all_timeouts
+        from apps.subscriptions.services import process_all_reminders
 
         interval = options["loop"]
         while True:
             close_old_connections()
             processed = process_all_timeouts()
+            processed += process_all_reminders()  # throttled to once a minute inside
             if processed or not interval:
                 self.stdout.write(f"timeouts processed: {processed}")
             if not interval:

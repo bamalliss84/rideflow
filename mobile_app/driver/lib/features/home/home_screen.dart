@@ -17,6 +17,7 @@ import '../../core/realtime/events_socket.dart';
 import '../../data/models.dart';
 import '../../design/components.dart';
 import '../../design/tokens.dart';
+import '../battery/battery_screen.dart' show maybeShowBatteryGuide;
 import '../../shared/labels.dart';
 import '../../shared/widgets.dart' show errorMessage, RefRetry, ErrorView;
 import '../history/history_screens.dart' show summarize;
@@ -217,7 +218,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           }
         },
       ));
-    } else if (online.noFix && !online.online) {
+    }
+    final battery = ref.watch(batteryStateProvider).valueOrNull;
+    if (online.online && battery != null && battery.supported && !battery.exempt) {
+      add(Banner2(
+        key: const Key('batteryBanner'),
+        tone: Tone.warning,
+        icon: Icons.battery_alert_rounded,
+        text: t.batteryBanner,
+        actionLabel: t.batteryFix,
+        onAction: () => context.push('/battery'),
+      ));
+    }
+    if (online.noFix && !online.online && !(access == LocationAccess.deniedForever || access == LocationAccess.denied || access == LocationAccess.serviceDisabled)) {
       add(Banner2(tone: Tone.warning, icon: Icons.gps_not_fixed_rounded, text: t.noLocationFix));
     }
     if (!online.online && eligibility.hasValue && !eligibility.value!.eligible) {
@@ -440,6 +453,7 @@ class _AvailabilityHero extends ConsumerWidget {
     final after = ref.read(onlineControllerProvider);
     if (after.noFix) showToast(context, t.noLocationFix, error: true);
     if (after.error != null && after.error!.reasons.isEmpty) showToast(context, errorMessage(context, after.error!), error: true);
+    if (after.online) await maybeShowBatteryGuide(context, ref);
   }
 
   @override

@@ -2255,6 +2255,7 @@ paths:
           enum:
           - compensation_credit
           - discount
+          - referral_credit
           - reversal
           - subscription_payment
           - trial_grant
@@ -2263,6 +2264,7 @@ paths:
           * `trial_grant` - Trial grant
           * `discount` - Renewal discount
           * `compensation_credit` - Compensation credit
+          * `referral_credit` - Referral reward
           * `reversal` - Reversal
       - name: ordering
         required: false
@@ -2456,12 +2458,14 @@ paths:
           - compensation
           - deposit
           - manual
+          - referral
           - trial
         description: |-
           * `deposit` - Approved deposit
           * `trial` - Founder trial
           * `compensation` - No-show compensation credit
           * `manual` - Manual adjustment
+          * `referral` - Referral reward
       tags:
       - admin-subscriptions
       security:
@@ -3538,6 +3542,33 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SubscriptionOverview'
+          description: ''
+  /api/v1/driver/subscription/referral:
+    post:
+      operationId: driver_subscription_referral_create
+      description: A new driver enters the code of the driver who invited them (D052).
+      tags:
+      - driver-subscription
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReferralCodeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReferralCodeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReferralCodeRequest'
+        required: true
+      security:
+      - BearerJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Referral'
           description: ''
   /api/v1/driver/subscription/trial:
     post:
@@ -7229,6 +7260,57 @@ components:
           format: binary
       required:
       - file
+    DriverPlan:
+      type: object
+      description: 'A plan as the driver sees it: what a day costs, how much it saves,
+        and which is the best value (D052).'
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        code:
+          type: string
+          maxLength: 40
+          pattern: ^[-a-zA-Z0-9_]+$
+        name:
+          type: string
+          maxLength: 120
+        price_minor:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        duration_days:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        is_trial:
+          type: boolean
+        is_active:
+          type: boolean
+        sort_order:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        per_day_minor:
+          type: integer
+          readOnly: true
+        saving_pct:
+          type: integer
+          readOnly: true
+        best_value:
+          type: boolean
+          readOnly: true
+      required:
+      - best_value
+      - code
+      - duration_days
+      - id
+      - name
+      - per_day_minor
+      - price_minor
+      - saving_pct
     DriverPosition:
       type: object
       properties:
@@ -7390,6 +7472,19 @@ components:
       - plan_name
       - source
       - starts_at
+    Earnings:
+      type: object
+      properties:
+        days:
+          type: integer
+        trips:
+          type: integer
+        earned_minor:
+          type: integer
+      required:
+      - days
+      - earned_minor
+      - trips
     EffectiveConfig:
       type: object
       properties:
@@ -7549,6 +7644,7 @@ components:
       - trial_grant
       - discount
       - compensation_credit
+      - referral_credit
       - reversal
       type: string
       description: |-
@@ -7556,6 +7652,7 @@ components:
         * `trial_grant` - Trial grant
         * `discount` - Renewal discount
         * `compensation_credit` - Compensation credit
+        * `referral_credit` - Referral reward
         * `reversal` - Reversal
     Estimate:
       type: object
@@ -9300,6 +9397,37 @@ components:
       - generated_at
       - remaining
       - total
+    Referral:
+      type: object
+      properties:
+        code:
+          type: string
+        reward_days:
+          type: integer
+        invited:
+          type: integer
+        rewarded:
+          type: integer
+        days_earned:
+          type: integer
+        can_enter_code:
+          type: boolean
+      required:
+      - can_enter_code
+      - code
+      - days_earned
+      - invited
+      - reward_days
+      - rewarded
+    ReferralCodeRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 12
+      required:
+      - code
     Region:
       type: object
       properties:
@@ -9818,12 +9946,14 @@ components:
       - trial
       - compensation
       - manual
+      - referral
       type: string
       description: |-
         * `deposit` - Approved deposit
         * `trial` - Founder trial
         * `compensation` - No-show compensation credit
         * `manual` - Manual adjustment
+        * `referral` - Referral reward
     StartRequest:
       type: object
       properties:
@@ -9845,10 +9975,18 @@ components:
           allOf:
           - $ref: '#/components/schemas/DriverSubscription'
           nullable: true
+        cover_ends_at:
+          type: string
+          format: date-time
+          nullable: true
+        grace_days:
+          type: integer
+        in_grace:
+          type: boolean
         plans:
           type: array
           items:
-            $ref: '#/components/schemas/SubscriptionPlan'
+            $ref: '#/components/schemas/DriverPlan'
         deposit_accounts:
           type: array
           items:
@@ -9859,12 +9997,21 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DepositClaim'
+        earnings:
+          $ref: '#/components/schemas/Earnings'
+        referral:
+          $ref: '#/components/schemas/Referral'
       required:
+      - cover_ends_at
       - current
       - deposit_accounts
+      - earnings
       - entitled
+      - grace_days
+      - in_grace
       - plans
       - recent_claims
+      - referral
       - renewal_discount_pct
     SubscriptionPlan:
       type: object

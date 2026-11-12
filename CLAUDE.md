@@ -7,7 +7,7 @@ Read this first, then `docs/CURRENT_STATUS.md` (where work stands) and `docs/pro
 - Reply in Arabic, concisely. The owner tests on a real phone and approves designs screen by screen.
 - Designs come before code. Show several models on the canvas, wait for approval, then build. The owner's "don't start" means report and wait.
 - Commit or push only when asked. Push to `main` only after checks pass, then report the CI result.
-- New decisions get the next ID in the decision log (latest: D051). Never rewrite an approved decision or treat a proposal as approved.
+- New decisions get the next ID in the decision log (latest: D052). Never rewrite an approved decision or treat a proposal as approved.
 - Don't invent test results. Say what wasn't run or seen.
 - Don't defer work the owner asked for. Anything that truly must wait goes into `docs/RELEASE_CHECKLIST.md` the same day; review that file before any release for sale.
 - Never log OTP codes or tokens beyond the existing dev-only behaviour. Never weaken TLS, authentication or test assertions to make checks pass.

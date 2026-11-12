@@ -1,3 +1,5 @@
+import secrets
+import time
 from datetime import timedelta
 
 from django.db import IntegrityError, connection, transaction
@@ -16,6 +18,7 @@ from .models import (
     LedgerEntryType,
     SubscriptionLedgerEntry,
     SubscriptionPlan,
+    SubscriptionReminder,
     SubscriptionSource,
 )
 
@@ -163,6 +166,7 @@ def approve_claim(claim, reviewer, note="", request=None):
             data={"subscription_id": str(subscription.pk), "ends_at": subscription.ends_at.isoformat()},
         )
         _notify(claim.driver, "subscription.activated", {"claim_id": str(claim.pk), "ends_at": subscription.ends_at.isoformat()})
+        _reward_referrer(claim, policy)
     return claim
 
 
@@ -247,4 +251,197 @@ def grant_compensation(driver, *, reason_ref, created_by=None):
             reference=reason_ref,
             created_by=created_by,
         )
+    return entry
+
+
+# ---------------------------------------------------------------- D052: plans that sell themselves, reminders, invitations
+
+
+def plan_values(plans):
+    """Per-day price of each paid plan, its saving against the dearest per day, and the best value (D052).
+
+    Worked out from the operator's own plans, so the app never needs numbers of its own."""
+    paid = [p for p in plans if not p.is_trial and p.price_minor > 0 and p.duration_days > 0]
+    per_day = {p.pk: p.price_minor / p.duration_days for p in paid}
+    dearest = max(per_day.values(), default=0)
+    best = min(paid, key=lambda p: (per_day[p.pk], -p.duration_days)) if len(paid) > 1 else None
+    out = {}
+    for p in plans:
+        if p.pk not in per_day:
+            out[p.pk] = {"per_day_minor": 0, "saving_pct": 0, "best_value": False}
+            continue
+        saving = int(round((dearest - per_day[p.pk]) * 100 / dearest)) if dearest else 0
+        out[p.pk] = {
+            "per_day_minor": int(round(per_day[p.pk])),
+            "saving_pct": saving,
+            "best_value": best is not None and p.pk == best.pk,
+        }
+    return out
+
+
+def cover_ends_at(driver):
+    """When the driver's paid or credited time runs out, counting renewals queued after the current one."""
+    return DriverSubscription.objects.filter(driver=driver, is_revoked=False).aggregate(m=Max("ends_at"))["m"]
+
+
+def earnings_last_days(driver, days=30):
+    """Cash fares of completed trips in the last `days`, so the driver can weigh a plan against what it brings in."""
+    from apps.rides.models import Ride, RideStatus
+
+    since = timezone.now() - timedelta(days=days)
+    rows = Ride.objects.filter(driver=driver, status=RideStatus.COMPLETED, completed_at__gte=since)
+    agg = rows.aggregate(total=Sum("agreed_fare_minor"))
+    return {"days": days, "trips": rows.count(), "earned_minor": agg["total"] or 0}
+
+
+_REMINDERS_EVERY = 60
+_last_reminders = {"at": 0.0}
+
+
+def process_all_reminders(force=False):
+    """Worker entry point, at most once a minute: reminds drivers before their cover ends and when it has ended."""
+    if not force and time.monotonic() - _last_reminders["at"] < _REMINDERS_EVERY:
+        return 0
+    _last_reminders["at"] = time.monotonic()
+    from apps.core.context import system_context, tenant_context
+    from apps.tenancy.models import Tenant
+
+    sent = 0
+    with system_context():
+        tenants = list(Tenant.objects.all())
+    for tenant in tenants:
+        with tenant_context(tenant):
+            sent += send_reminders()
+    return sent
+
+
+def send_reminders(now=None):
+    """For the current tenant. Only the nearest reminder due is sent, so a worker that was down doesn't send a burst."""
+    policy = current_policy()
+    now = now or timezone.now()
+    days = sorted(policy["subscriptions.reminder_days"], reverse=True)
+    horizon = now + timedelta(days=max(days, default=0))
+    grace = timedelta(days=policy["subscriptions.grace_days"])
+    ends = (
+        DriverSubscription.objects.filter(is_revoked=False)
+        .values("driver")
+        .annotate(end=Max("ends_at"))
+        .filter(end__lte=horizon, end__gte=now - max(grace, timedelta(days=1)))
+    )
+    sent = 0
+    from apps.drivers.models import DriverProfile
+
+    for row in ends:
+        end = row["end"]
+        if end > now:
+            due = [d for d in days if end - timedelta(days=d) <= now]
+            if not due:
+                continue
+            nearest = min(due)
+            kind = f"before:{nearest}"
+            payload = {"ends_at": end.isoformat(), "days_left": max(1, -(-int((end - now).total_seconds()) // 86400))}
+            notify_kind = "subscription.expiring"
+            skip = [f"before:{d}" for d in due if d != nearest]  # older ones that were never sent stay unsent
+        else:
+            kind, notify_kind, skip = "ended", "subscription.expired", []
+            payload = {"ends_at": end.isoformat(), "grace_until": (end + grace).isoformat() if grace else None}
+        if SubscriptionReminder.objects.filter(driver_id=row["driver"], ends_at=end, kind__in=[kind]).exists():
+            continue
+        with transaction.atomic():
+            try:
+                with transaction.atomic():
+                    SubscriptionReminder.objects.create(driver_id=row["driver"], ends_at=end, kind=kind)
+                    for k in skip:
+                        SubscriptionReminder.objects.get_or_create(driver_id=row["driver"], ends_at=end, kind=k)
+            except IntegrityError:
+                continue  # another worker sent it
+            driver = DriverProfile.objects.select_related("user").get(pk=row["driver"])
+            _notify(driver, notify_kind, payload)
+            sent += 1
+    return sent
+
+
+_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # no 0/O or 1/I to misread
+
+
+def referral_code(driver):
+    """The driver's own code, made the first time it is asked for."""
+    if driver.referral_code:
+        return driver.referral_code
+    for _ in range(10):
+        code = "".join(secrets.choice(_CODE_ALPHABET) for _ in range(6))
+        try:
+            with transaction.atomic():
+                type(driver).objects.filter(pk=driver.pk, referral_code="").update(referral_code=code)
+        except IntegrityError:
+            continue
+        driver.refresh_from_db(fields=["referral_code"])
+        return driver.referral_code
+    raise Conflict("Could not make a referral code; try again.", code="referral_code_busy")
+
+
+def has_paid_plan(driver):
+    return DriverSubscription.objects.filter(driver=driver, source=SubscriptionSource.DEPOSIT).exists()
+
+
+def use_referral_code(driver, code, request=None):
+    """A new driver says who invited them. Once, before their first paid plan, and never their own code."""
+    from apps.drivers.models import DriverProfile
+
+    code = (code or "").strip().upper()
+    if driver.referred_by_id:
+        raise Conflict("You already entered an invitation code.", code="referral_already_set")
+    if has_paid_plan(driver):
+        raise BusinessRuleViolation("Invitation codes are for drivers before their first plan.", code="referral_too_late")
+    inviter = DriverProfile.objects.filter(referral_code=code).exclude(referral_code="").first() if code else None
+    if inviter is None:
+        raise BusinessRuleViolation("This invitation code is not valid.", code="referral_invalid")
+    if inviter.pk == driver.pk:
+        raise BusinessRuleViolation("You can't use your own code.", code="referral_self")
+    updated = type(driver).objects.filter(pk=driver.pk, referred_by__isnull=True).update(referred_by=inviter)
+    if not updated:
+        raise Conflict("You already entered an invitation code.", code="referral_already_set")
+    driver.referred_by = inviter
+    audit.record("subscription.referral_used", request=request, target=driver, data={"inviter": str(inviter.pk)})
+    return inviter
+
+
+def referral_summary(driver, policy=None):
+    from apps.drivers.models import DriverProfile
+
+    policy = policy or current_policy()
+    invited = DriverProfile.objects.filter(referred_by=driver)
+    rewarded = SubscriptionLedgerEntry.objects.filter(driver=driver, entry_type=LedgerEntryType.REFERRAL_CREDIT)
+    return {
+        "code": referral_code(driver) if policy["rewards.referral_days"] > 0 else "",
+        "reward_days": policy["rewards.referral_days"],
+        "invited": invited.count(),
+        "rewarded": rewarded.count(),
+        "days_earned": rewarded.aggregate(s=Sum("days"))["s"] or 0,
+        "can_enter_code": policy["rewards.referral_days"] > 0 and not driver.referred_by_id and not has_paid_plan(driver),
+    }
+
+
+def _reward_referrer(claim, policy):
+    """Inside the approval: the inviter gets their days on the invitee's first paid plan, once per invitee."""
+    driver = claim.driver
+    days = policy["rewards.referral_days"]
+    if days <= 0 or not driver.referred_by_id:
+        return None
+    if DriverSubscription.objects.filter(driver=driver, source=SubscriptionSource.DEPOSIT).exclude(claim=claim).exists():
+        return None  # not the first paid plan
+    reference = f"referral:{driver.pk}"
+    if SubscriptionLedgerEntry.objects.filter(entry_type=LedgerEntryType.REFERRAL_CREDIT, reference=reference).exists():
+        return None
+    inviter = driver.referred_by
+    subscription = _extend(inviter, days=days, source=SubscriptionSource.REFERRAL)
+    entry = SubscriptionLedgerEntry.objects.create(
+        driver=inviter,
+        entry_type=LedgerEntryType.REFERRAL_CREDIT,
+        currency=require_tenant().currency,
+        days=days,
+        subscription=subscription,
+        reference=reference,
+    )
+    _notify(inviter, "subscription.referral_reward", {"days": days, "ends_at": subscription.ends_at.isoformat()})
     return entry

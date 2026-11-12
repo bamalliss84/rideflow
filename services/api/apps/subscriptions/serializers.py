@@ -127,13 +127,61 @@ class LedgerEntrySerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class DriverPlanSerializer(SubscriptionPlanSerializer):
+    """A plan as the driver sees it: what a day costs, how much it saves, and which is the best value (D052)."""
+
+    per_day_minor = serializers.SerializerMethodField()
+    saving_pct = serializers.SerializerMethodField()
+    best_value = serializers.SerializerMethodField()
+
+    class Meta(SubscriptionPlanSerializer.Meta):
+        fields = [*SubscriptionPlanSerializer.Meta.fields, "per_day_minor", "saving_pct", "best_value"]
+
+    def _value(self, obj):
+        return self.context["values"][obj.pk]
+
+    def get_per_day_minor(self, obj) -> int:
+        return self._value(obj)["per_day_minor"]
+
+    def get_saving_pct(self, obj) -> int:
+        return self._value(obj)["saving_pct"]
+
+    def get_best_value(self, obj) -> bool:
+        return self._value(obj)["best_value"]
+
+
+class EarningsSerializer(serializers.Serializer):
+    days = serializers.IntegerField()
+    trips = serializers.IntegerField()
+    earned_minor = serializers.IntegerField()
+
+
+class ReferralSerializer(serializers.Serializer):
+    code = serializers.CharField(allow_blank=True)
+    reward_days = serializers.IntegerField()
+    invited = serializers.IntegerField()
+    rewarded = serializers.IntegerField()
+    days_earned = serializers.IntegerField()
+    can_enter_code = serializers.BooleanField()
+
+
 class SubscriptionOverviewSerializer(serializers.Serializer):
     entitled = serializers.BooleanField()
     current = DriverSubscriptionSerializer(allow_null=True)
-    plans = SubscriptionPlanSerializer(many=True)
+    # The end of all paid or credited time, renewals included, and the grace after it (D052).
+    cover_ends_at = serializers.DateTimeField(allow_null=True)
+    grace_days = serializers.IntegerField()
+    in_grace = serializers.BooleanField()
+    plans = DriverPlanSerializer(many=True)
     deposit_accounts = DepositAccountSerializer(many=True)
     renewal_discount_pct = serializers.IntegerField()
     recent_claims = DepositClaimSerializer(many=True)
+    earnings = EarningsSerializer()
+    referral = ReferralSerializer()
+
+
+class ReferralCodeSerializer(serializers.Serializer):
+    code = serializers.CharField(max_length=12)
 
 
 class DecisionNoteSerializer(serializers.Serializer):

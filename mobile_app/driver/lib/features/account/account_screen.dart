@@ -51,6 +51,7 @@ class AccountScreen extends ConsumerWidget {
           RfRow(title: t.subscriptionTitle, leading: const RfRowIcon(Icons.workspace_premium_outlined), trailing: chevron, onTap: () => context.push('/subscription')),
           RfRow(title: t.notificationsTitle, leading: const RfRowIcon(Icons.notifications_none_rounded), trailing: chevron, onTap: () => context.push('/notifications')),
           RfRow(key: const Key('howItWorks'), title: t.howItWorks, leading: const RfRowIcon(Icons.schedule_rounded), trailing: chevron, onTap: () => context.push('/waits')),
+          RfRow(key: const Key('batteryGuide'), title: t.batteryGuide, leading: const RfRowIcon(Icons.battery_saver_rounded), trailing: chevron, onTap: () => context.push('/battery')),
         ]),
         RfGroup(title: t.trustTitle, children: [
           AsyncBody<TrustSnapshot>(

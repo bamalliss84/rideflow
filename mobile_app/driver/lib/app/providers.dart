@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/battery.dart';
 import '../core/api/api_client.dart';
 import '../core/app_settings.dart';
 import '../core/push.dart';
@@ -30,6 +31,8 @@ final apiClientProvider = Provider<ApiClient>((ref) {
 final driverApiProvider = Provider<DriverApi>((ref) => DriverApi(ref.watch(apiClientProvider)));
 final locationServiceProvider = Provider<LocationService>((ref) => LocationService());
 final externalAppsProvider = Provider<ExternalApps>((ref) => const ExternalApps());
+final batteryGuardProvider = Provider<BatteryGuard>((ref) => const BatteryGuard());
+final batteryStateProvider = FutureProvider.autoDispose<BatteryState>((ref) => ref.watch(batteryGuardProvider).state());
 
 final photoPickerProvider = Provider<PhotoPicker>((ref) => const PhotoPicker());
 

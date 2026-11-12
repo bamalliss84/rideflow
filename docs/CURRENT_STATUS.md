@@ -1,33 +1,32 @@
 # RideFlow current status
 
-The Git and test sections were last updated on 2026-11-05. The sections on the environment problem, the server and out-of-date documents were last checked on 2026-11-02. Update this file whenever the state changes. Decisions live in `project-management/06_DECISION_LOG.md`.
+The Git and test sections were last updated on 2026-11-12. The sections on the environment problem, the server and out-of-date documents were last checked on 2026-11-02. Update this file whenever the state changes. Decisions live in `project-management/06_DECISION_LOG.md`.
 
 ## Git
 
 | | |
 |---|---|
-| Branch | `main`, ahead of `origin/main` by the commits since the last push (`git log origin/main..HEAD`); not pushed |
-| Last commits | D040-D047: rider additions, rider app, layout models, arrival without location, driver photo |
-| Uncommitted | Nothing, apart from the two files below |
-| Must stay out of commits | `rider_login.json` (dev token, untracked), `.env` (ignored) |
+| Branch | `main`; pushed up to `68b3a80` (push notifications), CI passed on it and on `ba581bf` |
+| Last commits | `ba581bf` D050/D051, socket grace, background location; `68b3a80` Firebase push |
+| Uncommitted | D052 (subscriptions: reminders, grace, plan value, invitations) in the API, portal, contract and docs; the driver battery guide. All checks pass; held for the owner's go-ahead |
+| Must stay out of commits | `rider_login.json` (dev token), `.env`, `.secrets/` (Firebase key), `mobile_app/*/android/app/google-services.json` (all ignored) |
 
-## Tests and CI
+## Tests and CI (2026-11-12)
 
 | Check | Result | Covers |
 |---|---|---|
-| CI | Not run on the unpushed commits. CI doesn't run Flutter | Last read on `39b75a6` |
-| Backend `pytest` | Passed, 210 tests | D047 included |
-| `ruff check`, `ruff format --check`, `makemigrations --check` | Passed | D047 included |
-| OpenAPI contract and portal types | Regenerated | D047 included |
-| Portal `typecheck` and `lint` | Passed | D047 included |
-| Driver `flutter analyze` and `flutter test` | Clean; 79 passed, 1 skipped | D047 included |
-| Rider `flutter analyze` and `flutter test` | Clean; 40 passed, 1 skipped | D047 included |
+| CI | Passed on `68b3a80`. CI doesn't run Flutter | Not run on D052 |
+| Backend `pytest` | Passed, no failures | D052 included (`test_subscription_growth.py`, `test_push.py`) |
+| `ruff check`, `ruff format --check`, `makemigrations --check` | Passed | D052 included |
+| OpenAPI contract and portal types | Regenerated; contract matches | D052 included |
+| Portal `typecheck` and `lint` | Passed; admin container rebuilt | D052 included |
+| Driver `flutter analyze` and `flutter test` | Clean; 108 passed, 1 skipped | Push, background location, battery guide |
+| Rider `flutter analyze` and `flutter test` | Clean; 56 passed, 1 skipped | Push |
 
-Not run on the current work: `next build`, Playwright e2e (`apps/admin/e2e`), `integration_test/ride_flow_test.dart` (not run since trip model 1), `test/live`.
+Seen on the phone by the owner (2026-11-12): new arrival time choices from the portal; a test push in both apps. On the Infinix (XOS), its own freezer (`com.transsion.usf`) freezes the driver app seconds after the screen locks, even with the foreground location service and the Android battery exemption. While frozen, pushes wait until unlock and location stops. With the phone's "background power saving" turned off, a push posted 10 seconds after sending with the screen locked; location still arrives only now and then. The driver app now has a battery guide (account tab, a home banner, and opened once on first going online): the Android exemption, steps per phone maker, and locking the app in recent apps; the owner tried it on the phone (2026-11-12). Not yet seen: steady location with the screen off, "send my location now" feedback, a push from a real trip event, any D052 reminder.
 
-Seen on the phone by the owner: a driver photo appearing (D047). Which screens were checked wasn't stated.
+Canvas (version 53): `Rider-Flow-A` (the rider's whole flow in direction A, day and night; home has two models) and `Driver-Subscription-A` (D052 screens, night and day; "My subscription" has two models). Both wait for the owner's choice; nothing of them is coded yet.
 
-Seen only in tests, not on a screen: the portal's photo preview and remove buttons (D047).
 
 ## Android on the real phone
 

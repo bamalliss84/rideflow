@@ -247,4 +247,17 @@ D051 APPROVED by owner 2026-11-11: Any country, and every setting from the serve
 - Rationale: the owner wants the product to work in any country and to change behaviour from the portal without a new app release.
 - Impact: tenant model and platform portal, `apps/tenancy/policy.py`, a new app settings endpoint, both apps' formatting and timers.
 
+D052 APPROVED by owner 2026-11-12: Subscriptions that keep drivers and sell longer plans (the proposal given on 2026-11-12, accepted as proposed).
+- Reminders before the end: the driver is notified (push and in the app) a set number of days before the cover ends, by default 3 and 1, and again when it ends. Operator setting `subscriptions.reminder_days`; only the nearest due reminder is sent, never twice.
+- Grace: a short grace after the end so a late renewal doesn't cost a day's work, by default 1 day (`subscriptions.grace_days`, was 0).
+- Longer plans cheaper per day: the app shows each plan's price per day, its saving against the dearest per day, and marks the best value. All worked out from the operator's own plans; nothing is hard-coded.
+- Early renewal discount: D011's renewal discount stays an operator setting (off by default; its values remain proposals under D011).
+- Invitations: every driver has a code; a new driver may enter one before their first paid plan, and the inviter gets free days when that driver's first deposit is approved, once per invitee (`rewards.referral_days`, default 7, 0 turns it off).
+- Expiry screen: shows what the driver earned in cash over the last 30 days next to the plan price, so renewing is an easy choice.
+- Not changed: drivers still pay by bank deposit with a receipt approved by the operator (D026); no commission.
+- Next: the driver's subscription screens and reminders in direction A on the canvas; no app screen is coded before that board is approved.
+- Rationale: the owner asked what happens when a plan ends and how to make plans attractive and profitable.
+- Impact: `apps/subscriptions` (reminders, plan values, invitations, earnings in the overview), `apps/drivers` (referral code), worker, push texts, portal settings, contract.
+- Linked tests: `services/api/tests/test_subscription_growth.py`.
+
 Rule: New decisions get sequential ID, date, approver, rationale, impact and linked task. Never silently reinterpret proposals as approved.

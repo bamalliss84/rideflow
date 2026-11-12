@@ -78,6 +78,7 @@ class SubscriptionSource(models.TextChoices):
     TRIAL = "trial", "Founder trial"
     COMPENSATION = "compensation", "No-show compensation credit"
     MANUAL = "manual", "Manual adjustment"
+    REFERRAL = "referral", "Referral reward"
 
 
 class DriverSubscription(TenantScopedModel):
@@ -100,6 +101,7 @@ class LedgerEntryType(models.TextChoices):
     TRIAL_GRANT = "trial_grant", "Trial grant"
     DISCOUNT = "discount", "Renewal discount"
     COMPENSATION_CREDIT = "compensation_credit", "Compensation credit"
+    REFERRAL_CREDIT = "referral_credit", "Referral reward"
     REVERSAL = "reversal", "Reversal"
 
 
@@ -120,3 +122,15 @@ class SubscriptionLedgerEntry(AppendOnlyMixin, TenantScopedModel):
     class Meta:
         ordering = ["-created_at"]
         indexes = [models.Index(fields=["tenant", "driver", "created_at"])]
+
+
+class SubscriptionReminder(TenantScopedModel):
+    """One row per reminder sent, so the worker never sends the same one twice (D052)."""
+
+    driver = models.ForeignKey("drivers.DriverProfile", on_delete=models.CASCADE, related_name="+")
+    # The end of cover the reminder was about; a renewal moves it, so the next period gets its own reminders.
+    ends_at = models.DateTimeField()
+    kind = models.CharField(max_length=16)  # "before:3", "before:1", "ended"
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["tenant", "driver", "ends_at", "kind"], name="one_reminder_per_period")]

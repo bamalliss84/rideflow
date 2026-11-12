@@ -1585,6 +1585,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/driver/subscription/referral": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description A new driver enters the code of the driver who invited them (D052). */
+        post: operations["driver_subscription_referral_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/driver/subscription/trial": {
         parameters: {
             query?: never;
@@ -3173,6 +3190,22 @@ export interface components {
             /** Format: binary */
             file: string;
         };
+        /** @description A plan as the driver sees it: what a day costs, how much it saves, and which is the best value (D052). */
+        DriverPlan: {
+            /** Format: uuid */
+            readonly id: string;
+            code: string;
+            name: string;
+            /** Format: int64 */
+            price_minor: number;
+            duration_days: number;
+            is_trial?: boolean;
+            is_active?: boolean;
+            sort_order?: number;
+            readonly per_day_minor: number;
+            readonly saving_pct: number;
+            readonly best_value: boolean;
+        };
         DriverPosition: {
             /** Format: double */
             lat: number;
@@ -3229,6 +3262,11 @@ export interface components {
             readonly is_revoked: boolean;
             /** Format: date-time */
             readonly created_at: string;
+        };
+        Earnings: {
+            days: number;
+            trips: number;
+            earned_minor: number;
         };
         EffectiveConfig: {
             version: number;
@@ -3292,10 +3330,11 @@ export interface components {
          *     * `trial_grant` - Trial grant
          *     * `discount` - Renewal discount
          *     * `compensation_credit` - Compensation credit
+         *     * `referral_credit` - Referral reward
          *     * `reversal` - Reversal
          * @enum {string}
          */
-        EntryTypeEnum: "subscription_payment" | "trial_grant" | "discount" | "compensation_credit" | "reversal";
+        EntryTypeEnum: "subscription_payment" | "trial_grant" | "discount" | "compensation_credit" | "referral_credit" | "reversal";
         Estimate: {
             min_minor: number;
             max_minor: number;
@@ -4123,6 +4162,17 @@ export interface components {
             /** Format: date-time */
             generated_at: string | null;
         };
+        Referral: {
+            code: string;
+            reward_days: number;
+            invited: number;
+            rewarded: number;
+            days_earned: number;
+            can_enter_code: boolean;
+        };
+        ReferralCodeRequest: {
+            code: string;
+        };
         Region: {
             operator_name: string;
             country: string;
@@ -4339,9 +4389,10 @@ export interface components {
          *     * `trial` - Founder trial
          *     * `compensation` - No-show compensation credit
          *     * `manual` - Manual adjustment
+         *     * `referral` - Referral reward
          * @enum {string}
          */
-        SourceEnum: "deposit" | "trial" | "compensation" | "manual";
+        SourceEnum: "deposit" | "trial" | "compensation" | "manual" | "referral";
         StartRequest: {
             expected_version: number;
             /** @default  */
@@ -4350,10 +4401,16 @@ export interface components {
         SubscriptionOverview: {
             entitled: boolean;
             current: components["schemas"]["DriverSubscription"] | null;
-            plans: components["schemas"]["SubscriptionPlan"][];
+            /** Format: date-time */
+            cover_ends_at: string | null;
+            grace_days: number;
+            in_grace: boolean;
+            plans: components["schemas"]["DriverPlan"][];
             deposit_accounts: components["schemas"]["DepositAccount"][];
             renewal_discount_pct: number;
             recent_claims: components["schemas"]["DepositClaim"][];
+            earnings: components["schemas"]["Earnings"];
+            referral: components["schemas"]["Referral"];
         };
         SubscriptionPlan: {
             /** Format: uuid */
@@ -6336,9 +6393,10 @@ export interface operations {
                  *     * `trial_grant` - Trial grant
                  *     * `discount` - Renewal discount
                  *     * `compensation_credit` - Compensation credit
+                 *     * `referral_credit` - Referral reward
                  *     * `reversal` - Reversal
                  */
-                entry_type?: "compensation_credit" | "discount" | "reversal" | "subscription_payment" | "trial_grant";
+                entry_type?: "compensation_credit" | "discount" | "referral_credit" | "reversal" | "subscription_payment" | "trial_grant";
                 /** @description أي حقل يجب استخدامه عند ترتيب النتائج. */
                 ordering?: string;
                 /** @description رقم الصفحة ضمن النتائج المقسمة. */
@@ -6497,8 +6555,9 @@ export interface operations {
                  *     * `trial` - Founder trial
                  *     * `compensation` - No-show compensation credit
                  *     * `manual` - Manual adjustment
+                 *     * `referral` - Referral reward
                  */
-                source?: "compensation" | "deposit" | "manual" | "trial";
+                source?: "compensation" | "deposit" | "manual" | "referral" | "trial";
             };
             header?: never;
             path?: never;
@@ -7521,6 +7580,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SubscriptionOverview"];
+                };
+            };
+        };
+    };
+    driver_subscription_referral_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReferralCodeRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReferralCodeRequest"];
+                "multipart/form-data": components["schemas"]["ReferralCodeRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Referral"];
                 };
             };
         };

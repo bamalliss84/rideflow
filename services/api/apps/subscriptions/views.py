@@ -1,3 +1,4 @@
+from django.utils import timezone
 from django_filters import rest_framework as filters
 from drf_spectacular.utils import extend_schema
 from rest_framework import mixins, status, viewsets
@@ -13,6 +14,7 @@ from apps.core.idempotency import idempotent
 from apps.core.permissions import IsDriver, TenantPermission
 from apps.core.views import schema_safe
 from apps.drivers.services import get_driver_for_user
+from apps.tenancy.policy import current_policy
 
 from . import services
 from .models import DepositAccount, DepositClaim, DriverSubscription, SubscriptionLedgerEntry, SubscriptionPlan
@@ -21,8 +23,11 @@ from .serializers import (
     DepositAccountSerializer,
     DepositClaimCreateSerializer,
     DepositClaimSerializer,
+    DriverPlanSerializer,
     DriverSubscriptionSerializer,
     LedgerEntrySerializer,
+    ReferralCodeSerializer,
+    ReferralSerializer,
     SubscriptionOverviewSerializer,
     SubscriptionPlanSerializer,
 )
@@ -35,17 +40,41 @@ class DriverSubscriptionOverviewView(APIView):
     @extend_schema(responses=SubscriptionOverviewSerializer)
     def get(self, request):
         driver = get_driver_for_user(request.user)
-        current = services.active_subscription(driver)
+        policy = current_policy()
+        current = services.active_subscription(driver, policy)
+        plans = list(SubscriptionPlan.objects.filter(is_active=True))
+        cover_end = services.cover_ends_at(driver)
         return Response(
             {
                 "entitled": current is not None,
                 "current": DriverSubscriptionSerializer(current).data if current else None,
-                "plans": SubscriptionPlanSerializer(SubscriptionPlan.objects.filter(is_active=True), many=True).data,
+                "cover_ends_at": cover_end,
+                "grace_days": policy["subscriptions.grace_days"],
+                "in_grace": current is not None and cover_end is not None and cover_end < timezone.now(),
+                "plans": DriverPlanSerializer(plans, many=True, context={"values": services.plan_values(plans)}).data,
                 "deposit_accounts": DepositAccountSerializer(DepositAccount.objects.filter(is_active=True), many=True).data,
-                "renewal_discount_pct": services.renewal_discount_pct(driver),
+                "renewal_discount_pct": services.renewal_discount_pct(driver, policy),
                 "recent_claims": DepositClaimSerializer(DepositClaim.objects.filter(driver=driver)[:10], many=True).data,
+                "earnings": services.earnings_last_days(driver),
+                "referral": services.referral_summary(driver, policy),
             }
         )
+
+
+@extend_schema(tags=["driver-subscription"])
+class DriverReferralView(APIView):
+    """A new driver enters the code of the driver who invited them (D052)."""
+
+    permission_classes = [IsDriver]
+
+    @extend_schema(request=ReferralCodeSerializer, responses=ReferralSerializer)
+    @idempotent("driver.referral")
+    def post(self, request):
+        serializer = ReferralCodeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        driver = get_driver_for_user(request.user)
+        services.use_referral_code(driver, serializer.validated_data["code"], request=request)
+        return Response(services.referral_summary(driver))
 
 
 @extend_schema(tags=["driver-subscription"])

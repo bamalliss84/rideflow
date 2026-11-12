@@ -79,6 +79,14 @@ function validate(param: Param, value: unknown, p: Dictionary["policy"], tpl: (s
       new Set(list).size === list.length;
     if (!ok) return p.errors.choices;
   }
+  if (param.key === "subscriptions.reminder_days") {
+    const list = Array.isArray(value) ? (value as unknown[]) : [];
+    const ok =
+      list.length <= 5 &&
+      list.every((v) => typeof v === "number" && Number.isInteger(v) && v >= 1 && v <= 30) &&
+      new Set(list).size === list.length;
+    if (!ok) return p.errors.reminderDays;
+  }
   if (param.key === "trust.tier_thresholds" && value && typeof value === "object") {
     const v = value as Record<string, number>;
     if (!(0 <= v.silver! && v.silver! <= v.gold! && v.gold! <= v.diamond! && v.diamond! <= 100)) return p.errors.tiers;
@@ -190,7 +198,7 @@ export default function PolicyPage() {
         </div>
       );
     }
-    if (param.key === "app.offer_eta_choices_minutes") {
+    if (param.key === "app.offer_eta_choices_minutes" || param.key === "subscriptions.reminder_days") {
       // Typed as "3, 5, 8": anything that isn't a whole number is kept as text so the check above flags it.
       const text = Array.isArray(value) ? (value as unknown[]).join(", ") : "";
       return (

@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 
 import '../core/realtime/events_socket.dart';
 import '../data/models.dart';
+import '../features/battery/battery_screen.dart';
 import '../features/account/account_screen.dart';
 import '../features/auth/login_screen.dart';
 import '../features/confirm/confirm_screen.dart';
@@ -57,6 +58,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/subscription', builder: (_, __) => const SubscriptionScreen()),
       GoRoute(path: '/notifications', builder: (_, __) => const NotificationsScreen()),
       GoRoute(path: '/waits', builder: (_, __) => const WaitTimesScreen()),
+      GoRoute(path: '/battery', builder: (_, __) => const BatteryGuideScreen()),
     ],
   );
 });

@@ -59,6 +59,27 @@ TEXTS = {
         "You can go online and receive requests.",
         86400,
     ),
+    "subscription.expiring": (
+        "اشتراكك ينتهي قريبًا",
+        "باقي {days_left} يوم. جدّد الآن لتستمر في استقبال الطلبات.",
+        "Your subscription ends soon",
+        "{days_left} day(s) left. Renew now to keep receiving requests.",
+        86400,
+    ),
+    "subscription.expired": (
+        "انتهى اشتراكك",
+        "جدّد الآن لتعود لاستقبال الطلبات.",
+        "Your subscription has ended",
+        "Renew now to receive requests again.",
+        86400,
+    ),
+    "subscription.referral_reward": (
+        "حصلت على أيام مجانية",
+        "سائق دعوته اشترك، وأضفنا {days} يوم لاشتراكك.",
+        "You earned free days",
+        "A driver you invited subscribed: {days} day(s) were added to yours.",
+        86400,
+    ),
     "subscription.claim_rejected": (
         "لم يُقبل إيصال الإيداع",
         "افتح التطبيق لمعرفة السبب.",

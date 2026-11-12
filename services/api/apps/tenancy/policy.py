@@ -97,13 +97,17 @@ PARAMS = {
         "D013 legal list pending",
     ),
     "subscriptions.required_for_online": Param(True, bool, None, None, APPROVED, "D003 driver subscription model"),
-    "subscriptions.grace_days": Param(0, int, 0, 30, PROVISIONAL, ""),
+    "subscriptions.grace_days": Param(1, int, 0, 30, PROVISIONAL, "D052: a short grace so a late renewal doesn't cost a day's work"),
+    "subscriptions.reminder_days": Param([3, 1], list, None, None, PROVISIONAL, "D052: days before the end the driver is reminded"),
     "subscriptions.dual_approval": Param(False, bool, None, None, PROPOSED, "maker-checker preferred (BUSINESS_RULES §8)"),
     "subscriptions.founder_trial_max_drivers": Param(100, int, 0, 100000, PROPOSED, "D009"),
     # Rewards and compensation (D011 proposed, D015 open) - disabled until approved
     "rewards.renewal_discount_enabled": Param(False, bool, None, None, PROPOSED, "D011"),
     "rewards.renewal_discount_pct": Param(10, int, 0, 50, PROPOSED, "D011 (10–15%)"),
     "rewards.min_tier": Param("gold", str, None, None, PROVISIONAL, ""),
+    "rewards.referral_days": Param(
+        7, int, 0, 90, PROVISIONAL, "D052: free days for a driver whose invitee pays a first plan; 0 = off"
+    ),
     "compensation.enabled": Param(False, bool, None, None, PROVISIONAL, "D015 OPEN: disabled until approved"),
     "compensation.days_per_verified_no_show": Param(0, int, 0, 30, PROVISIONAL, "D015 OPEN"),
     "compensation.max_days_per_driver_month": Param(0, int, 0, 31, PROVISIONAL, "D015 OPEN"),
@@ -168,6 +172,13 @@ def validate_overrides(overrides):
             or len(set(value)) != len(value)
         ):
             errors[key] = "Use 1 to 8 different whole minutes between 1 and 180."
+            continue
+        if key == "subscriptions.reminder_days" and (
+            len(value) > 5
+            or any(not isinstance(v, int) or isinstance(v, bool) or not 1 <= v <= 30 for v in value)
+            or len(set(value)) != len(value)
+        ):
+            errors[key] = "Use up to 5 different whole days between 1 and 30."
             continue
         if key == "drivers.required_documents" and not set(value) <= DOCUMENT_TYPES:
             errors[key] = f"Document types must be among {sorted(DOCUMENT_TYPES)}."

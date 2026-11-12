@@ -118,7 +118,10 @@ def test_subscription_expiry_removes_entitlement(ta):
     api = api_for(ta, driver.user)
     assert api.get("/api/v1/driver/eligibility").data["eligible"] is True
     with tenant_context(ta.tenant):
-        DriverSubscription.objects.filter(driver=driver).update(ends_at=timezone.now() - timedelta(hours=1))
+        # Past the operator's grace (one day by default, D052).
+        DriverSubscription.objects.filter(driver=driver).update(
+            starts_at=timezone.now() - timedelta(days=31), ends_at=timezone.now() - timedelta(days=1, hours=1)
+        )
     body = api.get("/api/v1/driver/eligibility").data
     assert body["eligible"] is False and "subscription_inactive" in body["reasons"]
 

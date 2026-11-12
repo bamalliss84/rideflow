@@ -44,9 +44,17 @@ class DriverProfile(TenantScopedModel):
     photo = models.FileField(upload_to=tenant_upload_to("driver-photos"), max_length=255, blank=True)
     photo_content_type = models.CharField(max_length=32, blank=True)
     photo_updated_at = models.DateTimeField(null=True, blank=True)
+    # Invitations (D052): a driver shares their code; the one who joins with it gives them free days on a first paid plan.
+    referral_code = models.CharField(max_length=12, blank=True)
+    referred_by = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
 
     class Meta:
-        constraints = [models.UniqueConstraint(fields=["tenant", "user"], name="uniq_driver_profile_per_tenant")]
+        constraints = [
+            models.UniqueConstraint(fields=["tenant", "user"], name="uniq_driver_profile_per_tenant"),
+            models.UniqueConstraint(
+                fields=["tenant", "referral_code"], condition=~models.Q(referral_code=""), name="uniq_referral_code_per_tenant"
+            ),
+        ]
         indexes = [models.Index(fields=["tenant", "status", "is_online"])]
 
     def __str__(self):

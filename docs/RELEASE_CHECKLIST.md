@@ -51,3 +51,4 @@ section, with the date.
 
 - [ ] Open decisions D013, D014 and D015 closed; proposals D009 to D011 approved or replaced. (2026-11-12)
 - [ ] Terms of use and privacy policy for each country an operator runs in. (2026-11-12)
+- Driver app battery guide: built (2026-11-12). Before release, declare REQUEST_IGNORE_BATTERY_OPTIMIZATIONS in the Play Console (allowed for apps that track location for live work) and check the maker shortcuts on Tecno, Xiaomi and Samsung phones. Background: On Infinix/Tecno (XOS) the system freezes the app seconds after the screen locks: pushes wait until unlock and location stops. Turning off "background power saving" fixed pushes on the owner's phone (2026-11-12); location stayed patchy.

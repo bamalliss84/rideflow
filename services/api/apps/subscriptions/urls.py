@@ -14,5 +14,6 @@ router.register("admin/subscription-ledger", views.AdminLedgerViewSet, basename=
 urlpatterns = [
     path("driver/subscription", views.DriverSubscriptionOverviewView.as_view(), name="driver-subscription"),
     path("driver/subscription/trial", views.DriverTrialView.as_view(), name="driver-trial"),
+    path("driver/subscription/referral", views.DriverReferralView.as_view(), name="driver-referral"),
     *router.urls,
 ]
