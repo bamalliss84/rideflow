@@ -2,71 +2,80 @@ import 'package:flutter/material.dart';
 
 /// RideFlow design tokens (driver app). One source for colour, type, spacing, radius and elevation.
 ///
-/// Night is the approved "Souq" palette (D035) and stays the default; day is the driver's choice (D049). Token names
+/// Night is the default; day is the driver's choice (D049). Both are direction A (D054). Token names
 /// predate the palettes: `ink` is the ground colour. Colours are read while building, so a widget using them can't be const.
 enum RfAppearance { day, night }
 
+/// Direction A, "calm premium" (D050, D054): near-black and white, the brand green only for live states. Night (the
+/// black) stays the driver's default. `gold` is now the emphasis colour (money, the selected item) and follows the
+/// text; stars use `star`; main buttons use `pri`.
 class RfPalette {
-  const RfPalette({required this.ink, required this.ink2, required this.ink3, required this.text, required this.textMuted, required this.textSubtle, required this.onInk, required this.onInkMuted, required this.mapGround, required this.canvas, required this.surface, required this.surfaceSunken, required this.line, required this.lineStrong, required this.gold, required this.onGold, required this.teal, required this.tealDeep, required this.tealSoft, required this.amber, required this.amberDeep, required this.amberSoft, required this.coral, required this.coralDeep, required this.coralSoft, required this.blue, required this.blueSoft});
-  final Color ink, ink2, ink3, text, textMuted, textSubtle, onInk, onInkMuted, mapGround, canvas, surface, surfaceSunken, line, lineStrong, gold, onGold, teal, tealDeep, tealSoft, amber, amberDeep, amberSoft, coral, coralDeep, coralSoft, blue, blueSoft;
+  const RfPalette({required this.ink, required this.ink2, required this.ink3, required this.text, required this.textMuted, required this.textSubtle, required this.onInk, required this.onInkMuted, required this.mapGround, required this.canvas, required this.surface, required this.surfaceSunken, required this.line, required this.lineStrong, required this.gold, required this.onGold, required this.teal, required this.tealDeep, required this.tealSoft, required this.amber, required this.amberDeep, required this.amberSoft, required this.coral, required this.coralDeep, required this.coralSoft, required this.blue, required this.blueSoft, required this.pri, required this.onPri, required this.star});
+  final Color ink, ink2, ink3, text, textMuted, textSubtle, onInk, onInkMuted, mapGround, canvas, surface, surfaceSunken, line, lineStrong, gold, onGold, teal, tealDeep, tealSoft, amber, amberDeep, amberSoft, coral, coralDeep, coralSoft, blue, blueSoft, pri, onPri, star;
 
   static const night = RfPalette(
-    ink: Color(0xFF0F2419),
-    ink2: Color(0xFF183426),
-    ink3: Color(0xFF27493A),
-    text: Color(0xFFF3F6F3),
-    textMuted: Color(0xFFB8CABE),
-    textSubtle: Color(0xFF94AC9E),
-    onInk: Color(0xFFF3F6F3),
-    onInkMuted: Color(0xFFB8CABE),
-    mapGround: Color(0xFF16291F),
-    canvas: Color(0xFF0F2419),
-    surface: Color(0xFF183426),
-    surfaceSunken: Color(0xFF27493A),
-    line: Color(0xFF27493A),
-    lineStrong: Color(0xFF4A7361),
-    gold: Color(0xFFF5B83D),
-    onGold: Color(0xFF18261E),
-    teal: Color(0xFF5FD09A),
-    tealDeep: Color(0xFF5FD09A),
-    tealSoft: Color(0xFF1F4A38),
-    amber: Color(0xFFF5B83D),
-    amberDeep: Color(0xFFF5B83D),
-    amberSoft: Color(0xFF3A3518),
-    coral: Color(0xFFFFA99D),
-    coralDeep: Color(0xFFFFA99D),
-    coralSoft: Color(0xFF4A2B27),
+    ink: Color(0xFF0B0F0D),
+    ink2: Color(0xFF161B18),
+    ink3: Color(0xFF1F2622),
+    text: Color(0xFFF2F4F3),
+    textMuted: Color(0xFF9AA59F),
+    textSubtle: Color(0xFF9AA59F),
+    onInk: Color(0xFFF2F4F3),
+    onInkMuted: Color(0xFF9AA59F),
+    mapGround: Color(0xFF141917),
+    canvas: Color(0xFF0B0F0D),
+    surface: Color(0xFF161B18),
+    surfaceSunken: Color(0xFF1F2622),
+    line: Color(0xFF262D29),
+    lineStrong: Color(0xFF333B36),
+    gold: Color(0xFFF2F4F3),
+    onGold: Color(0xFF0B0F0D),
+    teal: Color(0xFF32D583),
+    tealDeep: Color(0xFF32D583),
+    tealSoft: Color(0xFF133024),
+    amber: Color(0xFFFDB022),
+    amberDeep: Color(0xFFFDB022),
+    amberSoft: Color(0xFF3A2A0C),
+    coral: Color(0xFFF97066),
+    coralDeep: Color(0xFFF97066),
+    coralSoft: Color(0xFF3D1714),
     blue: Color(0xFF9DC2FF),
     blueSoft: Color(0xFF243B55),
+    pri: Color(0xFFFFFFFF),
+    onPri: Color(0xFF0B0F0D),
+    star: Color(0xFFF5B83D),
   );
   static const day = RfPalette(
-    ink: Color(0xFFF2F5F2),
+    ink: Color(0xFFFFFFFF),
     ink2: Color(0xFFFFFFFF),
-    ink3: Color(0xFFE7EDE8),
-    text: Color(0xFF12211A),
-    textMuted: Color(0xFF4F6157),
-    textSubtle: Color(0xFF5C6E63),
-    onInk: Color(0xFF12211A),
-    onInkMuted: Color(0xFF4F6157),
-    mapGround: Color(0xFFE8ECE6),
-    canvas: Color(0xFFF2F5F2),
+    ink3: Color(0xFFF3F4F3),
+    text: Color(0xFF0B0F0D),
+    textMuted: Color(0xFF5E6B64),
+    textSubtle: Color(0xFF5E6B64),
+    onInk: Color(0xFF0B0F0D),
+    onInkMuted: Color(0xFF5E6B64),
+    mapGround: Color(0xFFEEF1EF),
+    canvas: Color(0xFFFFFFFF),
     surface: Color(0xFFFFFFFF),
-    surfaceSunken: Color(0xFFE3EAE5),
-    line: Color(0xFFDDE3DD),
-    lineStrong: Color(0xFFBFCAC2),
-    gold: Color(0xFF9A6700),
+    surfaceSunken: Color(0xFFF3F4F3),
+    line: Color(0xFFE4E7E5),
+    lineStrong: Color(0xFFDCE1DE),
+    gold: Color(0xFF0B0F0D),
     onGold: Color(0xFFFFFFFF),
-    teal: Color(0xFF0A7D46),
-    tealDeep: Color(0xFF0A7D46),
-    tealSoft: Color(0xFFE4F3EA),
-    amber: Color(0xFF9A6700),
-    amberDeep: Color(0xFF9A6700),
-    amberSoft: Color(0xFFFBF0D6),
-    coral: Color(0xFFB3261E),
-    coralDeep: Color(0xFFB3261E),
-    coralSoft: Color(0xFFFBE9E7),
+    teal: Color(0xFF12B76A),
+    tealDeep: Color(0xFF0E8F53),
+    tealSoft: Color(0xFFE3F6EC),
+    amber: Color(0xFFB54708),
+    amberDeep: Color(0xFFB54708),
+    amberSoft: Color(0xFFFEF0C7),
+    coral: Color(0xFFB42318),
+    coralDeep: Color(0xFFB42318),
+    coralSoft: Color(0xFFFEE4E2),
     blue: Color(0xFF1B5FAA),
     blueSoft: Color(0xFFE3EDF9),
+    pri: Color(0xFF0B0F0D),
+    onPri: Color(0xFFFFFFFF),
+    star: Color(0xFFF5B83D),
   );
 }
 
@@ -108,6 +117,9 @@ abstract final class RfColors {
   static Color get coralSoft => _p.coralSoft;
   static Color get blue => _p.blue;
   static Color get blueSoft => _p.blueSoft;
+  static Color get pri => _p.pri;
+  static Color get onPri => _p.onPri;
+  static Color get star => _p.star;
 }
 
 abstract final class RfSpace {
@@ -135,9 +147,9 @@ abstract final class RfShadow {
   static const soft = [BoxShadow(color: Color(0x0D0B1B2B), blurRadius: 8, offset: Offset(0, 2))];
 }
 
-/// Tajawal type scale: readable at arm's length without crowding a phone screen.
+/// IBM Plex Sans Arabic type scale (direction A): readable at arm's length without crowding a phone screen.
 abstract final class RfType {
-  static const family = 'Tajawal';
+  static const family = 'IBM Plex Sans Arabic';
   static TextStyle get _base => TextStyle(fontFamily: family, color: RfColors.text, height: 1.35, letterSpacing: 0);
 
   static TextStyle get display => _base.copyWith(fontSize: 22, fontWeight: FontWeight.w800, height: 1.15);

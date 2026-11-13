@@ -6,69 +6,77 @@ import 'package:flutter/material.dart';
 /// `ink` is the ground colour. Colours are read while building, so a widget using them can't be const.
 enum RfAppearance { day, night }
 
+/// Direction A, "calm premium" (D050): white and near-black, the brand green only for live states. `gold` is now the
+/// emphasis colour (prices, the selected item) and follows the text; stars use `star`. Buttons use `pri`.
 class RfPalette {
-  const RfPalette({required this.ink, required this.ink2, required this.ink3, required this.text, required this.textMuted, required this.textSubtle, required this.onInk, required this.onInkMuted, required this.mapGround, required this.canvas, required this.surface, required this.surfaceSunken, required this.line, required this.lineStrong, required this.gold, required this.onGold, required this.teal, required this.tealDeep, required this.tealSoft, required this.amber, required this.amberDeep, required this.amberSoft, required this.coral, required this.coralDeep, required this.coralSoft, required this.dangerSoft, required this.blue, required this.blueSoft});
-  final Color ink, ink2, ink3, text, textMuted, textSubtle, onInk, onInkMuted, mapGround, canvas, surface, surfaceSunken, line, lineStrong, gold, onGold, teal, tealDeep, tealSoft, amber, amberDeep, amberSoft, coral, coralDeep, coralSoft, dangerSoft, blue, blueSoft;
+  const RfPalette({required this.ink, required this.ink2, required this.ink3, required this.text, required this.textMuted, required this.textSubtle, required this.onInk, required this.onInkMuted, required this.mapGround, required this.canvas, required this.surface, required this.surfaceSunken, required this.line, required this.lineStrong, required this.gold, required this.onGold, required this.teal, required this.tealDeep, required this.tealSoft, required this.amber, required this.amberDeep, required this.amberSoft, required this.coral, required this.coralDeep, required this.coralSoft, required this.dangerSoft, required this.blue, required this.blueSoft, required this.pri, required this.onPri, required this.star});
+  final Color ink, ink2, ink3, text, textMuted, textSubtle, onInk, onInkMuted, mapGround, canvas, surface, surfaceSunken, line, lineStrong, gold, onGold, teal, tealDeep, tealSoft, amber, amberDeep, amberSoft, coral, coralDeep, coralSoft, dangerSoft, blue, blueSoft, pri, onPri, star;
 
   static const day = RfPalette(
-    ink: Color(0xFFF2F5F2),
+    ink: Color(0xFFFFFFFF),
     ink2: Color(0xFFFFFFFF),
-    ink3: Color(0xFFE7EDE8),
-    text: Color(0xFF12211A),
-    textMuted: Color(0xFF4F6157),
-    textSubtle: Color(0xFF5C6E63),
-    onInk: Color(0xFF12211A),
-    onInkMuted: Color(0xFF4F6157),
-    mapGround: Color(0xFFE8ECE6),
-    canvas: Color(0xFFF2F5F2),
+    ink3: Color(0xFFF3F4F3),
+    text: Color(0xFF0B0F0D),
+    textMuted: Color(0xFF5E6B64),
+    textSubtle: Color(0xFF5E6B64),
+    onInk: Color(0xFF0B0F0D),
+    onInkMuted: Color(0xFF5E6B64),
+    mapGround: Color(0xFFEEF1EF),
+    canvas: Color(0xFFFFFFFF),
     surface: Color(0xFFFFFFFF),
-    surfaceSunken: Color(0xFFE3EAE5),
-    line: Color(0xFFDDE3DD),
-    lineStrong: Color(0xFFBFCAC2),
-    gold: Color(0xFF9A6700),
+    surfaceSunken: Color(0xFFF3F4F3),
+    line: Color(0xFFE4E7E5),
+    lineStrong: Color(0xFFDCE1DE),
+    gold: Color(0xFF0B0F0D),
     onGold: Color(0xFFFFFFFF),
-    teal: Color(0xFF0A7D46),
-    tealDeep: Color(0xFF0A7D46),
-    tealSoft: Color(0xFFE4F3EA),
-    amber: Color(0xFF9A6700),
-    amberDeep: Color(0xFF9A6700),
-    amberSoft: Color(0xFFFBF0D6),
-    coral: Color(0xFFB3261E),
-    coralDeep: Color(0xFFB3261E),
-    coralSoft: Color(0xFFFBE9E7),
-    dangerSoft: Color(0xFFFBE9E7),
+    teal: Color(0xFF12B76A),
+    tealDeep: Color(0xFF0E8F53),
+    tealSoft: Color(0xFFE3F6EC),
+    amber: Color(0xFFB54708),
+    amberDeep: Color(0xFFB54708),
+    amberSoft: Color(0xFFFEF0C7),
+    coral: Color(0xFFB42318),
+    coralDeep: Color(0xFFB42318),
+    coralSoft: Color(0xFFFEE4E2),
+    dangerSoft: Color(0xFFFEE4E2),
     blue: Color(0xFF1B5FAA),
     blueSoft: Color(0xFFE3EDF9),
+    pri: Color(0xFF0B0F0D),
+    onPri: Color(0xFFFFFFFF),
+    star: Color(0xFFF5B83D),
   );
   static const night = RfPalette(
-    ink: Color(0xFF07120D),
-    ink2: Color(0xFF0D1913),
-    ink3: Color(0xFF16271E),
-    text: Color(0xFFF2F7F3),
-    textMuted: Color(0xFFB8CABE),
-    textSubtle: Color(0xFF9DB2A5),
-    onInk: Color(0xFFF2F7F3),
-    onInkMuted: Color(0xFFB8CABE),
-    mapGround: Color(0xFF0B1A13),
-    canvas: Color(0xFF07120D),
-    surface: Color(0xFF101C16),
-    surfaceSunken: Color(0xFF16271E),
-    line: Color(0xFF1C3024),
-    lineStrong: Color(0xFF33493C),
-    gold: Color(0xFFF5B83D),
-    onGold: Color(0xFF18261E),
-    teal: Color(0xFF27D17C),
-    tealDeep: Color(0xFF27D17C),
-    tealSoft: Color(0xFF123323),
-    amber: Color(0xFFF5B83D),
-    amberDeep: Color(0xFFF5B83D),
-    amberSoft: Color(0xFF3A3518),
-    coral: Color(0xFFFFA99D),
-    coralDeep: Color(0xFFFFA99D),
-    coralSoft: Color(0xFF4A2B27),
-    dangerSoft: Color(0xFF3A1F1B),
+    ink: Color(0xFF0B0F0D),
+    ink2: Color(0xFF0B0F0D),
+    ink3: Color(0xFF161B18),
+    text: Color(0xFFF2F4F3),
+    textMuted: Color(0xFF9AA59F),
+    textSubtle: Color(0xFF9AA59F),
+    onInk: Color(0xFFF2F4F3),
+    onInkMuted: Color(0xFF9AA59F),
+    mapGround: Color(0xFF141917),
+    canvas: Color(0xFF0B0F0D),
+    surface: Color(0xFF161B18),
+    surfaceSunken: Color(0xFF1F2622),
+    line: Color(0xFF262D29),
+    lineStrong: Color(0xFF333B36),
+    gold: Color(0xFFF2F4F3),
+    onGold: Color(0xFF0B0F0D),
+    teal: Color(0xFF32D583),
+    tealDeep: Color(0xFF32D583),
+    tealSoft: Color(0xFF133024),
+    amber: Color(0xFFFDB022),
+    amberDeep: Color(0xFFFDB022),
+    amberSoft: Color(0xFF3A2A0C),
+    coral: Color(0xFFF97066),
+    coralDeep: Color(0xFFF97066),
+    coralSoft: Color(0xFF3D1714),
+    dangerSoft: Color(0xFF3D1714),
     blue: Color(0xFF9DC2FF),
     blueSoft: Color(0xFF243B55),
+    pri: Color(0xFFFFFFFF),
+    onPri: Color(0xFF0B0F0D),
+    star: Color(0xFFF5B83D),
   );
 }
 
@@ -111,6 +119,9 @@ abstract final class RfColors {
   static Color get dangerSoft => _p.dangerSoft;
   static Color get blue => _p.blue;
   static Color get blueSoft => _p.blueSoft;
+  static Color get pri => _p.pri;
+  static Color get onPri => _p.onPri;
+  static Color get star => _p.star;
 }
 
 abstract final class RfSpace {
@@ -138,12 +149,14 @@ abstract final class RfShadow {
   static const soft = [BoxShadow(color: Color(0x0D0B1B2B), blurRadius: 8, offset: Offset(0, 2))];
 }
 
-/// The fonts this build ships. The rider picks one in the account settings (D040).
+/// The fonts this build ships. The rider picks one in the account settings (D040); IBM Plex Sans Arabic is direction A's
+/// font and the default (D050). A rider who already picked another keeps it.
 abstract final class RfFonts {
+  static const plex = 'IBM Plex Sans Arabic';
   static const tajawal = 'Tajawal';
   static const cairo = 'Cairo';
-  static const available = [tajawal, cairo];
-  static const preferred = tajawal;
+  static const available = [plex, tajawal, cairo];
+  static const preferred = plex;
 }
 
 /// Type scale from the approved rider boards. No family here: it comes from the theme, so the font setting reaches every style.

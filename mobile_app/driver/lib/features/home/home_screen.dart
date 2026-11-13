@@ -18,6 +18,7 @@ import '../../data/models.dart';
 import '../../design/components.dart';
 import '../../design/tokens.dart';
 import '../battery/battery_screen.dart' show maybeShowBatteryGuide;
+import '../subscription/subscription_screen.dart' show daysPhrase;
 import '../../shared/labels.dart';
 import '../../shared/widgets.dart' show errorMessage, RefRetry, ErrorView;
 import '../history/history_screens.dart' show summarize;
@@ -65,6 +66,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     ref.invalidate(offersProvider);
     ref.invalidate(hiddenOffersProvider);
     ref.invalidate(ridesProvider);
+    ref.invalidate(subscriptionProvider);
     await ref.read(pendingMatchProvider.notifier).reconcile();
   }
 
@@ -230,6 +232,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         onAction: () => context.push('/battery'),
       ));
     }
+    final sub = ref.watch(subscriptionProvider).valueOrNull;
+    final now = DateTime.now();
+    final waiting = sub?.recentClaims.any((c) => c.status == 'submitted' || c.status == 'first_approved') ?? false;
+    if (sub != null && !waiting && sub.remindNow(now)) {
+      final days = sub.daysLeft(now);
+      add(Banner2(
+        key: const Key('subscriptionReminder'),
+        tone: Tone.warning,
+        icon: Icons.workspace_premium_rounded,
+        title: sub.inGrace ? t.subEndedTitle : (days <= 0 ? t.subEndsToday : t.subEndsIn(daysPhrase(t, days))),
+        text: sub.inGrace ? t.subGraceHint : t.subRenewHint,
+        actionLabel: t.renewNow,
+        onAction: () => context.push('/subscription'),
+      ));
+    }
     if (online.noFix && !online.online && !(access == LocationAccess.deniedForever || access == LocationAccess.denied || access == LocationAccess.serviceDisabled)) {
       add(Banner2(tone: Tone.warning, icon: Icons.gps_not_fixed_rounded, text: t.noLocationFix));
     }
@@ -272,7 +289,7 @@ class _ProfileCard extends ConsumerWidget {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(name.isEmpty ? t.appTitle : name, style: RfType.h2, maxLines: 1, overflow: TextOverflow.ellipsis),
             Row(children: [
-              if (rating != null) ...[Icon(Icons.star_rounded, size: 14, color: RfColors.gold), const SizedBox(width: 2), Ltr(rating.toStringAsFixed(1), style: RfType.caption)],
+              if (rating != null) ...[Icon(Icons.star_rounded, size: 14, color: RfColors.star), const SizedBox(width: 2), Ltr(rating.toStringAsFixed(1), style: RfType.caption)],
               if (rating != null && car != null) Text(' · ', style: RfType.caption),
               if (car != null) Flexible(child: Text(car, style: RfType.caption, maxLines: 1, overflow: TextOverflow.ellipsis)),
             ]),
@@ -781,6 +798,8 @@ class _RequestsList extends ConsumerWidget {
               ),
       );
     }
+    // The last known position, if recent enough to say how far each pickup is.
+    final here = freshFix(ref.read(locationServiceProvider).last, maxAge: const Duration(minutes: 10));
     return Column(children: [
       for (final r in rides)
         _RequestCard(
@@ -788,6 +807,7 @@ class _RequestsList extends ConsumerWidget {
           ride: r,
           minorUnits: minorUnits,
           open: openId == r.id,
+          here: here,
           onToggle: () => onToggle(r.id),
           onOffer: () => _offer(context, r),
           onHide: () => _hide(context, ref, r),
@@ -802,11 +822,23 @@ String _rangeText(Ride r, int units) => r.estimateMin == null
         ? formatMoney(r.estimateMin, '', units)
         : '${formatMoney(r.estimateMin, '', units)}–${formatMoney(r.estimateMax, '', units)}');
 
+/// Straight-line distance from the driver to a point: enough to say how far a pickup is.
+double metersTo(Fix from, LatLng to) {
+  const r = 6371000.0;
+  double rad(double d) => d * math.pi / 180;
+  final dLat = rad(to.lat - from.lat), dLng = rad(to.lng - from.lng);
+  final h = math.pow(math.sin(dLat / 2), 2) + math.cos(rad(from.lat)) * math.cos(rad(to.lat)) * math.pow(math.sin(dLng / 2), 2);
+  return 2 * r * math.asin(math.sqrt(h));
+}
+
+/// A request in direction A (D050, D054): half as tall, the price largest, how far the pickup is from the driver, the
+/// trip in two lines and one main button. Tapping the card shows the other actions (another price, hide).
 class _RequestCard extends StatelessWidget {
-  const _RequestCard({super.key, required this.ride, required this.minorUnits, required this.open, required this.onToggle, required this.onOffer, required this.onHide});
+  const _RequestCard({super.key, required this.ride, required this.minorUnits, required this.open, required this.here, required this.onToggle, required this.onOffer, required this.onHide});
   final Ride ride;
   final int minorUnits;
   final bool open;
+  final Fix? here;
   final VoidCallback onToggle, onOffer, onHide;
 
   @override
@@ -815,66 +847,57 @@ class _RequestCard extends StatelessWidget {
     final rider = ride.rider;
     final price = ride.riderPriceMinor;
     final range = _rangeText(ride, minorUnits);
-    final name = rider == null || rider.displayName.isEmpty ? t.rider : rider.displayName;
+    final away = here == null || ride.pickup == null ? null : metersTo(here!, ride.pickup!);
+    final facts = [
+      if (away != null) t.awayFromYou(formatDistance(away.round())),
+      if (ride.distanceM != null) t.tripLength(formatDistance(ride.distanceM)),
+    ].join(' · ');
     return Padding(
       padding: EdgeInsets.only(bottom: RfLayout.listGap),
       child: RfCard(
-        padding: EdgeInsets.zero,
+        padding: const EdgeInsets.all(14),
         inList: true,
-        border: open ? RfColors.gold : null,
+        border: open ? RfColors.pri : null,
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           InkWell(
             key: Key('toggleCard_${ride.id}'),
             onTap: onToggle,
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              RfRow(
-                leading: CircleAvatar(radius: RfLayout.avatar, backgroundColor: RfColors.surfaceSunken, child: Text(name.characters.first, style: RfType.caption.copyWith(color: RfColors.text, fontWeight: FontWeight.w800))),
-                title: name,
-                maxLines: 1,
-                trailing: RatingBadge(score: rider?.ratingAvg, count: rider?.ratingCount ?? 0, provisional: rider?.ratingProvisional ?? true, newLabel: t.newUser),
-              ),
-              Container(height: 1, color: RfLayout.softLine),
-              RfStops(fromLabel: t.pickup, from: ride.pickupLandmark, toLabel: t.dropoff, to: ride.dropoffLandmark),
-              Container(height: 1, color: RfLayout.softLine),
-              Row(children: [
+              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Expanded(
-                  child: RfFacts([
-                    RfFact(t.distanceLabel, formatDistance(ride.distanceM), ltr: true),
-                    RfFact(t.estimateShort(ride.currency), range, ltr: true),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: AlignmentDirectional.centerStart,
+                      child: MoneyText(price != null ? formatMoney(price, ride.currency, minorUnits) : range, style: RfLayout.priceBig),
+                    ),
+                    Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: [
+                      Text(price != null ? t.riderPriceLabel : t.estimateShort(ride.currency), style: RfType.caption),
+                      if (price != null) ...[Text(' · ', style: RfType.caption), Ltr(range, style: RfType.caption)],
+                    ]),
                   ]),
                 ),
-                AnimatedRotation(
-                  turns: open ? 0.5 : 0,
-                  duration: const Duration(milliseconds: 150),
-                  child: Icon(Icons.expand_more_rounded, color: RfColors.text),
-                ),
-                SizedBox(width: RfLayout.inset),
+                const SizedBox(width: 8),
+                Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                  RatingBadge(score: rider?.ratingAvg, count: rider?.ratingCount ?? 0, provisional: rider?.ratingProvisional ?? true, newLabel: t.newUser),
+                ]),
               ]),
-              if (price != null) ...[
-                Container(height: 1, color: RfLayout.softLine),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: RfLayout.inset, vertical: 6),
-                  child: Row(children: [
-                    Expanded(child: Text(t.riderPriceLabel, style: RfType.caption)),
-                    MoneyText(formatMoney(price, ride.currency, minorUnits), style: RfLayout.priceSmall),
-                  ]),
-                ),
-              ],
+              if (facts.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 4), child: Text(facts, key: Key('cardFacts_${ride.id}'), style: RfType.bodyStrong)),
+              const SizedBox(height: 10),
+              RouteStops(pickupLabel: t.pickup, pickup: ride.pickupLandmark, dropoffLabel: t.dropoff, dropoff: ride.dropoffLandmark, dense: true, showLabels: false),
             ]),
+          ),
+          const SizedBox(height: 12),
+          RfButton(
+            key: Key('makeOffer_${ride.id}'),
+            label: price != null ? t.acceptPrice(formatMoney(price, ride.currency, minorUnits)) : t.makeOffer,
+            onPressed: onOffer,
           ),
           if (open)
             Padding(
-              padding: EdgeInsets.fromLTRB(RfLayout.inset, RfSpace.xs, RfLayout.inset, RfSpace.xxs),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                RfButton(
-                  key: Key('makeOffer_${ride.id}'),
-                  label: price != null ? t.acceptPrice(formatMoney(price, ride.currency, minorUnits)) : t.makeOffer,
-                  onPressed: onOffer,
-                ),
-                if (price != null) ...[
-                  const SizedBox(height: RfSpace.xs),
-                  RfButton(key: Key('otherPrice_${ride.id}'), label: t.offerOtherPrice, kind: RfButtonKind.secondary, onPressed: onOffer),
-                ],
+              padding: const EdgeInsets.only(top: RfSpace.xs),
+              child: Row(children: [
+                if (price != null) Expanded(child: RfButton(key: Key('otherPrice_${ride.id}'), label: t.offerOtherPrice, kind: RfButtonKind.secondary, onPressed: onOffer)),
                 TextButton(
                   key: Key('hide_${ride.id}'),
                   onPressed: onHide,

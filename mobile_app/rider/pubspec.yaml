@@ -37,6 +37,16 @@ flutter:
   # Tajawal and Cairo (SIL Open Font License 1.1, assets/fonts/OFL.txt and OFL-Cairo.txt), bundled: no runtime font download.
   # The Cairo files are fixed weights made from Google Fonts' variable file, since Flutter doesn't pick a weight from one on its own.
   fonts:
+    - family: IBM Plex Sans Arabic
+      fonts:
+        - asset: assets/fonts/IBMPlexSansArabic-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/IBMPlexSansArabic-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/IBMPlexSansArabic-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/IBMPlexSansArabic-Bold.ttf
+          weight: 700
     - family: Tajawal
       fonts:
         - asset: assets/fonts/Tajawal-Regular.ttf

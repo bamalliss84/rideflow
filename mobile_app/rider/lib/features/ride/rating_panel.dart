@@ -76,7 +76,7 @@ class _RatingPanelState extends ConsumerState<RatingPanel> {
     final name = widget.ride.driver?.name ?? t.driver;
     return SafeArea(
       child: ListView(padding: const EdgeInsets.all(18), children: [
-        Text(t.rateTrip, style: RfType.h2),
+        Text(t.rateWith(name), style: RfType.h1),
         const SizedBox(height: 18),
         Center(child: DriverPhoto(driver: widget.ride.driver, name: name, radius: 36)),
         const SizedBox(height: 10),
@@ -92,7 +92,7 @@ class _RatingPanelState extends ConsumerState<RatingPanel> {
                 _stars = i;
                 _tags.clear();
               }),
-              icon: Icon(i <= _stars ? Icons.star_rounded : Icons.star_outline_rounded, color: RfColors.gold),
+              icon: Icon(i <= _stars ? Icons.star_rounded : Icons.star_outline_rounded, color: RfColors.star),
             ),
         ]),
         Text(t.howWasIt, textAlign: TextAlign.center, style: RfType.caption),
@@ -102,12 +102,13 @@ class _RatingPanelState extends ConsumerState<RatingPanel> {
             for (final tag in _stars >= 4 ? _good : _bad)
               FilterChip(
                 key: Key('tag_$tag'),
-                label: Text(_label(t, tag), style: RfType.caption.copyWith(color: _tags.contains(tag) ? RfColors.canvas : RfColors.text, fontWeight: FontWeight.w700)),
+                label: Text(_label(t, tag), style: RfType.caption.copyWith(color: _tags.contains(tag) ? RfColors.onPri : RfColors.text, fontWeight: FontWeight.w700)),
                 selected: _tags.contains(tag),
                 showCheckmark: false,
-                selectedColor: RfColors.teal,
-                backgroundColor: RfColors.surface,
-                side: BorderSide(color: RfColors.lineStrong),
+                selectedColor: RfColors.pri,
+                backgroundColor: RfColors.surfaceSunken,
+                side: BorderSide.none,
+                shape: const StadiumBorder(),
                 onSelected: (on) => setState(() => on ? _tags.add(tag) : _tags.remove(tag)),
               ),
           ]),

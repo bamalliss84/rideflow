@@ -14,6 +14,15 @@ String _str(Object? v) => v?.toString() ?? '';
 /// Paginated list ({count, results}) or plain list.
 List<Json> results(Object? body) => body is Map ? _list(body['results']) : _list(body);
 
+/// Drivers around a point, at coarse positions (no identities), from `drivers/nearby`.
+class NearbyDrivers {
+  NearbyDrivers(Json j)
+      : count = (j['count'] as num?)?.toInt() ?? 0,
+        drivers = (j['drivers'] is List ? j['drivers'] as List : const []).map(Point.fromJson).whereType<Point>().toList();
+  final int count;
+  final List<Point> drivers;
+}
+
 class Point {
   const Point(this.lat, this.lng);
   final double lat, lng;
@@ -153,6 +162,7 @@ class Ride {
         shareActive = json['share_active'] == true,
         driver = json['driver'] is Map ? Driver(_map(json['driver'])) : null,
         createdAt = _date(_map(json['timestamps'])['created_at']),
+        arrivedAt = _date(_map(json['timestamps'])['arrived_at']),
         startedAt = _date(_map(json['timestamps'])['started_at']),
         completedAt = _date(_map(json['timestamps'])['completed_at']),
         cancellation = json['cancellation'] is Map ? _map(json['cancellation']) : null,
@@ -164,7 +174,7 @@ class Ride {
   final int version;
   final Point? pickup, dropoff;
   final int? estimateMin, estimateMax, distanceM, stepMinor, riderPriceMinor, myRatingStars, agreedFareMinor;
-  final DateTime? matchDeadline, freeCancelUntil, createdAt, startedAt, completedAt;
+  final DateTime? matchDeadline, freeCancelUntil, createdAt, arrivedAt, startedAt, completedAt;
   final String? startCode, emergencyPhone;
   final bool startCodeRequired, shareActive;
   final Driver? driver;

@@ -119,10 +119,13 @@ class Plan {
         name = _str(j['name']),
         priceMinor = _int(j['price_minor']) ?? 0,
         durationDays = _int(j['duration_days']) ?? 0,
-        isTrial = j['is_trial'] == true;
+        isTrial = j['is_trial'] == true,
+        perDayMinor = _int(j['per_day_minor']) ?? 0,
+        savingPct = _int(j['saving_pct']) ?? 0,
+        bestValue = j['best_value'] == true;
   final String id, code, name;
-  final int priceMinor, durationDays;
-  final bool isTrial;
+  final int priceMinor, durationDays, perDayMinor, savingPct;
+  final bool isTrial, bestValue;
 }
 
 class DepositAccount {
@@ -144,8 +147,9 @@ class DepositClaim {
         status = _str(j['status']),
         depositedOn = _str(j['deposited_on']),
         decisionNote = _str(j['decision_note']),
+        planName = _str(_map(j['plan'])['name']),
         createdAt = _date(j['created_at']);
-  final String id, reference, currency, status, depositedOn, decisionNote;
+  final String id, reference, currency, status, depositedOn, decisionNote, planName;
   final int amountMinor;
   final DateTime? createdAt;
 }
@@ -157,8 +161,19 @@ class SubscriptionOverview {
         plans = _list(j['plans']).map(Plan.new).toList(),
         accounts = _list(j['deposit_accounts']).map(DepositAccount.new).toList(),
         recentClaims = _list(j['recent_claims']).map(DepositClaim.new).toList(),
-        renewalDiscountPct = _int(j['renewal_discount_pct']) ?? 0;
-  final bool entitled;
+        renewalDiscountPct = _int(j['renewal_discount_pct']) ?? 0,
+        coverEndsAt = _date(j['cover_ends_at']),
+        graceDays = _int(j['grace_days']) ?? 0,
+        reminderDays = j['reminder_days'] is List ? (j['reminder_days'] as List).whereType<num>().map((d) => d.toInt()).toList() : const [],
+        inGrace = j['in_grace'] == true,
+        earnings = Earnings(_map(j['earnings'])),
+        referral = Referral(_map(j['referral']));
+  final bool entitled, inGrace;
+  final DateTime? coverEndsAt;
+  final int graceDays;
+  final List<int> reminderDays;
+  final Earnings earnings;
+  final Referral referral;
   final Json? current;
   final List<Plan> plans;
   final List<DepositAccount> accounts;
@@ -168,6 +183,52 @@ class SubscriptionOverview {
   DateTime? get endsAt => _date(current?['ends_at']);
   String? get currentPlanName => current?['plan_name'] as String?;
   String? get currentSource => current?['source'] as String?;
+
+  /// When paid time ends, renewals included; the subscription row's own end before the server sent it.
+  DateTime? get paidUntil => coverEndsAt ?? endsAt;
+
+  /// When requests stop: the paid end plus the operator's grace.
+  DateTime? get stopsAt => paidUntil?.add(Duration(days: graceDays));
+
+  /// Whole days of paid time left, rounded up; 0 once it has run out.
+  int daysLeft(DateTime now) {
+    final end = paidUntil;
+    if (end == null || !end.isAfter(now)) return 0;
+    return (end.difference(now).inMinutes / 1440).ceil();
+  }
+
+  /// Inside the reminder window the operator set (D052), or in the grace after the end.
+  bool remindNow(DateTime now) {
+    if (!entitled) return false;
+    if (inGrace) return true;
+    final first = reminderDays.isEmpty ? 0 : reminderDays.reduce((a, b) => a > b ? a : b);
+    final end = paidUntil;
+    return end != null && first > 0 && end.difference(now) <= Duration(days: first);
+  }
+}
+
+class Earnings {
+  Earnings(Json j)
+      : days = _int(j['days']) ?? 30,
+        trips = _int(j['trips']) ?? 0,
+        earnedMinor = _int(j['earned_minor']) ?? 0;
+  final int days, trips, earnedMinor;
+}
+
+class Referral {
+  Referral(Json j)
+      : code = _str(j['code']),
+        rewardDays = _int(j['reward_days']) ?? 0,
+        invited = _int(j['invited']) ?? 0,
+        rewarded = _int(j['rewarded']) ?? 0,
+        daysEarned = _int(j['days_earned']) ?? 0,
+        canEnterCode = j['can_enter_code'] == true;
+  final String code;
+  final int rewardDays, invited, rewarded, daysEarned;
+  final bool canEnterCode;
+
+  /// Invitations are on when the operator gives days for them.
+  bool get on => rewardDays > 0;
 }
 
 class Bid {

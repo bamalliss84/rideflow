@@ -9981,6 +9981,10 @@ components:
           nullable: true
         grace_days:
           type: integer
+        reminder_days:
+          type: array
+          items:
+            type: integer
         in_grace:
           type: boolean
         plans:
@@ -10012,6 +10016,7 @@ components:
       - plans
       - recent_claims
       - referral
+      - reminder_days
       - renewal_discount_pct
     SubscriptionPlan:
       type: object

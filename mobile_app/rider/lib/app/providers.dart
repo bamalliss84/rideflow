@@ -220,6 +220,17 @@ final myLocationProvider = FutureProvider.autoDispose<Point?>((ref) async {
   return fix == null ? null : Point(fix.lat, fix.lng);
 });
 
+/// Drivers around the rider for the home map; null without a position or when the read fails.
+final nearbyDriversProvider = FutureProvider.autoDispose<NearbyDrivers?>((ref) async {
+  final here = await ref.watch(myLocationProvider.future);
+  if (here == null) return null;
+  try {
+    return await ref.watch(riderApiProvider).nearby(here);
+  } catch (_) {
+    return null;
+  }
+});
+
 /// The last place the device's position was named, so the same spot shows its name without asking the server again.
 final namedSpotProvider = StateProvider<(Point, String)?>((ref) => null);
 

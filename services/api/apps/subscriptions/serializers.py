@@ -171,6 +171,8 @@ class SubscriptionOverviewSerializer(serializers.Serializer):
     # The end of all paid or credited time, renewals included, and the grace after it (D052).
     cover_ends_at = serializers.DateTimeField(allow_null=True)
     grace_days = serializers.IntegerField()
+    # Days before the end when the driver is reminded; the app shows its own reminder from the first of them.
+    reminder_days = serializers.ListField(child=serializers.IntegerField())
     in_grace = serializers.BooleanField()
     plans = DriverPlanSerializer(many=True)
     deposit_accounts = DepositAccountSerializer(many=True)

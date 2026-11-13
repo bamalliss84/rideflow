@@ -621,9 +621,12 @@ class _SearchPanelState extends ConsumerState<_SearchPanel> {
       textInputAction: TextInputAction.search,
       decoration: InputDecoration(
         hintText: widget.hint ?? t.searchPlaceHint,
-        filled: widget.floating ? true : null,
-        fillColor: widget.floating ? RfColors.ink2 : null,
+        filled: true,
+        fillColor: widget.floating ? RfColors.canvas : RfColors.surfaceSunken,
         isDense: widget.floating,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: RfColors.pri, width: 1.5)),
         prefixIcon: const Icon(Icons.search_rounded, size: 20),
         suffixIcon: _searching ? const Padding(padding: EdgeInsets.all(14), child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))) : null,
       ),
@@ -640,14 +643,14 @@ class _SearchPanelState extends ConsumerState<_SearchPanel> {
         Expanded(
           child: ListView(padding: const EdgeInsets.fromLTRB(16, 2, 16, 12), keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag, children: [
             if (widget.header != null) RfGroup(children: [Padding(padding: EdgeInsets.symmetric(horizontal: RfLayout.inset), child: widget.header!)]),
-            if (mine.isNotEmpty) RfGroup(title: t.recent, children: mine),
+            if (mine.isNotEmpty) _Section(title: t.recent, children: mine),
             if (_hits.isNotEmpty)
-              RfGroup(title: t.sectionResults, children: [
+              _Section(title: t.sectionResults, children: [
                 for (final (i, hit) in _hits.indexed) _ResultRow(key: Key('hit_$i'), icon: Icons.place_outlined, title: hit.name, subtitle: hit.detail.isEmpty ? null : hit.detail, trailing: _away(hit.point), onTap: () => choose(hit)),
               ]),
             if (status != null) Padding(padding: const EdgeInsets.symmetric(vertical: 12), child: Text(status, key: const Key('searchStatus'), style: RfType.caption)),
-            RfGroup(children: [
-              _ResultRow(key: const Key('backToMap'), icon: Icons.map_rounded, iconColor: RfColors.gold, title: t.chooseOnMap, onTap: () {
+            _Section(children: [
+              _ResultRow(key: const Key('backToMap'), icon: Icons.map_outlined, title: t.chooseOnMap, onTap: () {
                 _leave();
                 widget.onMap();
               }),
@@ -659,19 +662,50 @@ class _SearchPanelState extends ConsumerState<_SearchPanel> {
 }
 
 class _ResultRow extends StatelessWidget {
-  const _ResultRow({super.key, required this.icon, required this.title, this.subtitle, this.trailing, this.iconColor, required this.onTap});
+  const _ResultRow({super.key, required this.icon, required this.title, this.subtitle, this.trailing, required this.onTap});
   final IconData icon;
   final String title;
   final String? subtitle, trailing;
-  final Color? iconColor;
   final VoidCallback onTap;
   @override
-  Widget build(BuildContext context) => RfRow(
-        title: title,
-        sub: subtitle,
-        maxLines: 1,
-        leading: RfRowIcon(icon, color: iconColor),
-        trailing: trailing == null ? null : Ltr(trailing!, style: RfType.caption),
-        onTap: onTap,
+  Widget build(BuildContext context) {
+    final sub = [if (subtitle != null && subtitle!.isNotEmpty) subtitle!, if (trailing != null) trailing!].join(' · ');
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 2),
+        child: Row(children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(color: RfColors.surfaceSunken, shape: BoxShape.circle),
+            child: Icon(icon, size: 20, color: RfColors.text),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(title, style: RfType.bodyStrong, maxLines: 1, overflow: TextOverflow.ellipsis),
+              if (sub.isNotEmpty) Text(sub, style: RfType.caption, maxLines: 1, overflow: TextOverflow.ellipsis),
+            ]),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+/// A flat list section (direction A): a small label, then the rows, no card around them.
+class _Section extends StatelessWidget {
+  const _Section({this.title, required this.children});
+  final String? title;
+  final List<Widget> children;
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(top: 10),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          if (title != null) Padding(padding: const EdgeInsets.only(bottom: 2), child: Text(title!, style: RfType.caption.copyWith(fontWeight: FontWeight.w700))),
+          ...children,
+        ]),
       );
 }

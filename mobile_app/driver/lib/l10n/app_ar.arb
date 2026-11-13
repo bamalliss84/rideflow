@@ -143,6 +143,175 @@
   "photoAddHint": "أضف صورة واضحة لوجهك، يراها الراكب عند عرضك وفي الرحلة.",
   "photoShownHint": "تظهر للراكب عند عرضك وفي الرحلة.",
   "howItWorks": "كيف يعمل التطبيق",
+  "dayOne": "يوم واحد",
+  "dayTwo": "يومين",
+  "daysFew": "{n} أيام",
+  "@daysFew": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "daysMany": "{n} يومًا",
+  "@daysMany": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "ringDay": "يوم",
+  "ringDayTwo": "يومان",
+  "ringDaysFew": "أيام",
+  "ringDaysMany": "يومًا",
+  "subEndsOn": "ينتهي {date}",
+  "@subEndsOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "subGraceLine": "ثم مهلة {days} قبل إيقاف الطلبات.",
+  "@subGraceLine": {
+    "placeholders": {
+      "days": {
+        "type": "String"
+      }
+    }
+  },
+  "subInGraceTag": "مهلة سماح حتى {time}",
+  "@subInGraceTag": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "subEndedTitle": "انتهى اشتراكك",
+  "subInGraceText": "ما زالت الطلبات تصلك حتى نهاية المهلة. بعدها تتوقف حتى تجدد.",
+  "subNoneTitle": "لا يوجد اشتراك فعّال",
+  "subNoneText": "الطلبات متوقفة حتى تشترك.",
+  "plansHeadingRenew": "جدّد اشتراكك",
+  "plansHeadingNew": "اختر باقتك",
+  "plansHint": "الباقة الأطول أرخص لليوم.",
+  "bestValue": "الأوفر",
+  "saveBadge": "وفّر {pct}%",
+  "@saveBadge": {
+    "placeholders": {
+      "pct": {
+        "type": "String"
+      }
+    }
+  },
+  "perDay": "{amount} لليوم",
+  "@perDay": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "worthTitle": "هل تستحق؟",
+  "worthYou": "دخلك",
+  "worthCaption": "دخلك في آخر {days} يوم ({trips} رحلة) مقابل سعر باقة {plan}.",
+  "@worthCaption": {
+    "placeholders": {
+      "days": {
+        "type": "String"
+      },
+      "trips": {
+        "type": "String"
+      },
+      "plan": {
+        "type": "String"
+      }
+    }
+  },
+  "inviteRow": "ادعُ سائقًا واحصل على {days} مجانًا",
+  "@inviteRow": {
+    "placeholders": {
+      "days": {
+        "type": "String"
+      }
+    }
+  },
+  "enterCodeRow": "هل دعاك سائق؟ أدخل كوده",
+  "choosePlanCta": "اختر {plan} · {price}",
+  "@choosePlanCta": {
+    "placeholders": {
+      "plan": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "noDepositAccounts": "لا توجد حسابات إيداع بعد. تواصل مع المشغّل.",
+  "reviewTitle": "إيصالك قيد المراجعة",
+  "reviewText": "يراجعه المشغّل عادة خلال ساعات، ويصلك إشعار فور التفعيل.",
+  "activatedTitle": "تم تفعيل اشتراكك",
+  "activatedText": "{plan} حتى {date}. شكرًا لك.",
+  "@activatedText": {
+    "placeholders": {
+      "plan": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "startReceiving": "ابدأ استقبال الطلبات",
+  "inviteTitle": "ادعُ سائقًا",
+  "inviteIntro": "كل سائق يسجل بكودك ويشترك أول مرة يعطيك {days} مجانًا.",
+  "@inviteIntro": {
+    "placeholders": {
+      "days": {
+        "type": "String"
+      }
+    }
+  },
+  "shareWhatsApp": "شارك عبر واتساب",
+  "shareText": "سجّل سائقًا معنا وأدخل كودي {code} قبل أول اشتراك.",
+  "@shareText": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "shareFailed": "تعذّر فتح واتساب. انسخ الكود وأرسله.",
+  "inviteInvited": "دعوتهم",
+  "inviteJoined": "اشتركوا",
+  "inviteDaysEarned": "يوم ربحتها",
+  "inviteStep1": "شارك كودك مع سائق تعرفه.",
+  "inviteStep2": "يدخل الكود قبل أول اشتراك له.",
+  "inviteStep3": "بعد اعتماد أول إيداع له تُضاف الأيام لاشتراكك تلقائيًا.",
+  "codeTitle": "هل دعاك سائق؟",
+  "codeText": "أدخل كوده الآن، قبل أول اشتراك. يحصل هو على أيام مجانية ولا يكلفك شيئًا.",
+  "referralCodeLabel": "كود الدعوة",
+  "codeConfirm": "تأكيد الكود",
+  "codeNone": "ليس لدي كود",
+  "codeSaved": "تم حفظ الكود. شكرًا لك.",
+  "referral_invalid": "الكود غير صحيح.",
+  "referral_self": "لا يمكنك استخدام كودك.",
+  "referral_too_late": "الكود يُدخل قبل أول اشتراك فقط.",
+  "referral_already_set": "أدخلت كودًا من قبل.",
+  "subEndsIn": "ينتهي اشتراكك بعد {days}",
+  "@subEndsIn": {
+    "placeholders": {
+      "days": {
+        "type": "String"
+      }
+    }
+  },
+  "subEndsToday": "ينتهي اشتراكك اليوم",
+  "subRenewHint": "جدّد الآن لتبقى تستقبل الطلبات بدون انقطاع.",
+  "subGraceHint": "الطلبات تصلك حتى نهاية المهلة. جدّد الآن.",
+  "renewNow": "جدّد الاشتراك",
   "batteryGuide": "العمل والشاشة مقفلة",
   "batteryIntro": "بعض الجوالات توقف التطبيق بعد قفل الشاشة لتوفير البطارية، فلا تصلك الطلبات ولا يتحدث موقعك. اضبط هذه الخطوات مرة واحدة.",
   "batteryStep1": "إيقاف تحسين البطارية للتطبيق",
@@ -493,6 +662,22 @@
   "todaySummary": "نشاط اليوم",
   "todayRides": "رحلات مكتملة",
   "todayFares": "أجرة نقدية",
+  "awayFromYou": "{d} منك",
+  "@awayFromYou": {
+    "placeholders": {
+      "d": {
+        "type": "String"
+      }
+    }
+  },
+  "tripLength": "المشوار {d}",
+  "@tripLength": {
+    "placeholders": {
+      "d": {
+        "type": "String"
+      }
+    }
+  },
   "makeOffer": "قدّم عرضك",
   "viewOffer": "عرضك",
   "estimateLabel": "التقدير",

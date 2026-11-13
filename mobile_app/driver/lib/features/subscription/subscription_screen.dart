@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../app/providers.dart';
@@ -14,40 +15,91 @@ import '../../design/tokens.dart';
 import '../../shared/labels.dart';
 import '../../shared/widgets.dart' show ActionRunner, AsyncBody, RefRetry, errorMessage;
 
-/// Everything here comes from the operator's configuration (plans, prices, accounts, discount): nothing is
-/// hardcoded in the app.
-class SubscriptionScreen extends ConsumerWidget {
+/// Remembers the receipt the driver is waiting on, so its approval is celebrated once (screen 7 of D053).
+const awaitingClaimKey = 'subscription_awaiting_claim';
+
+/// "1 day", "2 days", "3 days", "15 days" with the Arabic forms for each count.
+String daysPhrase(AppLocalizations t, int n) {
+  if (n == 1) return t.dayOne;
+  if (n == 2) return t.dayTwo;
+  return n >= 3 && n <= 10 ? t.daysFew('$n') : t.daysMany('$n');
+}
+
+/// The word under the number in the ring.
+String ringUnit(AppLocalizations t, int n) {
+  if (n == 1) return t.ringDay;
+  if (n == 2) return t.ringDayTwo;
+  return n >= 3 && n <= 10 ? t.ringDaysFew : t.ringDaysMany;
+}
+
+/// My subscription (D052, D053 model 2 with the remaining-days ring): how long is left, the plans side by side with
+/// their value per day, what the driver earned against the price, and invitations. Prices, plans, grace and reward
+/// days all come from the operator.
+class SubscriptionScreen extends ConsumerStatefulWidget {
   const SubscriptionScreen({super.key});
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SubscriptionScreen> createState() => _SubscriptionScreenState();
+}
+
+class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
+  String? _selectedId;
+  bool _celebrating = false;
+
+  /// A receipt we saw waiting is now approved: show the activation once.
+  Future<void> _watchClaims(SubscriptionOverview s) async {
+    final prefs = ref.read(prefsProvider);
+    final pending = s.recentClaims.where((c) => c.status == 'submitted' || c.status == 'first_approved').firstOrNull;
+    try {
+      if (pending != null) {
+        await prefs.write(awaitingClaimKey, pending.id);
+        return;
+      }
+      final awaited = await prefs.read(awaitingClaimKey);
+      if (awaited == null || awaited.isEmpty) return;
+      final claim = s.recentClaims.where((c) => c.id == awaited).firstOrNull;
+      if (claim == null || claim.status == 'submitted' || claim.status == 'first_approved') return;
+      await prefs.write(awaitingClaimKey, '');
+      if (claim.status != 'approved' || !mounted || _celebrating) return;
+      _celebrating = true;
+      await RfSheet.show<void>(context, _Activated(overview: s));
+      _celebrating = false;
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     final me = ref.watch(authProvider).valueOrNull;
     final units = me?.minorUnits ?? 2;
     final currency = me?.currency ?? '';
+    ref.listen<AsyncValue<SubscriptionOverview>>(subscriptionProvider, (_, next) {
+      final s = next.valueOrNull;
+      if (s != null) _watchClaims(s);
+    });
     return Scaffold(
       appBar: AppBar(title: Text(t.subscriptionTitle)),
       body: AsyncBody<SubscriptionOverview>(
         value: ref.watch(subscriptionProvider),
         onRetry: ref.retry(subscriptionProvider),
         data: (s) {
-          final paid = s.plans.where((p) => !p.isTrial).toList();
+          final paid = s.plans.where((p) => !p.isTrial).toList()..sort((a, b) => a.durationDays.compareTo(b.durationDays));
           final trial = s.plans.where((p) => p.isTrial).firstOrNull;
           final pending = s.recentClaims.where((c) => c.status == 'submitted' || c.status == 'first_approved').firstOrNull;
           final lastRejected = s.recentClaims.isNotEmpty && s.recentClaims.first.status == 'rejected' ? s.recentClaims.first : null;
           final canPay = s.accounts.isNotEmpty && paid.isNotEmpty;
+          final selected = paid.where((p) => p.id == _selectedId).firstOrNull ??
+              paid.where((p) => p.bestValue).firstOrNull ??
+              paid.where((p) => p.name == s.currentPlanName).firstOrNull ??
+              paid.lastOrNull;
+          String money(int minor) => formatMoney(minor, currency, units);
           void pay([Plan? plan]) => RfSheet.show<void>(context, _DepositForm(overview: s, plan: plan, minorUnits: units, currency: currency));
           return RefreshIndicator(
             onRefresh: () async => ref.invalidate(subscriptionProvider),
-            child: ListView(padding: const EdgeInsets.all(RfSpace.md), children: [
-              _Summary(overview: s),
+            child: ListView(padding: const EdgeInsets.fromLTRB(RfSpace.md, RfSpace.sm, RfSpace.md, RfSpace.lg), children: [
+              _Status(overview: s),
               if (pending != null) ...[
                 const SizedBox(height: RfSpace.sm),
-                Banner2(
-                  title: t.pendingReceipt,
-                  text: '${formatMoney(pending.amountMinor, pending.currency, units)} · ${pending.reference}',
-                  tone: Tone.info,
-                  icon: Icons.hourglass_top_rounded,
-                ),
+                _Review(claim: pending, money: money),
               ],
               if (lastRejected != null && pending == null) ...[
                 const SizedBox(height: RfSpace.sm),
@@ -56,55 +108,70 @@ class SubscriptionScreen extends ConsumerWidget {
                   tone: Tone.danger,
                   icon: Icons.error_outline_rounded,
                   actionLabel: canPay ? t.submitDeposit : null,
-                  onAction: canPay ? pay : null,
+                  onAction: canPay ? () => pay(selected) : null,
                 ),
               ],
               if (!s.entitled && trial != null) ...[
                 const SizedBox(height: RfSpace.md),
                 _TrialCard(plan: trial),
               ],
-              const SizedBox(height: RfSpace.lg),
-              SectionHeader(s.entitled ? t.renew : t.selectPlan),
-              for (final p in paid)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: RfSpace.sm),
-                  child: _PlanCard(
-                    plan: p,
-                    price: formatMoney(p.priceMinor, currency, units),
-                    current: s.entitled && p.name == s.currentPlanName,
-                    onPay: canPay && pending == null ? () => pay(p) : null,
-                  ),
-                ),
+              if (pending == null && paid.isNotEmpty) ...[
+                const SizedBox(height: RfSpace.lg),
+                Text(s.entitled ? t.plansHeadingRenew : t.plansHeadingNew, style: RfType.h2),
+                const SizedBox(height: 2),
+                Text(t.plansHint, style: RfType.caption),
+                const SizedBox(height: RfSpace.md),
+                _Plans(plans: paid, selected: selected, money: money, onSelect: (p) => setState(() => _selectedId = p.id)),
+              ],
               if (paid.isEmpty) EmptyState(icon: Icons.workspace_premium_outlined, title: t.plansTitle, message: t.emptyTitle),
-              if (s.renewalDiscountPct > 0) Text('${t.renew}: −${s.renewalDiscountPct}%', style: RfType.caption),
-              const SizedBox(height: RfSpace.lg),
-              SectionHeader(t.depositAccounts, subtitle: t.depositIntro),
-              for (final a in s.accounts) _AccountCard(account: a),
-              if (s.accounts.isEmpty) EmptyState(icon: Icons.account_balance_outlined, title: t.depositAccounts, message: t.emptyTitle),
-              const SizedBox(height: RfSpace.lg),
-              SectionHeader(t.claimsTitle),
-              if (s.recentClaims.isEmpty)
-                EmptyState(icon: Icons.receipt_outlined, title: t.emptyTitle)
-              else
-                RfCard(
-                  padding: const EdgeInsets.symmetric(horizontal: RfSpace.md, vertical: RfSpace.xs),
-                  child: Column(children: [
-                    for (final c in s.recentClaims)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: RfSpace.xs),
-                        child: Row(children: [
-                          Expanded(
-                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              MoneyText(formatMoney(c.amountMinor, c.currency, units), style: RfType.bodyStrong),
-                              Text([c.reference, c.depositedOn].join(' · '), style: RfType.caption),
-                              if (c.decisionNote.isNotEmpty) Text(c.decisionNote, style: RfType.caption.copyWith(color: RfColors.coralDeep)),
-                            ]),
-                          ),
-                          StatusPill(claimStatusLabel(t, c.status), tone: toneFor(c.status)),
-                        ]),
-                      ),
-                  ]),
+              if (s.renewalDiscountPct > 0) ...[const SizedBox(height: RfSpace.xs), Text('${t.renew}: −${s.renewalDiscountPct}%', style: RfType.caption)],
+              if (s.earnings.earnedMinor > 0 && paid.isNotEmpty) ...[
+                const SizedBox(height: RfSpace.md),
+                _Worth(earnings: s.earnings, plan: _monthly(paid), money: money),
+              ],
+              if (s.referral.on || s.referral.canEnterCode) ...[
+                const SizedBox(height: RfSpace.md),
+                RfGroup(children: [
+                  if (s.referral.canEnterCode && s.referral.on)
+                    RfRow(
+                      key: const Key('enterReferralCode'),
+                      leading: RfRowIcon(Icons.card_giftcard_rounded, color: RfColors.teal),
+                      title: t.enterCodeRow,
+                      trailing: const Icon(Icons.chevron_left_rounded),
+                      onTap: () => RfSheet.show<void>(context, const ReferralCodeSheet()),
+                    ),
+                  if (s.referral.on)
+                    RfRow(
+                      key: const Key('inviteDriver'),
+                      leading: RfRowIcon(Icons.redeem_rounded, color: RfColors.teal),
+                      title: t.inviteRow(daysPhrase(t, s.referral.rewardDays)),
+                      trailing: const Icon(Icons.chevron_left_rounded),
+                      onTap: () => context.push('/subscription/invite'),
+                    ),
+                ]),
+              ],
+              if (pending == null && selected != null) ...[
+                const SizedBox(height: RfSpace.sm),
+                RfButton(
+                  key: const Key('choosePlan'),
+                  label: t.choosePlanCta(selected.name, money(selected.priceMinor)),
+                  kind: RfButtonKind.primary,
+                  large: true,
+                  onPressed: canPay ? () => pay(selected) : null,
                 ),
+                if (s.accounts.isEmpty) ...[const SizedBox(height: RfSpace.xs), Text(t.noDepositAccounts, style: RfType.caption, textAlign: TextAlign.center)],
+              ],
+              if (s.recentClaims.isNotEmpty) ...[
+                const SizedBox(height: RfSpace.lg),
+                RfGroup(title: t.claimsTitle, children: [
+                  for (final c in s.recentClaims)
+                    RfRow(
+                      titleChild: MoneyText(money(c.amountMinor), style: RfType.bodyStrong),
+                      sub: [if (c.planName.isNotEmpty) c.planName, c.reference, c.depositedOn, if (c.decisionNote.isNotEmpty) c.decisionNote].join(' · '),
+                      trailing: StatusPill(claimStatusLabel(t, c.status), tone: toneFor(c.status)),
+                    ),
+                ]),
+              ],
             ]),
           );
         },
@@ -113,80 +180,331 @@ class SubscriptionScreen extends ConsumerWidget {
   }
 }
 
-class _Summary extends StatelessWidget {
-  const _Summary({required this.overview});
+/// The plan closest to a month, to weigh against a month of earnings.
+Plan _monthly(List<Plan> paid) => paid.reduce((a, b) => (a.durationDays - 30).abs() <= (b.durationDays - 30).abs() ? a : b);
+
+/// The ring with the days left (taken from model 1), or the ended state with its grace.
+class _Status extends StatelessWidget {
+  const _Status({required this.overview});
   final SubscriptionOverview overview;
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     final s = overview;
-    final ends = s.endsAt;
-    final days = ends == null ? null : (ends.difference(DateTime.now()).inHours / 24).ceil().clamp(0, 9999);
-    return Container(
-      padding: const EdgeInsets.all(RfSpace.lg),
-      decoration: BoxDecoration(
-        color: s.entitled ? RfColors.ink2 : RfColors.amberSoft,
-        borderRadius: BorderRadius.circular(RfRadius.xl),
-        boxShadow: RfShadow.card,
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Icon(s.entitled ? Icons.verified_rounded : Icons.warning_amber_rounded, color: s.entitled ? RfColors.teal : RfColors.amberDeep),
-          const SizedBox(width: RfSpace.xs),
-          Expanded(child: Text(t.currentPlan, style: RfType.label.copyWith(color: s.entitled ? RfColors.onInkMuted : RfColors.amberDeep))),
-          if (s.currentSource == 'trial') StatusPill(t.trialBadge, tone: Tone.info),
+    final now = DateTime.now();
+    if (s.entitled && !s.inGrace) {
+      final days = s.daysLeft(now);
+      final span = (s.current?['plan'] is Map ? (s.current!['plan'] as Map)['duration_days'] as num? : null)?.toInt() ?? 30;
+      final low = days <= (s.reminderDays.isEmpty ? 3 : s.reminderDays.first);
+      return RfCard(
+        key: const Key('subscriptionRing'),
+        child: Row(children: [
+          _Ring(value: (days / (span < days ? days : span)).clamp(0.03, 1.0), color: low ? RfColors.amber : RfColors.teal, number: days, unit: ringUnit(t, days)),
+          const SizedBox(width: RfSpace.md),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Flexible(child: Text(s.currentPlanName ?? '', style: RfType.caption)),
+                if (s.currentSource == 'trial') ...[const SizedBox(width: 6), StatusPill(t.trialBadge, tone: Tone.info)],
+              ]),
+              const SizedBox(height: 2),
+              Text(t.subEndsOn(formatDate(s.paidUntil?.toLocal())), key: const Key('subscriptionEnds'), style: RfType.h3),
+              if (s.graceDays > 0) ...[const SizedBox(height: 2), Text(t.subGraceLine(daysPhrase(t, s.graceDays)), style: RfType.caption)],
+            ]),
+          ),
         ]),
-        const SizedBox(height: RfSpace.sm),
-        if (s.entitled) ...[
-          Text(s.currentPlanName ?? '', style: RfType.h1.copyWith(color: RfColors.onInk)),
+      );
+    }
+    return RfCard(
+      key: const Key('subscriptionEnded'),
+      border: s.inGrace ? RfColors.amber : RfColors.coral,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        if (s.inGrace) ...[
+          StatusPill(t.subInGraceTag(formatDateTime(s.stopsAt?.toLocal())), tone: Tone.warning),
           const SizedBox(height: RfSpace.xs),
-          if (days != null)
-            Text(t.daysRemaining('$days'), key: const Key('daysRemaining'), style: RfType.number.copyWith(color: days <= 3 ? RfColors.amber : RfColors.teal)),
-          const SizedBox(height: 2),
-          Text(t.subscriptionActive(formatDate(ends)), style: RfType.caption.copyWith(color: RfColors.onInkMuted)),
-          if (days != null && ends != null) ...[
-            const SizedBox(height: RfSpace.sm),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(RfRadius.pill),
-              child: LinearProgressIndicator(
-                value: (days / 30).clamp(0.04, 1.0),
-                minHeight: 6,
-                backgroundColor: RfColors.ink3,
-                color: days <= 3 ? RfColors.amber : RfColors.teal,
-              ),
-            ),
-          ],
-        ] else
-          Text(t.subscriptionInactive, style: RfType.bodyStrong.copyWith(color: RfColors.amberDeep)),
+        ],
+        Text(s.inGrace || s.paidUntil != null ? t.subEndedTitle : t.subNoneTitle, style: RfType.h2),
+        const SizedBox(height: 2),
+        Text(s.inGrace ? t.subInGraceText : t.subNoneText, style: RfType.caption),
       ]),
     );
   }
 }
 
-class _PlanCard extends StatelessWidget {
-  const _PlanCard({required this.plan, required this.price, required this.current, required this.onPay});
+class _Ring extends StatelessWidget {
+  const _Ring({required this.value, required this.color, required this.number, required this.unit});
+  final double value;
+  final Color color;
+  final int number;
+  final String unit;
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        width: 78,
+        height: 78,
+        child: Stack(alignment: Alignment.center, children: [
+          SizedBox.expand(child: CircularProgressIndicator(value: value, strokeWidth: 7, color: color, backgroundColor: RfColors.surfaceSunken, strokeCap: StrokeCap.round)),
+          Column(mainAxisSize: MainAxisSize.min, children: [
+            Text('$number', key: const Key('daysRemaining'), style: RfType.h1.copyWith(height: 1)),
+            Text(unit, style: RfType.caption),
+          ]),
+        ]),
+      );
+}
+
+/// Plans side by side; the best value is crowned and picked unless the driver picks another.
+class _Plans extends StatelessWidget {
+  const _Plans({required this.plans, required this.selected, required this.money, required this.onSelect});
+  final List<Plan> plans;
+  final Plan? selected;
+  final String Function(int) money;
+  final ValueChanged<Plan> onSelect;
+  @override
+  Widget build(BuildContext context) {
+    final tiles = [for (final p in plans) _PlanTile(plan: p, selected: p.id == selected?.id, money: money, onTap: () => onSelect(p))];
+    if (plans.length <= 3) {
+      return IntrinsicHeight(
+        child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          for (final (i, tile) in tiles.indexed) ...[if (i > 0) const SizedBox(width: RfSpace.xs), Expanded(child: tile)],
+        ]),
+      );
+    }
+    return SizedBox(
+      height: 190,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: tiles.length,
+        separatorBuilder: (_, __) => const SizedBox(width: RfSpace.xs),
+        itemBuilder: (_, i) => SizedBox(width: 112, child: tiles[i]),
+      ),
+    );
+  }
+}
+
+class _PlanTile extends StatelessWidget {
+  const _PlanTile({required this.plan, required this.selected, required this.money, required this.onTap});
   final Plan plan;
-  final String price;
-  final bool current;
-  final VoidCallback? onPay;
+  final bool selected;
+  final String Function(int) money;
+  final VoidCallback onTap;
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
-    return RfCard(
-      border: current ? RfColors.teal : null,
-      child: Row(children: [
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              Flexible(child: Text(plan.name, style: RfType.h3)),
-              if (current) ...[const SizedBox(width: 6), StatusPill(t.currentPlan, tone: Tone.success)],
-            ]),
-            Text(t.planDays('${plan.durationDays}'), style: RfType.caption),
-            const SizedBox(height: RfSpace.xs),
-            MoneyText(price, style: RfType.number),
-          ]),
+    final border = selected ? RfColors.gold : (plan.bestValue ? RfColors.gold.withOpacity(0.45) : RfColors.line);
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Stack(clipBehavior: Clip.none, alignment: Alignment.topCenter, children: [
+        Material(
+          color: selected ? RfColors.gold.withOpacity(0.10) : RfColors.surface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: border, width: selected ? 2 : 1)),
+          child: InkWell(
+            key: Key('plan_${plan.id}'),
+            borderRadius: BorderRadius.circular(14),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(6, 16, 6, 12),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Text(plan.name, style: RfType.bodyStrong, textAlign: TextAlign.center, maxLines: 2),
+                const SizedBox(height: 6),
+                FittedBox(fit: BoxFit.scaleDown, child: MoneyText(money(plan.priceMinor), style: RfType.number.copyWith(color: RfColors.gold))),
+                Text(t.planDays('${plan.durationDays}'), style: RfType.caption),
+                Container(height: 1, margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 10), color: RfColors.line),
+                FittedBox(fit: BoxFit.scaleDown, child: Text(t.perDay(money(plan.perDayMinor)), style: RfType.caption)),
+                const SizedBox(height: 4),
+                if (plan.savingPct > 0)
+                  StatusPill(t.saveBadge('${plan.savingPct}'), tone: Tone.success)
+                else
+                  const SizedBox(height: 22),
+              ]),
+            ),
+          ),
         ),
-        RfButton(key: Key('pay_${plan.id}'), label: current ? t.renew : t.payWithDeposit, kind: RfButtonKind.primary, expand: false, onPressed: onPay),
+        if (plan.bestValue)
+          Positioned(
+            top: -10,
+            child: Container(
+              key: Key('best_${plan.id}'),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(color: RfColors.gold, borderRadius: BorderRadius.circular(20)),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.workspace_premium_rounded, size: 13, color: RfColors.onGold),
+                const SizedBox(width: 3),
+                Text(t.bestValue, style: RfType.caption.copyWith(color: RfColors.onGold, fontWeight: FontWeight.w700)),
+              ]),
+            ),
+          ),
+      ]),
+    );
+  }
+}
+
+/// What the driver earned in cash against the plan closest to a month.
+class _Worth extends StatelessWidget {
+  const _Worth({required this.earnings, required this.plan, required this.money});
+  final Earnings earnings;
+  final Plan plan;
+  final String Function(int) money;
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final share = (plan.priceMinor / earnings.earnedMinor).clamp(0.06, 1.0);
+    Widget bar(double f, Color c, Color fg, String text) => LayoutBuilder(
+          builder: (_, box) => Container(
+            width: box.maxWidth * f,
+            height: 30,
+            alignment: AlignmentDirectional.centerStart,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            decoration: BoxDecoration(color: c, borderRadius: BorderRadius.circular(8)),
+            child: FittedBox(fit: BoxFit.scaleDown, child: Text(text, style: RfType.bodyStrong.copyWith(color: fg))),
+          ),
+        );
+    return RfCard(
+      key: const Key('worthIt'),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text(t.worthTitle, style: RfType.h3),
+        const SizedBox(height: RfSpace.sm),
+        bar(1, RfColors.teal, RfColors.canvas, '${money(earnings.earnedMinor)}  ${t.worthYou}'),
+        const SizedBox(height: 6),
+        Align(alignment: AlignmentDirectional.centerStart, child: bar(share, RfColors.gold, RfColors.onGold, money(plan.priceMinor))),
+        const SizedBox(height: RfSpace.xs),
+        Text(t.worthCaption('${earnings.days}', '${earnings.trips}', plan.name), style: RfType.caption),
+      ]),
+    );
+  }
+}
+
+/// The receipt waiting for the operator (screen 6).
+class _Review extends StatelessWidget {
+  const _Review({required this.claim, required this.money});
+  final DepositClaim claim;
+  final String Function(int) money;
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    Widget kv(String k, Widget v) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 3),
+          child: Row(children: [Expanded(child: Text(k, style: RfType.caption)), v]),
+        );
+    return RfCard(
+      key: const Key('receiptInReview'),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          Icon(Icons.hourglass_top_rounded, color: RfColors.blue),
+          const SizedBox(width: RfSpace.xs),
+          Expanded(child: Text(t.reviewTitle, style: RfType.h3)),
+        ]),
+        const SizedBox(height: 4),
+        Text(t.reviewText, style: RfType.caption),
+        const SizedBox(height: RfSpace.xs),
+        if (claim.planName.isNotEmpty) kv(t.plan, Text(claim.planName, style: RfType.bodyStrong)),
+        kv(t.amount, MoneyText(money(claim.amountMinor), style: RfType.bodyStrong)),
+        kv(t.reference, Ltr(claim.reference, style: RfType.bodyStrong)),
+      ]),
+    );
+  }
+}
+
+/// Shown once when the receipt we waited on is approved (screen 7).
+class _Activated extends StatelessWidget {
+  const _Activated({required this.overview});
+  final SubscriptionOverview overview;
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final days = overview.daysLeft(DateTime.now());
+    return RfSheet(
+      title: t.activatedTitle,
+      body: [
+        Center(child: Icon(Icons.check_circle_rounded, size: 64, color: RfColors.teal)),
+        const SizedBox(height: RfSpace.sm),
+        Text(t.activatedText(overview.currentPlanName ?? '', formatDate(overview.paidUntil?.toLocal())), style: RfType.body, textAlign: TextAlign.center),
+        const SizedBox(height: RfSpace.md),
+        Center(child: _Ring(value: 1, color: RfColors.teal, number: days, unit: ringUnit(t, days))),
+      ],
+      action: RfButton(
+        key: const Key('startReceiving'),
+        label: t.startReceiving,
+        kind: RfButtonKind.go,
+        onPressed: () {
+          Navigator.pop(context);
+          context.go('/');
+        },
+      ),
+    );
+  }
+}
+
+/// A new driver enters the code of the driver who invited them (screen 9).
+class ReferralCodeSheet extends ConsumerStatefulWidget {
+  const ReferralCodeSheet({super.key});
+  @override
+  ConsumerState<ReferralCodeSheet> createState() => _ReferralCodeSheetState();
+}
+
+class _ReferralCodeSheetState extends ConsumerState<ReferralCodeSheet> {
+  final _code = TextEditingController();
+  final _key = newActionKey();
+  bool _busy = false;
+  String? _error;
+
+  String _message(AppLocalizations t, Object e) {
+    if (e is ApiException) {
+      switch (e.code) {
+        case 'referral_invalid':
+          return t.referral_invalid;
+        case 'referral_self':
+          return t.referral_self;
+        case 'referral_too_late':
+          return t.referral_too_late;
+        case 'referral_already_set':
+          return t.referral_already_set;
+      }
+    }
+    return errorMessage(context, e);
+  }
+
+  Future<void> _submit() async {
+    final t = AppLocalizations.of(context);
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await ref.read(driverApiProvider).useReferralCode(_code.text.trim().toUpperCase(), actionKey: _key);
+      ref.invalidate(subscriptionProvider);
+      if (!mounted) return;
+      showToast(context, t.codeSaved);
+      Navigator.pop(context);
+    } catch (e) {
+      if (mounted) setState(() => _error = _message(t, e));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return RfSheet(
+      title: t.codeTitle,
+      subtitle: t.codeText,
+      body: [
+        TextField(
+          key: const Key('referralCode'),
+          controller: _code,
+          autofocus: true,
+          textDirection: TextDirection.ltr,
+          textAlign: TextAlign.center,
+          textCapitalization: TextCapitalization.characters,
+          inputFormatters: [FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9]')), LengthLimitingTextInputFormatter(12)],
+          style: RfType.h2.copyWith(letterSpacing: 4),
+          onChanged: (_) => setState(() => _error = null),
+          decoration: InputDecoration(labelText: t.referralCodeLabel, errorText: _error),
+        ),
+      ],
+      action: Column(mainAxisSize: MainAxisSize.min, children: [
+        RfButton(key: const Key('confirmReferralCode'), label: t.codeConfirm, kind: RfButtonKind.primary, loading: _busy, onPressed: _code.text.trim().length >= 4 ? _submit : null),
+        const SizedBox(height: RfSpace.xs),
+        RfButton(label: t.codeNone, kind: RfButtonKind.ghost, onPressed: () => Navigator.pop(context)),
       ]),
     );
   }
@@ -366,7 +684,8 @@ class _DepositFormState extends ConsumerState<_DepositForm> {
           items: [for (final a in widget.overview.accounts) DropdownMenuItem(value: a, child: Text(a.bankName))],
           onChanged: (a) => setState(() => _account = a!),
         ),
-        const SizedBox(height: RfSpace.md),
+        const SizedBox(height: RfSpace.sm),
+        _AccountCard(account: _account),
         TextField(
           controller: _amount,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),

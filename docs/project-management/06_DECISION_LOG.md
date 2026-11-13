@@ -260,4 +260,18 @@ D052 APPROVED by owner 2026-11-12: Subscriptions that keep drivers and sell long
 - Impact: `apps/subscriptions` (reminders, plan values, invitations, earnings in the overview), `apps/drivers` (referral code), worker, push texts, portal settings, contract.
 - Linked tests: `services/api/tests/test_subscription_growth.py`.
 
+D053 APPROVED by owner 2026-11-12: Screen choices on the direction A boards.
+- Driver "My subscription": model 2 (plans side by side, "is it worth it?" earnings against price, invitation link), with the remaining-days ring from model 1 moved to its top. The other screens of `Driver-Subscription-A` stand as drawn.
+- Rider home: model 2 of `Rider-Flow-A` (greeting and search first, the map as a card). The rest of that board stands as drawn.
+- Rationale: the owner's choice on the canvas.
+- Impact: driver subscription screens (D052) and the rider app redesign in direction A; the canvas boards now show only the approved models.
+
+D054 APPROVED by owner 2026-11-13: Direction A ("the royal black", model 1 of `World-Class-DS2`) in both apps now, without waiting for driver boards.
+- The owner asked in chat to finish the rider screens and apply model 1 to both apps, without stopping for approval, and to report when done. This amends D050's "nothing is coded before those boards are approved" for the driver app only.
+- Driver app: direction A palettes (the same values as the rider's), night (near-black) stays its default and day stays a choice (D049); one main button colour (`pri`: near-black by day, white by night); money in the text colour, gold only for stars; IBM Plex Sans Arabic bundled. The requests card follows the driver requests screen on `World-Class-DS2` direction A: half as tall, the price largest, how far the pickup is from the driver (straight line from the last position) and the trip length, the trip in two lines, and one main button always visible ("accept the rider's price" or "make an offer"); tapping the card still reveals "another price" and "hide" (D035, D037). Other driver screen layouts are unchanged until their boards exist.
+- Both apps: cards have no border (a soft shadow by day), and the input focus ring uses the main button colour, not green.
+- Rider app: every screen of `Rider-Flow-A` is built, including the no-offers and offline states. Where the server has no data the board assumes, the app says something true instead: no "reached 6 drivers" count and no arrival time; the distance to the driver and the distance left are straight lines.
+- Rationale: the owner wants one world-class design across both apps now.
+- Impact: driver `lib/design` (tokens, components, theme) and fonts; rider screens; the owner reviews on the phone and can ask for changes screen by screen.
+
 Rule: New decisions get sequential ID, date, approver, rationale, impact and linked task. Never silently reinterpret proposals as approved.

@@ -50,6 +50,7 @@ class DriverSubscriptionOverviewView(APIView):
                 "current": DriverSubscriptionSerializer(current).data if current else None,
                 "cover_ends_at": cover_end,
                 "grace_days": policy["subscriptions.grace_days"],
+                "reminder_days": sorted(policy["subscriptions.reminder_days"], reverse=True),
                 "in_grace": current is not None and cover_end is not None and cover_end < timezone.now(),
                 "plans": DriverPlanSerializer(plans, many=True, context={"values": services.plan_values(plans)}).data,
                 "deposit_accounts": DepositAccountSerializer(DepositAccount.objects.filter(is_active=True), many=True).data,

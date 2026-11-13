@@ -405,14 +405,16 @@ void main() {
       expect(find.byKey(const Key('searchInput')), findsOneWidget);
     });
 
-    testWidgets('both descriptions are optional, and are set on the price screen with the start code', (tester) async {
+    testWidgets('both descriptions are optional, and are set from the note chip with the start code', (tester) async {
       final backend = await pump(tester, {
         ...routes,
         'POST rides': (_) => (201, ride('bidding')),
         'GET rides/r1': (_) => (200, ride('bidding')),
       }, '/request', extra: const RideDraft(pickup: Place('أ', _shaab), dropoff: Place('ب', _fuwah)));
+      await tapKey(tester, 'noteChip');
       await tester.enterText(find.byKey(const Key('pickupNote')), 'عند البوابة الزرقاء');
       await tapKey(tester, 'codeSwitch');
+      await tapKey(tester, 'notesDone');
       await tapKey(tester, 'requestOffers');
       final body = posts(backend, 'rides').single.body as Map;
       expect(body['pickup_note'], 'عند البوابة الزرقاء');
@@ -422,7 +424,7 @@ void main() {
   });
 
   group('offers', () {
-    testWidgets('nothing is selected at first; choosing sends that offer with the ride version', (tester) async {
+    testWidgets('nothing is sent until a card is accepted; accepting sends that offer with the ride version', (tester) async {
       var current = ride('bidding');
       final backend = await pump(tester, {
         'GET rides/r1': (_) => (200, current),
@@ -432,13 +434,9 @@ void main() {
           return (200, current);
         },
       }, '/ride/r1');
-      await tester.tap(find.byKey(const Key('selectOffer')));
-      await settle(tester);
       expect(posts(backend, 'rides/r1/select'), isEmpty);
-
-      await tapKey(tester, 'offer_b');
       expect(find.textContaining('سائق-b'), findsWidgets);
-      await tapKey(tester, 'selectOffer');
+      await tapKey(tester, 'accept_b');
       final body = posts(backend, 'rides/r1/select').single.body as Map;
       expect(body['bid_id'], 'b');
       expect(body['expected_version'], 3);
@@ -480,32 +478,34 @@ void main() {
       expect(posts(backend, 'rides/r1/dispatch'), isEmpty);
     });
 
-    testWidgets('sorting reorders the offers without losing the selection', (tester) async {
-      await pump(tester, {
+    testWidgets('offers come cheapest first with the lowest marked, and ignoring hides one without sending anything', (tester) async {
+      final backend = await pump(tester, {
         'GET rides/r1': (_) => (200, ride('bidding')),
-        'GET rides/r1/bids': (_) => (200, [offer('slow', 80000, eta: 900), offer('fast', 90000, eta: 120)]),
+        'GET rides/r1/bids': (_) => (200, [offer('fast', 90000, eta: 120), offer('slow', 80000, eta: 900)]),
       }, '/ride/r1');
       double y(String id) => tester.getTopLeft(find.byKey(Key('offer_$id'))).dy;
       expect(y('slow') < y('fast'), isTrue);
-      await tapKey(tester, 'offer_slow');
-      await tapKey(tester, 'segment_1');
-      expect(y('fast') < y('slow'), isTrue);
-      expect(find.textContaining('سائق-slow'), findsWidgets);
+      expect(find.descendant(of: find.byKey(const Key('offer_slow')), matching: find.byKey(const Key('cheapestTag'))), findsOneWidget);
+      expect(find.descendant(of: find.byKey(const Key('offer_fast')), matching: find.byKey(const Key('cheapestTag'))), findsNothing);
+      await tapKey(tester, 'ignore_slow');
+      expect(find.byKey(const Key('offer_slow')), findsNothing);
+      expect(find.byKey(const Key('offer_fast')), findsOneWidget);
+      expect(find.byKey(const Key('cheapestTag')), findsNothing, reason: 'one offer left: nothing to compare');
+      expect(posts(backend, 'rides/r1/select'), isEmpty);
     });
 
-    testWidgets('an expired offer disappears and its selection is dropped', (tester) async {
+    testWidgets('an expired offer disappears and can no longer be accepted', (tester) async {
       final backend = await pump(tester, {
         'GET rides/r1': (_) => (200, ride('bidding')),
         'GET rides/r1/bids': (_) => (200, [offer('soon', 80000, left: const Duration(seconds: 2)), offer('later', 90000)]),
       }, '/ride/r1');
-      await tapKey(tester, 'offer_soon');
+      expect(find.byKey(const Key('accept_soon')), findsOneWidget);
       await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 2200))); // expiry follows the real clock
       await tester.pump(const Duration(seconds: 1));
       await settle(tester);
       expect(find.byKey(const Key('offer_soon')), findsNothing);
-      expect(find.text('انتهت مهلة هذا العرض.'), findsOneWidget);
-      await tester.tap(find.byKey(const Key('selectOffer')));
-      await settle(tester);
+      expect(find.byKey(const Key('accept_soon')), findsNothing);
+      expect(find.byKey(const Key('offer_later')), findsOneWidget);
       expect(posts(backend, 'rides/r1/select'), isEmpty);
     });
 
@@ -534,8 +534,7 @@ void main() {
         'GET rides/r1': (_) => (200, ride('bidding')),
         'POST rides/r1/cancel': (_) => (200, ride('cancelled', actions: [], extra: {'cancellation': {'by_role': 'rider'}})),
       }, '/ride/r1');
-      await tapKey(tester, 'rideMenu');
-      await tester.tap(find.byKey(const Key('cancelItem')));
+      await tester.tap(find.byKey(const Key('cancelRequest')));
       await tester.pump(const Duration(seconds: 1));
       await settle(tester);
       await tester.tap(find.byKey(const Key('confirmCancel')));
@@ -547,6 +546,32 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
       await settle(tester);
       expect((posts(backend, 'rides/r1/cancel').single.body as Map)['reason_code'], 'changed_mind');
+    });
+
+    testWidgets('without a network the trip says nothing is lost and carries on by itself when it is back', (tester) async {
+      var online = false;
+      final backend = await pump(tester, {
+        'GET rides/r1': (_) => online ? (200, ride('bidding')) : (0, null),
+        'GET rides/r1/bids': (_) => (200, []),
+      }, '/ride/r1');
+      expect(find.byKey(const Key('offlineState')), findsOneWidget);
+      expect(find.text('لا يوجد اتصال'), findsOneWidget);
+      online = true;
+      final before = backend.seen.where((r) => r.path == 'rides/r1').length;
+      await tester.pump(const Duration(seconds: 9));
+      await settle(tester);
+      expect(backend.seen.where((r) => r.path == 'rides/r1').length, greaterThan(before));
+      expect(find.byKey(const Key('offlineState')), findsNothing);
+      expect(find.byKey(const Key('searching')), findsOneWidget);
+    });
+
+    testWidgets('no offers: raising by one step and asking again is the main action', (tester) async {
+      await pump(tester, {
+        'GET rides/r1': (_) => (200, ride('cancelled', actions: [], extra: {'rider_price_minor': 90000, 'cancellation': {'by_role': 'system'}})),
+      }, '/ride/r1');
+      expect(find.textContaining('وأعد الطلب'), findsOneWidget);
+      expect(find.byKey(const Key('requestAgain')), findsOneWidget);
+      expect(find.byKey(const Key('notNow')), findsOneWidget);
     });
 
     testWidgets('a request that expired offers to send it again', (tester) async {
@@ -627,6 +652,17 @@ void main() {
     testWidgets('no start code card when the ride has none', (tester) async {
       await pump(tester, {'GET rides/r1': (_) => (200, withDriver('en_route'))}, '/ride/r1');
       expect(find.byKey(const Key('startCode')), findsNothing);
+    });
+
+    testWidgets('arrived: the code digit by digit, and how long the driver has waited', (tester) async {
+      final since = DateTime.now().subtract(const Duration(seconds: 72)).toUtc().toIso8601String();
+      await pump(tester, {'GET rides/r1': (_) => (200, withDriver('arrived', extra: {'start_code': '4821', 'start_code_required': true, 'timestamps': {'arrived_at': since}}))}, '/ride/r1');
+      expect(find.text('وصل السائق'), findsOneWidget);
+      expect(find.byKey(const Key('startCode')), findsOneWidget);
+      for (final c in ['4', '8', '2', '1']) {
+        expect(find.text(c), findsOneWidget);
+      }
+      expect(find.textContaining('1:1'), findsOneWidget, reason: 'waiting since about 1:12');
     });
 
     testWidgets('the rider cannot cancel once the trip started: the server decides', (tester) async {
@@ -853,13 +889,15 @@ void main() {
     await settle(tester);
     Iterable<Color?> textColours() => tester.widgetList<Text>(find.byType(Text)).map((w) => w.style?.color).whereType<Color>();
     expect(textColours(), contains(RfPalette.day.text));
+    expect(textColours(), contains(RfPalette.day.textMuted));
 
     await scope.read(appearanceProvider.notifier).set(RfAppearance.night);
     await settle(tester);
 
     expect(RfColors.isNight, isTrue);
     expect(prefs.values['rf_appearance'], 'night');
-    expect(textColours(), isNot(contains(RfPalette.day.text)));
+    // Direction A: the day text is also the night button label, so check a colour only the day palette has.
+    expect(textColours(), isNot(contains(RfPalette.day.textMuted)));
     expect(textColours(), contains(RfPalette.night.text));
     expect(Theme.of(tester.element(find.byType(Scaffold).first)).brightness, Brightness.dark);
   });

@@ -56,7 +56,7 @@ ThemeData buildRideFlowTheme() {
       errorStyle: RfType.caption.copyWith(color: RfColors.coralDeep),
       border: inputBorder,
       enabledBorder: inputBorder,
-      focusedBorder: inputBorder.copyWith(borderSide: BorderSide(color: RfColors.teal, width: 2)),
+      focusedBorder: inputBorder.copyWith(borderSide: BorderSide(color: RfColors.pri, width: 1.5)),
       errorBorder: inputBorder.copyWith(borderSide: BorderSide(color: RfColors.coral)),
     ),
     bottomSheetTheme: BottomSheetThemeData(

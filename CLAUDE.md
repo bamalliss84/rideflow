@@ -7,7 +7,7 @@ Read this first, then `docs/CURRENT_STATUS.md` (where work stands) and `docs/pro
 - Reply in Arabic, concisely. The owner tests on a real phone and approves designs screen by screen.
 - Designs come before code. Show several models on the canvas, wait for approval, then build. The owner's "don't start" means report and wait.
 - Commit or push only when asked. Push to `main` only after checks pass, then report the CI result.
-- New decisions get the next ID in the decision log (latest: D052). Never rewrite an approved decision or treat a proposal as approved.
+- New decisions get the next ID in the decision log (latest: D054). Never rewrite an approved decision or treat a proposal as approved.
 - Don't invent test results. Say what wasn't run or seen.
 - Don't defer work the owner asked for. Anything that truly must wait goes into `docs/RELEASE_CHECKLIST.md` the same day; review that file before any release for sale.
 - Never log OTP codes or tokens beyond the existing dev-only behaviour. Never weaken TLS, authentication or test assertions to make checks pass.
@@ -99,12 +99,12 @@ The emulator AVD has an unknown lock credential and a hung snapshot boot; don't 
 
 Canvas: https://claude.ai/artifact/5vXMvWdh6gw6TSQupomxfi (keep using this one; files live under `project/`).
 
-- "Souq" dark palette: ground `#0F2419`, card `#183426`, raised `#27493A`, text `#F3F6F3`, muted `#B8CABE`, gold `#F5B83D` (text on it `#18261E`), live green `#5FD09A`.
-- Font: Tajawal, bundled in the app. The owner asked for smaller type twice: body 13, titles 14-18, captions 12, buttons 44/50 high (D043). See `lib/design/tokens.dart`.
+- Direction A, "calm premium" (D050, D054), in both apps: near-black and white, the brand green only for live states, no card borders, one main button colour (`RfColors.pri`), money in the text colour and gold (`RfColors.star`) only for stars. Night `#0B0F0D` / surface `#161B18` / text `#F2F4F3`; day `#FFFFFF` / sunken `#F3F4F3` / text `#0B0F0D`; live green `#12B76A` by day, `#32D583` by night. Palettes in each app's `lib/design/tokens.dart`. The driver defaults to night, the rider to day. The old "Souq" palette is gone.
+- Font: IBM Plex Sans Arabic, bundled in both apps (the rider can still pick Tajawal or Cairo). The owner asked for smaller type twice: body 13, titles 14-18, captions 12, buttons 44/50 high (D043).
 - Connected-route icons: green ring for "from", gold pin for "to", dashed line between.
 - Driver screens: requests with tap-to-reveal cards (`Requests-Final`), one offer sheet (`Offer-Options` option 1), status bar after sending (`After-Send` model 3), confirmation (`Confirm-Options` model 1), trip one step at a time (`Trip-Options` model 1, `Trip-Stages`).
 - Rider app (D040): same family, one main fact and one main button per screen, more breathing room than the driver app, map as the base with one panel over it, and it must work without a map.
-- Rider style (approved): `Rider-Style-V2`. Ground `#07120D`, panel `#0D1913`, card `#14241C`, line `#1C3024`, text `#F2F7F3`, muted `#B8CABE`, green main buttons `#27D17C` (text `#06170E`), gold `#F5B83D` for prices and ratings. The rider picks Cairo or Tajawal in settings, so layouts must hold in both. Those are the night colours: the rider also has a day appearance, the default, switched in account settings (D042; palettes in `mobile_app/rider/lib/design/tokens.dart`). Colours are read while building, so a widget using them can't be `const`. Later rider screens: see `docs/CURRENT_STATUS.md`. Destination screen: `Rider-Destination-Options`, models 1 and 3 both built and switched in account settings until the owner picks one (D041).
+- Rider screens follow `Rider-Flow-A` (home model 2, D053), all built (D054). The rider has a day appearance, the default, and a night one, switched in account settings (D042). Colours are read while building, so a widget using them can't be `const`. Destination screen: `Rider-Destination-Options`, models 1 and 3 both built and switched in account settings until the owner picks one (D041).
 - Layout (D044): three models built in both apps and switched in account settings until the owner keeps one. `RfLayout` in `lib/design/tokens.dart`; build screens from `RfGroup`, `RfRow`, `RfFacts`, `RfStops` and `RfFoot` in `lib/design/components.dart`.
 - Not redesigned yet in the driver app: onboarding, subscription, history, earnings, notifications (they only inherit the colours and the card shape).
 

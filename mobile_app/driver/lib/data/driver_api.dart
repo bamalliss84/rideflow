@@ -62,6 +62,8 @@ class DriverApi {
   Future<SubscriptionOverview> subscription() async =>
       SubscriptionOverview(((await client.get('driver/subscription')) as Map).cast<String, dynamic>());
   Future<void> startTrial({String? actionKey}) => client.post('driver/subscription/trial', actionKey: actionKey);
+  Future<Referral> useReferralCode(String code, {String? actionKey}) async =>
+      Referral(((await client.post('driver/subscription/referral', data: {'code': code}, actionKey: actionKey)) as Map).cast<String, dynamic>());
   Future<DepositClaim> submitDeposit({
     required String planId,
     required String accountId,

@@ -153,7 +153,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
           if (rating != null)
             RfRow(
               title: t.yourRating,
-              trailing: Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.star_rounded, color: RfColors.gold, size: 16), const SizedBox(width: 4), Text(rating.toStringAsFixed(1), style: RfType.bodyStrong)]),
+              trailing: Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.star_rounded, color: RfColors.star, size: 16), const SizedBox(width: 4), Text(rating.toStringAsFixed(1), style: RfType.bodyStrong)]),
             ),
         ]),
         RfGroup(title: t.sectionSettings, children: [

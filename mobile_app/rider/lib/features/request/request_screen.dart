@@ -10,6 +10,7 @@ import '../../core/format.dart';
 import '../../data/models.dart';
 import '../../design/components.dart';
 import '../../design/tokens.dart';
+import '../../shared/ride_map.dart';
 import '../../shared/widgets.dart' show ActionRunner, AsyncBody;
 
 /// Default price step: 50 whole currency units. A ride's own snapshot carries the operator's step once it exists.
@@ -21,6 +22,8 @@ int defaultStepMinor(int minorUnits) {
   return step;
 }
 
+/// Confirm the request (direction A, screen 3): the route on the map, the expected range large, the optional price on
+/// one line, cash and a note for the driver as chips, one button.
 class RequestScreen extends ConsumerStatefulWidget {
   const RequestScreen({super.key, required this.draft});
   final RideDraft draft;
@@ -63,79 +66,185 @@ class _RequestScreenState extends ConsumerState<RequestScreen> {
     context.go('/ride/${ride!.id}');
   }
 
+  Future<void> _notes() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: RfColors.canvas,
+      builder: (_) => StatefulBuilder(
+        builder: (context, setSheet) {
+          final t = AppLocalizations.of(context);
+          return SafeArea(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(20, 4, 20, 16 + MediaQuery.viewInsetsOf(context).bottom),
+              child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                Text(t.sectionNotes, style: RfType.h2),
+                const SizedBox(height: 12),
+                TextField(
+                  key: const Key('pickupNote'),
+                  controller: _pickupNote,
+                  maxLength: 300,
+                  decoration: InputDecoration(hintText: t.pickupNoteHint, counterText: '', prefixIcon: Icon(Icons.radio_button_checked_rounded, color: RfColors.teal, size: 18)),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  key: const Key('dropoffNote'),
+                  controller: _dropoffNote,
+                  maxLength: 300,
+                  decoration: InputDecoration(hintText: t.dropoffNoteHint, counterText: '', prefixIcon: Icon(Icons.square_rounded, color: RfColors.text, size: 14)),
+                ),
+                const SizedBox(height: 4),
+                SwitchListTile(
+                  key: const Key('codeSwitch'),
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(t.startCodeTitle, style: RfType.bodyStrong),
+                  subtitle: Text(_code ? t.on_ : t.off_, style: RfType.caption),
+                  value: _code,
+                  activeTrackColor: RfColors.teal,
+                  onChanged: (v) {
+                    setSheet(() {});
+                    setState(() => _code = v);
+                  },
+                ),
+                const SizedBox(height: 8),
+                RfButton(key: const Key('notesDone'), label: t.done, onPressed: () => Navigator.pop(context)),
+              ]),
+            ),
+          );
+        },
+      ),
+    );
+    if (mounted) setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     final units = ref.watch(authProvider).valueOrNull?.minorUnits ?? 2;
     final value = ref.watch(estimateProvider(widget.draft));
     final d = widget.draft;
+    final noted = _pickupNote.text.trim().isNotEmpty || _dropoffNote.text.trim().isNotEmpty || _code;
     return Scaffold(
-      appBar: AppBar(title: Text(t.price), leading: const BackButton()),
-      bottomNavigationBar: value.valueOrNull == null ? null : RfFoot(child: RfButton(key: const Key('requestOffers'), label: t.requestOffers, large: true, loading: _runner.busy, onPressed: _send)),
-      body: AsyncBody<Estimate>(
-        value: value,
-        onRetry: () => ref.invalidate(estimateProvider(widget.draft)),
-        data: (e) {
-          String money(int? v) => formatMoney(v, e.currency, units);
-          return ListView(padding: const EdgeInsets.fromLTRB(16, 0, 16, 16), children: [
-            RfGroup(title: t.sectionTrip, children: [
-              RfStops(fromLabel: t.from, from: d.pickup.landmark, toLabel: t.to, to: d.dropoff.landmark),
-              RfFacts([RfFact(t.distance, formatDistance(e.distanceM), ltr: true), RfFact(t.payment, t.cash)]),
-            ]),
-            RfGroup(title: t.estimate, children: [
-              Padding(
-                padding: RfLayout.box,
-                child: Column(children: [
-                  MoneyText('${formatMoney(e.minMinor, '', units)} – ${money(e.maxMinor)}', style: RfLayout.price),
-                  const SizedBox(height: 2),
-                  Text(t.estimateNote, style: RfType.caption, textAlign: TextAlign.center),
-                ]),
+      body: Stack(children: [
+        Positioned.fill(bottom: 300, child: RideMap(pickup: d.pickup.point, dropoff: d.dropoff.point)),
+        PositionedDirectional(
+          top: 0,
+          start: 0,
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Material(
+                color: RfColors.canvas,
+                shape: const CircleBorder(),
+                elevation: 2,
+                child: IconButton(icon: Icon(Icons.arrow_back_rounded, color: RfColors.text), tooltip: MaterialLocalizations.of(context).backButtonTooltip, onPressed: () => context.pop()),
               ),
-              RfRow(
-                key: const Key('addPrice'),
-                title: _price == null ? t.addPrice : t.yourPrice,
-                trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                  if (_price != null) MoneyText(money(_price), style: RfType.bodyStrong.copyWith(color: RfColors.gold)),
-                  Icon(Icons.chevron_left_rounded, color: RfColors.textMuted),
-                ]),
-                onTap: () async {
-                  final picked = await showPriceSheet(context, start: _price ?? e.riderMinMinor, minimum: e.riderMinMinor, step: defaultStepMinor(units), currency: e.currency, minorUnits: units, estimate: '${formatMoney(e.minMinor, '', units)} – ${money(e.maxMinor)}', allowNone: true);
-                  if (picked != null && mounted) setState(() => _price = picked == 0 ? null : picked);
+            ),
+          ),
+        ),
+        Align(
+          alignment: Alignment.bottomCenter,
+          child: Container(
+            constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.72),
+            decoration: BoxDecoration(
+              color: RfColors.canvas,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              boxShadow: const [BoxShadow(color: Color(0x22000000), blurRadius: 30, offset: Offset(0, -8))],
+            ),
+            child: SafeArea(
+              top: false,
+              child: AsyncBody<Estimate>(
+                value: value,
+                onRetry: () => ref.invalidate(estimateProvider(widget.draft)),
+                data: (e) {
+                  String money(int? v) => formatMoney(v, e.currency, units);
+                  final range = '${formatMoney(e.minMinor, '', units)} – ${money(e.maxMinor)}';
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+                    child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                      Center(child: Container(width: 38, height: 4, decoration: BoxDecoration(color: RfColors.line, borderRadius: BorderRadius.circular(4)))),
+                      const SizedBox(height: 12),
+                      RouteStops(pickupLabel: t.from, pickup: d.pickup.landmark, dropoffLabel: t.to, dropoff: d.dropoff.landmark, dense: true, showLabels: false),
+                      Padding(padding: const EdgeInsets.symmetric(vertical: 12), child: Container(height: 1, color: RfColors.line)),
+                      Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                        Expanded(
+                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text(t.estimate, style: RfType.caption),
+                            FittedBox(fit: BoxFit.scaleDown, alignment: AlignmentDirectional.centerStart, child: MoneyText(range, key: const Key('estimateRange'), style: RfLayout.priceBig)),
+                          ]),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+                          decoration: BoxDecoration(color: RfColors.surfaceSunken, borderRadius: BorderRadius.circular(RfRadius.pill)),
+                          child: Ltr(formatDistance(e.distanceM), style: RfType.bodyStrong),
+                        ),
+                      ]),
+                      const SizedBox(height: 12),
+                      Material(
+                        color: RfColors.surfaceSunken,
+                        borderRadius: BorderRadius.circular(16),
+                        child: InkWell(
+                          key: const Key('addPrice'),
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: () async {
+                            final picked = await showPriceSheet(context, start: _price ?? e.riderMinMinor, minimum: e.riderMinMinor, step: defaultStepMinor(units), currency: e.currency, minorUnits: units, estimate: range, allowNone: true);
+                            if (picked != null && mounted) setState(() => _price = picked == 0 ? null : picked);
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                              Row(children: [
+                                Expanded(child: Text(t.yourPriceOptional, style: RfType.bodyStrong)),
+                                if (_price != null) MoneyText(money(_price), style: RfLayout.price) else Icon(Icons.add_rounded, color: RfColors.text),
+                              ]),
+                              const SizedBox(height: 2),
+                              Text(t.priceLineHint(money(e.riderMinMinor)), style: RfType.caption),
+                            ]),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Row(children: [
+                        _Chip(icon: Icons.payments_outlined, label: t.cash),
+                        const SizedBox(width: 8),
+                        _Chip(key: const Key('noteChip'), icon: noted ? Icons.check_rounded : Icons.edit_note_rounded, label: t.noteForDriver, onTap: _notes),
+                      ]),
+                      const SizedBox(height: 14),
+                      RfButton(key: const Key('requestOffers'), label: t.requestOffers, large: true, loading: _runner.busy, onPressed: _send),
+                    ]),
+                  );
                 },
               ),
-            ]),
-            RfGroup(title: t.sectionNotes, children: [
-              Padding(
-                padding: RfLayout.box,
-                child: Column(children: [
-                  TextField(
-                    key: const Key('pickupNote'),
-                    controller: _pickupNote,
-                    maxLength: 300,
-                    decoration: InputDecoration(hintText: t.pickupNoteHint, counterText: '', prefixIcon: Icon(Icons.radio_button_checked_rounded, color: RfColors.teal, size: 18)),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    key: const Key('dropoffNote'),
-                    controller: _dropoffNote,
-                    maxLength: 300,
-                    decoration: InputDecoration(hintText: t.dropoffNoteHint, counterText: '', prefixIcon: Icon(Icons.place_rounded, color: RfColors.gold, size: 18)),
-                  ),
-                ]),
-              ),
-            ]),
-            RfGroup(children: [
-              RfRow(
-                title: t.startCodeTitle,
-                sub: _code ? t.on_ : t.off_,
-                trailing: Switch(key: const Key('codeSwitch'), value: _code, activeTrackColor: RfColors.teal, onChanged: (v) => setState(() => _code = v)),
-              ),
-            ]),
-          ]);
-        },
-      ),
+            ),
+          ),
+        ),
+      ]),
     );
   }
+}
+
+class _Chip extends StatelessWidget {
+  const _Chip({super.key, required this.icon, required this.label, this.onTap});
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+  @override
+  Widget build(BuildContext context) => Material(
+        color: RfColors.surfaceSunken,
+        borderRadius: BorderRadius.circular(RfRadius.pill),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(RfRadius.pill),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(icon, size: 17, color: RfColors.text),
+              const SizedBox(width: 6),
+              Text(label, style: RfType.bodyStrong),
+            ]),
+          ),
+        ),
+      );
 }
 
 /// Returns the chosen price, 0 for "no price", or null when dismissed.

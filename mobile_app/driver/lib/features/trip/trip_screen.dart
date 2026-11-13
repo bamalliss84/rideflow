@@ -641,7 +641,7 @@ class _RatingPanelState extends ConsumerState<_RatingPanel> {
               _stars = i;
               _tags.clear();
             }),
-            icon: Icon(i <= _stars ? Icons.star_rounded : Icons.star_outline_rounded, color: RfColors.gold),
+            icon: Icon(i <= _stars ? Icons.star_rounded : Icons.star_outline_rounded, color: RfColors.star),
           ),
       ]),
       if (_stars > 0) ...[

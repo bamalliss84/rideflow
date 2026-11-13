@@ -1,6 +1,6 @@
 # RideFlow current status
 
-The Git and test sections were last updated on 2026-11-12. The sections on the environment problem, the server and out-of-date documents were last checked on 2026-11-02. Update this file whenever the state changes. Decisions live in `project-management/06_DECISION_LOG.md`.
+The Git and test sections were last updated on 2026-11-13. The sections on the environment problem, the server and out-of-date documents were last checked on 2026-11-02. Update this file whenever the state changes. Decisions live in `project-management/06_DECISION_LOG.md`.
 
 ## Git
 
@@ -8,24 +8,24 @@ The Git and test sections were last updated on 2026-11-12. The sections on the e
 |---|---|
 | Branch | `main`; pushed up to `68b3a80` (push notifications), CI passed on it and on `ba581bf` |
 | Last commits | `ba581bf` D050/D051, socket grace, background location; `68b3a80` Firebase push |
-| Uncommitted | D052 (subscriptions: reminders, grace, plan value, invitations) in the API, portal, contract and docs; the driver battery guide. All checks pass; held for the owner's go-ahead |
+| Uncommitted | D054: the rider app in direction A on every screen of `Rider-Flow-A` (home, destination, request, waiting, offers accepted from the card, driver confirming, on the way, arrived with the code in four boxes, in trip, pay and rate, no offers, offline), the driver app's palette, buttons and font in direction A and its half-height request card, borderless cards in both apps. Before that: D053 and the driver subscription screens (D052 in direction A): ring with days left, plans side by side with value per day, "is it worth it?", receipt in review, activation, invitations, invitation code, home reminder; `reminder_days` added to the overview. Checks pass locally |
 | Must stay out of commits | `rider_login.json` (dev token), `.env`, `.secrets/` (Firebase key), `mobile_app/*/android/app/google-services.json` (all ignored) |
 
-## Tests and CI (2026-11-12)
+## Tests and CI (2026-11-13)
 
 | Check | Result | Covers |
 |---|---|---|
-| CI | Passed on `68b3a80`. CI doesn't run Flutter | Not run on D052 |
+| CI | Failed on `264e5fb` in the backend tests step; the same tests pass locally (live code, a fresh image, and CI's env file). The log needs a GitHub sign-in to read. CI doesn't run Flutter | Rerun pending |
 | Backend `pytest` | Passed, no failures | D052 included (`test_subscription_growth.py`, `test_push.py`) |
 | `ruff check`, `ruff format --check`, `makemigrations --check` | Passed | D052 included |
 | OpenAPI contract and portal types | Regenerated; contract matches | D052 included |
 | Portal `typecheck` and `lint` | Passed; admin container rebuilt | D052 included |
-| Driver `flutter analyze` and `flutter test` | Clean; 108 passed, 1 skipped | Push, background location, battery guide |
-| Rider `flutter analyze` and `flutter test` | Clean; 56 passed, 1 skipped | Push |
+| Driver `flutter analyze` and `flutter test` | Clean; 118 passed, 1 skipped | Push, background location, battery guide, subscription screens, direction A palette |
+| Rider `flutter analyze` and `flutter test` | Clean; 59 passed, 1 skipped (`test/live` excluded) | Push, direction A screens, arrived code, offline retry, no offers |
 
 Seen on the phone by the owner (2026-11-12): new arrival time choices from the portal; a test push in both apps. On the Infinix (XOS), its own freezer (`com.transsion.usf`) freezes the driver app seconds after the screen locks, even with the foreground location service and the Android battery exemption. While frozen, pushes wait until unlock and location stops. With the phone's "background power saving" turned off, a push posted 10 seconds after sending with the screen locked; location still arrives only now and then. The driver app now has a battery guide (account tab, a home banner, and opened once on first going online): the Android exemption, steps per phone maker, and locking the app in recent apps; the owner tried it on the phone (2026-11-12). Not yet seen: steady location with the screen off, "send my location now" feedback, a push from a real trip event, any D052 reminder.
 
-Canvas (version 53): `Rider-Flow-A` (the rider's whole flow in direction A, day and night; home has two models) and `Driver-Subscription-A` (D052 screens, night and day; "My subscription" has two models). Both wait for the owner's choice; nothing of them is coded yet.
+Canvas (version 59): `Rider-Flow-A` and `Driver-Subscription-A` show the approved models (D053); both are now coded. Both apps were installed on the phone on 2026-11-13 (driver 02:39, rider 02:33) with D054; the owner hasn't looked at them yet. Apart from the request card, the driver app's screen layouts are still the old ones in the new colours: they get direction A boards next.
 
 
 ## Android on the real phone

@@ -16,6 +16,10 @@ class ExternalApps {
     return await _open(Uri.https('www.google.com', '/maps/dir/', query)) || await _open(Uri.parse('geo:$to?q=$to'));
   }
 
+  /// WhatsApp with [text] ready to send to a contact the driver picks; the web link if the app isn't there.
+  Future<bool> shareWhatsApp(String text) async =>
+      await _open(Uri(scheme: 'whatsapp', host: 'send', queryParameters: {'text': text})) || await _open(Uri.https('wa.me', '/', {'text': text}));
+
   Future<bool> _open(Uri uri) async {
     try {
       return await launchUrl(uri, mode: LaunchMode.externalApplication);

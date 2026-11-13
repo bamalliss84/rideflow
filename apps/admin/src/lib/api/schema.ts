@@ -4404,6 +4404,7 @@ export interface components {
             /** Format: date-time */
             cover_ends_at: string | null;
             grace_days: number;
+            reminder_days: number[];
             in_grace: boolean;
             plans: components["schemas"]["DriverPlan"][];
             deposit_accounts: components["schemas"]["DepositAccount"][];

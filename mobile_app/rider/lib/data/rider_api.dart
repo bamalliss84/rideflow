@@ -32,6 +32,7 @@ class RiderApi {
 
   Future<void> markRead({int? upTo, int? cursor}) => client.post('notifications/read', data: {if (upTo != null) 'up_to': upTo, if (cursor != null) 'cursor': cursor});
 
+  Future<NearbyDrivers> nearby(Point p) async => NearbyDrivers(_json(await client.get('drivers/nearby', query: {'lat': p.lat, 'lng': p.lng})));
   Future<List<City>> cities() async => results(await client.get('cities')).map(City.new).toList();
   Future<List<SavedPlace>> places() async => results(await client.get('me/places')).map(SavedPlace.new).toList();
   Future<SavedPlace> addPlace({required String kind, required String label, required Place place}) async =>

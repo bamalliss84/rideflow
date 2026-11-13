@@ -232,7 +232,7 @@ void main() {
       return (backend, () => current);
     }
 
-    testWidgets('card shows rating and price; tapping reveals the right actions; "new" replaces the prior', (tester) async {
+    testWidgets('card shows rating, price and one main button; tapping reveals the other actions; "new" replaces the prior', (tester) async {
       await pumpHome(tester, [offer('r1', riderPrice: 80000, ratingCount: 32), offer('r2')]);
 
       expect(find.byKey(const Key('statusReady')), findsOneWidget);
@@ -242,17 +242,21 @@ void main() {
       expect(find.text('جديد'), findsOneWidget); // the other rider: no fake 4.5
       expect(find.text('735–1,103'), findsNWidgets(2)); // estimate shown beside the rider price too
 
-      expect(find.byKey(const Key('makeOffer_r1')), findsNothing);
+      // One main button on every card: accept the rider's price, or make an offer.
+      expect(find.text('اقبل 800 YER'), findsOneWidget);
+      expect(find.text('قدّم عرضك'), findsOneWidget);
+      expect(find.byKey(const Key('hide_r1')), findsNothing);
+      expect(find.text('قدّم سعرًا آخر'), findsNothing);
       await tester.tap(find.byKey(const Key('toggleCard_r1')));
       await _settle(tester, 2);
-      expect(find.text('اقبل 800 YER'), findsOneWidget);
       expect(find.text('قدّم سعرًا آخر'), findsOneWidget);
       expect(find.byKey(const Key('hide_r1')), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('toggleCard_r2')));
       await _settle(tester, 2);
-      expect(find.byKey(const Key('makeOffer_r1')), findsNothing); // one open at a time
-      expect(find.text('قدّم عرضك'), findsOneWidget);
+      expect(find.byKey(const Key('hide_r1')), findsNothing); // one open at a time
+      expect(find.byKey(const Key('hide_r2')), findsOneWidget);
+      expect(find.byKey(const Key('otherPrice_r2')), findsNothing, reason: 'no rider price: one way to offer');
 
       await tester.ensureVisible(find.byKey(const Key('tab_price')));
       await tester.tap(find.byKey(const Key('tab_price')));

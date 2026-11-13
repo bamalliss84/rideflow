@@ -85,6 +85,7 @@ def test_a_day_of_grace_by_default_and_none_when_the_operator_says_so(ta):
     api = api_for(ta, driver.user)
     data = api.get("/api/v1/driver/subscription").data
     assert data["entitled"] is True and data["in_grace"] is True
+    assert data["grace_days"] == 1 and data["reminder_days"] == [3, 1]
     set_policy(ta, **{"subscriptions.grace_days": 0})
     assert api.get("/api/v1/driver/subscription").data["entitled"] is False
 

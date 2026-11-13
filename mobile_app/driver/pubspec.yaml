@@ -38,7 +38,18 @@ flutter:
   uses-material-design: true
   generate: true
   # Tajawal (SIL Open Font License 1.1, assets/fonts/OFL.txt), bundled: no runtime font download.
+  # IBM Plex Sans Arabic (SIL Open Font License 1.1, assets/fonts/OFL-IBMPlexSansArabic.txt): direction A (D054).
   fonts:
+    - family: IBM Plex Sans Arabic
+      fonts:
+        - asset: assets/fonts/IBMPlexSansArabic-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/IBMPlexSansArabic-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/IBMPlexSansArabic-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/IBMPlexSansArabic-Bold.ttf
+          weight: 700
     - family: Tajawal
       fonts:
         - asset: assets/fonts/Tajawal-Regular.ttf

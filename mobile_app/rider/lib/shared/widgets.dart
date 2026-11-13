@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -36,19 +38,50 @@ class LoadingView extends StatelessWidget {
   Widget build(BuildContext context) => const Padding(padding: EdgeInsets.all(RfSpace.md), child: SkeletonList());
 }
 
-class ErrorView extends StatelessWidget {
+/// A failed read. Without a network it says nothing is lost and tries again by itself every few seconds while shown
+/// (board "لا شبكة"); other errors keep the plain message and a retry button.
+class ErrorView extends StatefulWidget {
   const ErrorView({super.key, required this.error, this.onRetry});
   final Object error;
   final VoidCallback? onRetry;
   @override
+  State<ErrorView> createState() => _ErrorViewState();
+}
+
+class _ErrorViewState extends State<ErrorView> {
+  Timer? _again;
+
+  bool get _network => widget.error is ApiException && (widget.error as ApiException).isNetwork;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_network && widget.onRetry != null) _again = Timer.periodic(const Duration(seconds: 8), (_) => widget.onRetry?.call());
+  }
+
+  @override
+  void dispose() {
+    _again?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
-    final network = error is ApiException && (error as ApiException).isNetwork;
+    if (_network) {
+      return EmptyState(
+        key: const Key('offlineState'),
+        icon: Icons.wifi_off_rounded,
+        title: t.noConnection,
+        message: t.noConnectionNote,
+        action: widget.onRetry == null ? null : RfButton(key: const Key('retryNow'), label: t.tryNow, expand: false, onPressed: widget.onRetry),
+      );
+    }
     return EmptyState(
-      icon: network ? Icons.wifi_off_rounded : Icons.error_outline_rounded,
+      icon: Icons.error_outline_rounded,
       title: t.errorTitle,
-      message: errorMessage(context, error),
-      action: onRetry == null ? null : RfButton(label: t.retry, icon: Icons.refresh_rounded, kind: RfButtonKind.secondary, expand: false, onPressed: onRetry),
+      message: errorMessage(context, widget.error),
+      action: widget.onRetry == null ? null : RfButton(label: t.retry, icon: Icons.refresh_rounded, kind: RfButtonKind.secondary, expand: false, onPressed: widget.onRetry),
     );
   }
 }

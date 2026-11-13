@@ -41,6 +41,36 @@
   "navRides": "رحلاتي",
   "navAccount": "حسابي",
   "whereTo": "إلى أين تريد الذهاب؟",
+  "whereToShort": "إلى أين؟",
+  "greetingMorning": "صباح الخير",
+  "greetingEvening": "مساء الخير",
+  "nearbyOne": "سائق واحد قريب",
+  "nearbyTwo": "سائقان قريبان",
+  "nearbyFew": "{n} سائقين قريبين",
+  "@nearbyFew": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "nearbyMany": "{n} سائقًا قريبًا",
+  "@nearbyMany": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "nearestAway": "أقربهم على بعد {d}",
+  "@nearestAway": {
+    "placeholders": {
+      "d": {
+        "type": "String"
+      }
+    }
+  },
+  "noDriversNearby": "لا يوجد سائقون قريبون الآن",
   "home_": "البيت",
   "work": "العمل",
   "add": "إضافة",
@@ -89,6 +119,17 @@
   "payment": "الدفع",
   "cash": "نقدًا",
   "estimate": "السعر التقديري",
+  "done": "تم",
+  "yourPriceOptional": "سعرك (اختياري)",
+  "priceLineHint": "يراه السائقون بوضوح. لا يقل عن {min}، ويُقبل حين يوافق سائق.",
+  "@priceLineHint": {
+    "placeholders": {
+      "min": {
+        "type": "String"
+      }
+    }
+  },
+  "noteForDriver": "ملاحظة للسائق",
   "estimateNote": "يتحدد السعر النهائي من عروض السائقين.",
   "addPrice": "أضف سعرك (اختياري)",
   "yourPrice": "سعرك",
@@ -112,13 +153,32 @@
   },
   "noPrice": "بدون سعر",
   "raisePrice": "ارفع السعر",
-  "searching": "نبحث عن سائقين",
-  "searchingNote": "أرسلنا طلبك للسائقين القريبين، وستظهر عروضهم هنا.",
+  "searching": "نرسل طلبك للسائقين القريبين",
+  "searchingNote": "العروض تظهر هنا فور وصولها.",
   "currentPrice": "سعرك الحالي",
   "offersTitle": "عروض السائقين ({count})",
   "@offersTitle": {
     "placeholders": {
       "count": {
+        "type": "String"
+      }
+    }
+  },
+  "pickFromCard": "اختر من البطاقة مباشرة",
+  "ignore": "تجاهل",
+  "accept": "قبول",
+  "acceptIn": "قبول · {time}",
+  "@acceptIn": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "tripsCount": "{n} رحلة",
+  "@tripsCount": {
+    "placeholders": {
+      "n": {
         "type": "String"
       }
     }
@@ -158,6 +218,41 @@
   "newDriver": "جديد",
   "cancelRequest": "إلغاء الطلب",
   "tripOptions": "الخيارات",
+  "confirmingTitle": "{name} ينظر في طلبك",
+  "@confirmingTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "toConfirm": "للتأكيد",
+  "confirmPriceNote": "السعر {amount} بعد تأكيد السائق. إن لم يؤكد تعود العروض الأخرى كما هي.",
+  "@confirmPriceNote": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "confirmNote": "إن لم يؤكد السائق تعود العروض الأخرى كما هي.",
+  "driverAway": "على بعد {d} منك",
+  "@driverAway": {
+    "placeholders": {
+      "d": {
+        "type": "String"
+      }
+    }
+  },
+  "codeOnBoard": "قله للسائق عند الركوب. لا تشاركه قبل ذلك.",
+  "freeCancelLeft": "إلغاء مجاني {time}",
+  "@freeCancelLeft": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "confirming": "جاري تأكيد السائق",
   "waitingFor": "ننتظر تأكيد {name}",
   "@waitingFor": {
@@ -191,6 +286,26 @@
   "goToCar": "توجّه إلى السيارة",
   "goToCarCode": "توجّه إلى السيارة وأعطه الرمز",
   "onWayTo": "في الطريق إلى",
+  "remaining": "متبقٍ",
+  "waitingSince": "ينتظرك منذ {time}",
+  "@waitingSince": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "sayCode": "قل هذا الرمز للسائق",
+  "safeArrival": "وصلت بالسلامة",
+  "payCash": "ادفع للسائق نقدًا",
+  "rateWith": "كيف كانت رحلتك مع {name}؟",
+  "@rateWith": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "tripTime": "مدة الرحلة",
   "fare": "الأجرة",
   "fareCash": "الأجرة نقدًا للسائق",
@@ -233,8 +348,20 @@
   "status_no_show": "لم تحضر",
   "status_disputed": "قيد المراجعة",
   "status_active": "جارية",
-  "noOffers": "لم تصلنا عروض هذه المرة",
-  "noOffersNote": "قد يساعدك رفع السعر قليلًا أو المحاولة بعد دقائق.",
+  "raiseAndRequest": "ارفع إلى {amount} وأعد الطلب",
+  "@raiseAndRequest": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "notNow": "ليس الآن",
+  "noConnection": "لا يوجد اتصال",
+  "noConnectionNote": "لا شيء يضيع. سنكمل تلقائيًا فور عودة الشبكة.",
+  "tryNow": "حاول الآن",
+  "noOffers": "لم تصل عروض بعد",
+  "noOffersNote": "السائقون القريبون مشغولون الآن. ارفع سعرك قليلًا أو أعد الطلب بعد دقائق.",
   "wasPrice": "كان سعرك {amount}",
   "@wasPrice": {
     "placeholders": {

@@ -32,8 +32,8 @@ class RfButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (bg, fg, border) = switch (kind) {
-      RfButtonKind.primary => (RfColors.teal, RfColors.canvas, null),
-      RfButtonKind.go => (RfColors.teal, RfColors.canvas, null),
+      RfButtonKind.primary => (RfColors.pri, RfColors.onPri, null),
+      RfButtonKind.go => (RfColors.pri, RfColors.onPri, null),
       RfButtonKind.live => (RfColors.teal, RfColors.canvas, null),
       RfButtonKind.danger => (RfColors.coral, RfColors.onGold, null),
       RfButtonKind.dangerSoft => (RfColors.dangerSoft, RfColors.coral, null),
@@ -90,7 +90,7 @@ class RfCard extends StatelessWidget {
     final tint = color ?? (accent != null && model != RfLayoutModel.a ? accent.withOpacity(0.09) : null);
     final line = BorderSide(color: RfColors.line);
     final ShapeBorder shape = switch (model) {
-      RfLayoutModel.a => RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: accent == null ? line : BorderSide(color: accent, width: 2)),
+      RfLayoutModel.a => RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: accent == null ? BorderSide.none : BorderSide(color: accent, width: 2)),
       RfLayoutModel.b => tint != null ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)) : Border(top: inList ? BorderSide.none : line, bottom: line),
       RfLayoutModel.c => RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     };
@@ -98,9 +98,13 @@ class RfCard extends StatelessWidget {
     if (model == RfLayoutModel.c && accent != null) {
       content = DecoratedBox(decoration: BoxDecoration(border: BorderDirectional(start: BorderSide(color: accent, width: 3))), child: content);
     }
+    // Direction A: no border around a card; by day a soft shadow lifts it off the white page.
+    final lift = model == RfLayoutModel.a && !RfColors.isNight && tint == null;
     return Material(
       color: tint ?? (RfLayout.ruled ? Colors.transparent : RfColors.surface),
       shape: shape,
+      elevation: lift ? 1.5 : 0,
+      shadowColor: const Color(0x40000000),
       clipBehavior: Clip.antiAlias,
       child: InkWell(onTap: onTap, child: content),
     );
@@ -232,7 +236,7 @@ class RatingBadge extends StatelessWidget {
       child: isNew
           ? Text(newLabel, style: RfType.caption.copyWith(color: RfColors.teal, fontWeight: FontWeight.w800, fontSize: large ? 14 : 13))
           : Row(mainAxisSize: MainAxisSize.min, children: [
-              Icon(Icons.star_rounded, size: large ? 16 : 14, color: RfColors.gold),
+              Icon(Icons.star_rounded, size: large ? 16 : 14, color: RfColors.star),
               const SizedBox(width: 4),
               Ltr(score!.toStringAsFixed(1), style: RfType.bodyStrong.copyWith(fontSize: large ? 14 : 13)),
               const SizedBox(width: 4),
